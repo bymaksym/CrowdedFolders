@@ -68,7 +68,7 @@ export function runEngine(input: EngineInput): EngineResult {
     const findings: Finding[] = [];
     for (const entry of tree) {
         if (only?.every(path => !(path === '.' || entry.path === path || entry.path.startsWith(`${path}/`)))) {
-            context.markOverridesUsed(entry.path);
+            context.markOverridesUsed(entry);
             continue;
         }
         findings.push(...context.check(entry));
@@ -85,7 +85,7 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
         return undefined;
     }
     const context = new FolderContext(input.config, input.rules);
-    const { naming, rules, overrides } = context.settingsFor(entry.path);
+    const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
         const rule = input.rules[name];
@@ -114,6 +114,7 @@ export function sortFindings(findings: readonly Finding[]): Finding[] {
 interface CompiledOverride {
     readonly state: OverrideState;
     readonly globs: readonly Glob[];
+    readonly withFiles: readonly Glob[];
     used: boolean;
 }
 
@@ -127,15 +128,28 @@ class FolderContext {
     constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
         this.config = config;
         this.rules = rules;
-        this.overrides = config.overrides.map(state => ({ state, globs: state.folders.map(compileGlob), used: false }));
+        this.overrides = config.overrides.map(state => ({
+            state,
+            globs: state.folders.map(compileGlob),
+            withFiles: state.withFiles.map(compileGlob),
+            used: false,
+        }));
     }
 
-    settingsFor(path: string): { naming: NamingState; rules: Record<string, RuleState>; overrides: OverrideState[] } {
+    settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): {
+        naming: NamingState;
+        rules: Record<string, RuleState>;
+        overrides: OverrideState[];
+    } {
         let naming = this.config.naming;
         const rules: Record<string, RuleState> = { ...this.config.rules };
         const applied: OverrideState[] = [];
         for (const override of this.overrides) {
-            if (override.globs.every(glob => !glob.test(path))) {
+            if (
+                override.globs.every(glob => !glob.test(entry.path)) ||
+                (override.withFiles.length > 0 &&
+                    entry.files.every(file => override.withFiles.every(glob => !glob.test(file))))
+            ) {
                 continue;
             }
             override.used = true;
@@ -148,8 +162,8 @@ class FolderContext {
         return { naming, rules, overrides: applied };
     }
 
-    markOverridesUsed(path: string): void {
-        this.settingsFor(path);
+    markOverridesUsed(entry: FolderEntry): void {
+        this.settingsFor(entry);
     }
 
     viewOf(entry: FolderEntry, state: NamingState): FolderView {
@@ -158,7 +172,7 @@ class FolderContext {
     }
 
     check(entry: FolderEntry): Finding[] {
-        const { naming, rules } = this.settingsFor(entry.path);
+        const { naming, rules } = this.settingsFor(entry);
         const active = Object.entries(rules).filter(([, state]) => state.severity !== 'off');
         if (active.length === 0) {
             return [];

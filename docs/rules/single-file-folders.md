@@ -2,7 +2,11 @@
 
 A folder that holds one file and no sub-folders is a level of nesting with nothing to group.
 
-**Off in `recommended`, warning in `strict`.** No options.
+**Off in `recommended`, warning in `strict`.**
+
+| Option    | Default | Meaning                                                                                                                                                                                                               |
+| --------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `allowed` | `[]`    | Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. A name without `/` matches at any depth; with `/` it is a path from the root. |
 
 ```text
 src/utils/date/

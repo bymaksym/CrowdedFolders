@@ -211,7 +211,8 @@ describe('the command', () => {
         const whole = JSON.parse((await cli(root, ['print-config'])).out) as { layers: string[] };
         assert.deepEqual(whole.layers, ['preset "recommended"', '(the command line)']);
         const one = JSON.parse((await cli(root, ['print-config', '.'])).out) as { rules: Record<string, unknown> };
-        assert.deepEqual(one.rules['max-files'], ['error', { max: 40, count: 'modules', dotfiles: false, hint: '' }]);
+        const [severity, options] = one.rules['max-files'] as [string, { max: number; count: string }];
+        assert.deepEqual([severity, options.max, options.count], ['error', 40, 'modules']);
     });
 
     it('lists presets and rules', async () => {

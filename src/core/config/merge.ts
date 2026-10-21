@@ -27,6 +27,7 @@ export function mergeLayer(base: ResolvedConfig, layer: Config, origin: string, 
         ...base.overrides,
         ...(layer.overrides ?? []).map(override => ({
             folders: override.folders,
+            withFiles: override.withFiles ?? [],
             reason: override.reason,
             rules: override.rules ?? {},
             naming: override.naming ?? {},

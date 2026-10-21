@@ -1,17 +1,18 @@
-import { defineRule } from './rule.ts';
+import { defineRule, HINT_FOR_SCHEMA, hintText } from './rule.ts';
 
 export interface MaxFilesOptions {
     readonly max: number;
     readonly count: 'files' | 'modules';
     readonly dotfiles: boolean;
     readonly hint: string;
+    readonly hintFor: readonly string[];
 }
 
 export const maxFiles = defineRule<MaxFilesOptions>({
     meta: {
         description: 'A folder holds at most `max` files (or modules): past that it is scrolled, not read.',
         url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/max-files.md',
-        defaultOptions: { max: 20, count: 'files', dotfiles: false, hint: '' },
+        defaultOptions: { max: 20, count: 'files', dotfiles: false, hint: '', hintFor: [] },
         options: {
             type: 'object',
             additionalProperties: false,
@@ -26,6 +27,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
                     type: 'string',
                     description: 'Added to the message: how to split in this ecosystem, or what a new folder costs.',
                 },
+                hintFor: HINT_FOR_SCHEMA,
                 dotfiles: {
                     type: 'boolean',
                     description:
@@ -46,7 +48,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
         }
         const unit = options.count === 'modules' ? 'modules' : 'files';
         report({
-            message: `${measured} ${unit}, over the limit of ${options.max}: split it into folders by what the files are about.${options.hint === '' ? '' : ` ${options.hint}`}`,
+            message: `${measured} ${unit}, over the limit of ${options.max}: split it into folders by what the files are about.${hintText(options.hint, options.hintFor, counted)}`,
             measured,
             limit: options.max,
             files: counted,

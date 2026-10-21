@@ -120,6 +120,12 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                             description:
                                 'Globs matched against folder paths relative to the root; the root itself is ".".',
                         },
+                        withFiles: {
+                            type: 'array',
+                            items: { type: 'string', minLength: 1 },
+                            description:
+                                'Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders".',
+                        },
                         reason: {
                             type: 'string',
                             minLength: 1,

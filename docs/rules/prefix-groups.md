@@ -43,12 +43,13 @@ Each case was a false positive found in the [field trial](../field-trial.md).
 
 ## Options
 
-| Option   | Default                                                                         |                                                                                                             |
-| -------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `min`    | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7). |
-| `words`  | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups.             |
-| `ignore` | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`.                                                |
-| `hint`   | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                |
+| Option    | Default                                                                         |                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `min`     | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).      |
+| `words`   | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups.                  |
+| `ignore`  | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`.                                                     |
+| `hint`    | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                     |
+| `hintFor` | `[]`                                                                            | Globs of file names: the hint is added only when the files of the group include one (`*.java`). Default: always. |
 
 ## Where a folder is not free
 

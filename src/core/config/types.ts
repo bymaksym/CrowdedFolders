@@ -20,6 +20,11 @@ export interface NamingConfig {
 export interface OverrideConfig {
     /** Globs matched against folder paths (the root is `.`). */
     readonly folders: readonly string[];
+    /**
+     * Globs of file names: when given, the override applies only to the folders (of those matching `folders`)
+     * that hold one of these files directly. It is how "the root of a package" is said: the folder with a package.json.
+     */
+    readonly withFiles?: readonly string[];
     readonly reason: string;
     readonly rules?: Readonly<Record<string, RuleSetting>>;
     readonly naming?: NamingConfig;
@@ -100,6 +105,7 @@ export interface NamingState {
 
 export interface OverrideState {
     readonly folders: readonly string[];
+    readonly withFiles: readonly string[];
     readonly reason: string;
     readonly rules: Readonly<Record<string, RuleSetting>>;
     readonly naming: NamingConfig;

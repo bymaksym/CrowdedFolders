@@ -166,6 +166,14 @@
                                             "type": "string",
                                             "description": "Added to the message: how to split in this ecosystem, or what a new folder costs."
                                         },
+                                        "hintFor": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always."
+                                        },
                                         "dotfiles": {
                                             "type": "boolean",
                                             "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks."
@@ -223,6 +231,14 @@
                                             },
                                             "uniqueItems": true,
                                             "description": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`."
+                                        },
+                                        "hintFor": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always."
                                         },
                                         "hint": {
                                             "type": "string",
@@ -339,7 +355,16 @@
                                 {
                                     "type": "object",
                                     "additionalProperties": false,
-                                    "properties": {}
+                                    "properties": {
+                                        "allowed": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string",
+                                                "minLength": 1
+                                            },
+                                            "description": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root."
+                                        }
+                                    }
                                 }
                             ],
                             "minItems": 1,
@@ -399,6 +424,14 @@
                         },
                         "description": "Globs matched against folder paths relative to the root; the root itself is \".\"."
                     },
+                    "withFiles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1
+                        },
+                        "description": "Globs of file names: the override applies only to the folders that hold one of them directly (\"package.json\" is the root of a package). Default: every folder matching \"folders\"."
+                    },
                     "reason": {
                         "type": "string",
                         "minLength": 1,
@@ -449,6 +482,14 @@
                                                     "hint": {
                                                         "type": "string",
                                                         "description": "Added to the message: how to split in this ecosystem, or what a new folder costs."
+                                                    },
+                                                    "hintFor": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always."
                                                     },
                                                     "dotfiles": {
                                                         "type": "boolean",
@@ -507,6 +548,14 @@
                                                         },
                                                         "uniqueItems": true,
                                                         "description": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`."
+                                                    },
+                                                    "hintFor": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always."
                                                     },
                                                     "hint": {
                                                         "type": "string",
@@ -623,7 +672,16 @@
                                             {
                                                 "type": "object",
                                                 "additionalProperties": false,
-                                                "properties": {}
+                                                "properties": {
+                                                    "allowed": {
+                                                        "type": "array",
+                                                        "items": {
+                                                            "type": "string",
+                                                            "minLength": 1
+                                                        },
+                                                        "description": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root."
+                                                    }
+                                                }
                                             }
                                         ],
                                         "minItems": 1,
