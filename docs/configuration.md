@@ -20,7 +20,7 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
 | `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
 | `overrides` | object[] | Settings for some folders only. Every override says why. |
-| `suppressions` | string | The suppressions file, relative to this configuration. Default: crowded-folders-suppressions.json. |
+| `suppressions` | string | The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or "per-project": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project. |
 
 ## `naming`
 

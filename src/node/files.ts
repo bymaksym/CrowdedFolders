@@ -91,7 +91,7 @@ function gitFiles(root: string): string[] | undefined {
  * arranges them by hand. bufbuild/buf marks `/private/gen/**`, vitess its protobuf code. Git answers,
  * so the rules are git's, nested `.gitattributes` included.
  */
-function markedByAttributes(root: string, files: readonly string[]): Set<string> {
+export function markedByAttributes(root: string, files: readonly string[]): Set<string> {
     const marked = new Set<string>();
     if (files.every(path => path !== '.gitattributes' && !path.endsWith('/.gitattributes'))) {
         return marked;

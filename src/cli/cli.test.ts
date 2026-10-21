@@ -167,7 +167,7 @@ describe('the command', () => {
         });
         assert.equal((await cli(root, [])).code, 0);
         assert.equal((await cli(root, ['--max-warnings', '0'])).code, 1);
-        assert.match((await cli(root, ['--quiet'])).out, /No crowded folders/u);
+        assert.match((await cli(root, ['--quiet'])).out, /✔ No errors \(.*; 1 warning hidden by --quiet\)/u);
     });
 
     it('writes the report to a file with --output', async () => {

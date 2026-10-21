@@ -39,7 +39,7 @@ export interface Config {
     readonly naming?: NamingConfig;
     readonly rules?: Readonly<Record<string, RuleSetting>>;
     readonly overrides?: readonly OverrideConfig[];
-    /** Where the suppressions file is, relative to the configuration. Default: `crowded-folders-suppressions.json`. */
+    /** Where the suppressions file is, relative to the configuration (default: `crowded-folders-suppressions.json`), or `"per-project"`: one in each project. */
     readonly suppressions?: string;
 }
 

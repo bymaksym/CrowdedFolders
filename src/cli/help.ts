@@ -42,10 +42,22 @@ Adopting it in a repository that already has problems
       --prune-suppressions           remove suppressions nothing needs and lower the ones that went down
       --pass-on-unpruned-suppressions  do not fail on suppressions nothing needs
       --suppressions-location <file> the suppressions file (default: crowded-folders-suppressions.json
-                                     at the root, or "suppressions" in the configuration)
+                                     at the root, or "suppressions" in the configuration; "per-project"
+                                     keeps one in each package)
+      --new-since <ref>              fail only on problems that are new or grew since <ref> (git):
+                                     adopting it without a suppressions file
+
+Only what a change touched
+      --since <ref>          check only the folders the change since <ref> reshaped: a file added,
+                             removed or moved, in its old and its new folder. Suppressions of other
+                             folders are left alone
+      --changed              --since the base of the pull request, read from the CI
+                             (GITHUB_BASE_REF, CI_MERGE_REQUEST_TARGET_BRANCH_NAME, …); outside a
+                             pull request, everything is checked
 
 Other
-      --force                init: overwrite an existing configuration
+      --force                init: overwrite an existing configuration; with CI set, let
+                             --suppress-all and --prune-suppressions write the suppressions file
   -h, --help                 this help
   -v, --version              the version
 

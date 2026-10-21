@@ -49,14 +49,25 @@ describe('formatText', () => {
     it('prints moves, colours and stale suppressions when asked', () => {
         const text = formatText(
             report([finding], {
-                staleSuppressions: [{ folder: 'src', id: 'max-files', count: 30, measured: 28 }],
+                staleSuppressions: [
+                    {
+                        folder: 'src',
+                        id: 'max-files',
+                        rule: 'max-files',
+                        key: undefined,
+                        count: 30,
+                        measured: 28,
+                        status: 'lowered',
+                        file: 'crowded-folders-suppressions.json',
+                    },
+                ],
                 suppressedCount: 2,
             }),
             { color: true, moves: true },
         );
         assert.match(text, /git mv cli\/render-json\.ts cli\/render\/render-json\.ts/u);
         assert.ok(text.includes('\u{1B}[31m'));
-        assert.match(text, /suppressed at 30, now 28/u);
+        assert.match(text, /Progress.*\n.*src {2}max-files {2}30 → .*28/u);
         assert.match(text, /2 problems suppressed/u);
     });
 
@@ -109,7 +120,22 @@ describe('machine formats', () => {
         assert.match(line, /100%25 \| sure\n$/u);
         assert.equal(formatGithub(report([])), '');
         assert.match(
-            formatGithub(report([], { staleSuppressions: [{ folder: 'a', id: 'b', count: 1, measured: undefined }] })),
+            formatGithub(
+                report([], {
+                    staleSuppressions: [
+                        {
+                            folder: 'a',
+                            id: 'b',
+                            rule: 'b',
+                            key: undefined,
+                            count: 1,
+                            measured: undefined,
+                            status: 'fixed',
+                            file: 'crowded-folders-suppressions.json',
+                        },
+                    ],
+                }),
+            ),
             /stale suppression.*fixed/u,
         );
     });

@@ -25,6 +25,12 @@ export interface Args {
     readonly pruneSuppressions: boolean;
     readonly passOnUnprunedSuppressions: boolean;
     readonly suppressionsLocation: string | undefined;
+    /** `--since <ref>`: check only the folders the change since `ref` reshaped. */
+    readonly since: string | undefined;
+    /** `--changed`: `--since` the pull request's base, read from the CI's environment. */
+    readonly changed: boolean;
+    /** `--new-since <ref>`: fail only on problems that are new or grew since `ref`. */
+    readonly newSince: string | undefined;
     readonly force: boolean;
     readonly help: boolean;
     readonly version: boolean;
@@ -60,6 +66,9 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 'prune-suppressions': { type: 'boolean' },
                 'pass-on-unpruned-suppressions': { type: 'boolean' },
                 'suppressions-location': { type: 'string' },
+                since: { type: 'string' },
+                changed: { type: 'boolean' },
+                'new-since': { type: 'string' },
                 force: { type: 'boolean' },
                 help: { type: 'boolean', short: 'h' },
                 version: { type: 'boolean', short: 'v' },
@@ -99,6 +108,27 @@ export function parseCommandLine(argv: readonly string[]): Args {
             '--stdin and --no-git cannot both be given: with --stdin the files come from standard input',
         );
     }
+    if (values.since !== undefined && values.changed) {
+        throw new UsageError('--since and --changed cannot both be given: --changed is --since the base the CI names');
+    }
+    if ((values.since !== undefined || values.changed) && command === 'check' && paths.length > 0) {
+        throw new UsageError(
+            `${values.changed ? '--changed' : '--since'} and folders cannot both be given: it checks the folders the change reshaped`,
+        );
+    }
+    for (const [flag, ref] of [
+        ['--since', values.since],
+        ['--new-since', values['new-since']],
+    ] as const) {
+        if (ref?.trim() === '') {
+            throw new UsageError(`${flag} needs a ref: ${flag} origin/main`);
+        }
+    }
+    if ((values.since !== undefined || values.changed || values['new-since'] !== undefined) && values['no-git']) {
+        throw new UsageError(
+            '--since, --changed and --new-since compare with git, and --no-git reads the disk: the two lists would differ in what .gitignore hides',
+        );
+    }
     if (command === 'explain' && paths.length !== 1 && !values.help) {
         throw new UsageError('explain takes one folder: crowded-folders explain src/components');
     }
@@ -125,6 +155,9 @@ export function parseCommandLine(argv: readonly string[]): Args {
         pruneSuppressions: values['prune-suppressions'] ?? false,
         passOnUnprunedSuppressions: values['pass-on-unpruned-suppressions'] ?? false,
         suppressionsLocation: values['suppressions-location'],
+        since: values.since,
+        changed: values.changed ?? false,
+        newSince: values['new-since'],
         force: values.force ?? false,
         help: values.help ?? false,
         version: values.version ?? false,

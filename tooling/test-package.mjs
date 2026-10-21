@@ -106,7 +106,8 @@ try {
         init.status === 0 && existsSync(join(sample, 'crowded-folders.config.json')),
         init.stdout + init.stderr,
     );
-    const adopted = run(['--suppress-all'], sample);
+    // On the CI runner CI is set, where writing suppressions is refused without --force.
+    const adopted = run(['--suppress-all', '--force'], sample);
     expect('--suppress-all adopts it and exits 0', adopted.status === 0, adopted.stdout + adopted.stderr);
     const sarif = run(['--format', 'sarif', '--pass-on-unpruned-suppressions'], sample);
     expect('--format sarif prints SARIF', sarif.stdout.includes('"version": "2.1.0"'), sarif.stderr);
