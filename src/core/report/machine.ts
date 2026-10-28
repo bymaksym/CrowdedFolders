@@ -55,6 +55,7 @@ export function formatJson(report: Report, options: JsonOptions = {}): string {
                 measured: stale.measured ?? null,
             })),
             ...(report.knownOnBase && { knownOnBase: report.knownOnBase }),
+            ...(report.configChange && { configChange: report.configChange }),
             ...(report.folderStats && { folders: report.folderStats }),
         },
         undefined,

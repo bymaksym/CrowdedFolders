@@ -96,6 +96,19 @@ export interface OverrideCoverage {
     readonly overrides: readonly { readonly state: OverrideState; readonly folders: readonly string[] }[];
 }
 
+/**
+ * The numbers of every folder (or every folder under `only`), without running a rule: what
+ * `crowded-folders history` measures at each commit it samples.
+ */
+export function measureFolders(input: EngineInput): FolderStat[] {
+    const only = scopeOf(input.only);
+    const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));
+    const context = new FolderContext(input.config, input.rules, tree);
+    return tree
+        .filter(entry => !only || only.some(path => isInside(entry.path, path)))
+        .map(entry => context.statsOf(entry));
+}
+
 export function overrideCoverage(input: EngineInput): OverrideCoverage {
     const only = scopeOf(input.only);
     const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));

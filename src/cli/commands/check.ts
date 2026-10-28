@@ -1,4 +1,4 @@
-import { changeBetween, compareWithBase, foldersOf, type TreeChange } from '../../core/changes.ts';
+import { changeAgainstBase, changeBetween, compareWithBase, foldersOf, type TreeChange } from '../../core/changes.ts';
 import { type Finding, runEngine, selectFiles } from '../../core/engine.ts';
 import { joinPath } from '../../core/paths/tree.ts';
 import { plural } from '../../core/plural.ts';
@@ -20,9 +20,10 @@ import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
 import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
+import { compareConfigAt } from './compare-config.ts';
 
 /** The default command: checks the repository and prints the report. Returns the exit code. */
-export function check(args: Args, io: Io, session: Session): number {
+export async function check(args: Args, io: Io, session: Session): Promise<number> {
     refuseWritesInCi(args, io);
     // Before anything is written: a folder or a tracked file given as a report's file is refused first.
     const outputPaths = outputPathsOf(args, session);
@@ -107,11 +108,32 @@ export function check(args: Args, io: Io, session: Session): number {
     };
     const outcome = applySuppressions(findings, suppressions, context);
 
+    const configChange =
+        args.compareConfig === undefined ? undefined : await compareConfigAt(args, session, files, only, findings);
+    if (configChange) {
+        io.error(`--compare-config: ${configChange.summary}
+`);
+    }
+
+    // A Markdown report (a pull-request comment) says what is new, what grew and what improved, against
+    // the base it is given: --new-since, --since, --base or the pull request's.
+    const wantsChange = args.outputs.some(spec => spec.format === 'markdown');
+    const anchored = wantsAnchors(args, session) || wantsChange ? anchorBase(args, io, session, own) : undefined;
+    const changeBase = wantsChange ? (newSince ?? since?.base ?? anchored) : undefined;
+    const baseFindings = new Map<Base, readonly Finding[]>();
+    const findingsOf = (base: Base): readonly Finding[] => {
+        let found = baseFindings.get(base);
+        if (!found) {
+            found = runEngine({ files: base.files, config, rules: session.loaded.rules }).findings;
+            baseFindings.set(base, found);
+        }
+        return found;
+    };
+
     let kept: readonly Finding[] = outcome.kept;
     let knownOnBase: Report['knownOnBase'];
     if (newSince) {
-        const base = runEngine({ files: newSince.files, config, rules: session.loaded.rules });
-        const compared = compareWithBase(kept, base.findings, {
+        const compared = compareWithBase(kept, findingsOf(newSince), {
             label: newSince.label,
             ...(change && { renamed: change.renamed }),
         });
@@ -126,9 +148,18 @@ export function check(args: Args, io: Io, session: Session): number {
     }
     const hiddenWarnings = args.quiet ? reported.filter(finding => finding.severity === 'warn').length : 0;
 
-    const annotationBase = wantsAnchors(args, session)
-        ? (anchorBase(args, io, session, own) ?? since?.base ?? newSince)
-        : undefined;
+    const annotationBase = wantsAnchors(args, session) ? (anchored ?? since?.base ?? newSince) : undefined;
+    const treeChange =
+        changeBase && change && (changeBase === since?.base || changeBase === newSince)
+            ? change
+            : changeBase && changeBetween(changeBase.files, files);
+    const baseChange =
+        changeBase &&
+        changeAgainstBase(findings, findingsOf(changeBase), {
+            label: changeBase.label,
+            ...(treeChange && { renamed: treeChange.renamed }),
+            ...(inScope && { inScope }),
+        });
     const report = buildReport({
         args,
         io,
@@ -141,6 +172,8 @@ export function check(args: Args, io: Io, session: Session): number {
         suppressionFile: store.locate,
         hiddenWarnings,
         ...(knownOnBase && { knownOnBase }),
+        ...(baseChange && { change: baseChange }),
+        ...(configChange && { configChange }),
         ...(annotationBase && { addedFiles: addedSince(annotationBase, files) }),
         ...(annotationBase && {
             addedByFolder: addedByFolder({ findings: reported, baseFiles: annotationBase.files, files, session }),

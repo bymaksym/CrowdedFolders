@@ -1,3 +1,4 @@
+import { findingId } from '../../changes.ts';
 import { shownOf } from '../../plural.ts';
 import { byWeight, describeStale, failureMessage, folderLabel, plainMessage } from '../describe.ts';
 import { plural, type Report, type ReportFinding, totalsOf } from '../report.ts';
@@ -13,6 +14,8 @@ export const DEFAULT_MAX_FINDINGS = 200;
 const BUDGET = 900_000;
 /** Characters Markdown reads as syntax inside a sentence or a table cell. */
 const SPECIAL = new Set(['\\', '`', '*', '_', '[', ']', '|', '~']);
+/** How many improvements a pull-request comment lists. */
+const IMPROVED_SHOWN = 20;
 /** How many groups the per-group summary lists. */
 const TOP_GROUPS = 10;
 
@@ -39,24 +42,11 @@ export function formatMarkdown(report: Report, options: MarkdownOptions = {}): s
 
     const maxFindings = options.maxFindings ?? DEFAULT_MAX_FINDINGS;
     const sorted = report.findings.toSorted(byWeight);
-    lines.push('| Folder | Rule | Problem |', '| --- | --- | --- |');
-    let size = lines.join('\n').length;
-    let shown = 0;
-    for (const finding of sorted) {
-        const rule = finding.url ? `[${escapeText(finding.rule)}](${finding.url})` : escapeText(finding.rule);
-        const row = `| ${codeSpan(folderLabel(finding.folder))} | ${rule} | ${escapeText(plainMessage(report, finding))} |`;
-        if (shown >= shownOf(sorted.length, maxFindings) || size + row.length + 1 > BUDGET) {
-            break;
-        }
-        lines.push(row);
-        size += row.length + 1;
-        shown++;
-    }
-    if (shown < sorted.length) {
-        lines.push(
-            '',
-            `_… and ${plural(sorted.length - shown, 'more problem')} (the ${shown} worst are listed; \`--max-findings\` changes that, \`--format json\` has them all)._`,
-        );
+    const table = new Table(report, maxFindings, lines.join('\n').length);
+    if (report.change) {
+        lines.push(...changeSections(report, report.change, sorted, table));
+    } else {
+        lines.push(...table.rows(sorted));
     }
     if (report.staleSuppressions.length > 0) {
         lines.push('', 'Suppressions nothing needs any more (run with `--prune-suppressions`):', '');
@@ -69,6 +59,104 @@ export function formatMarkdown(report: Report, options: MarkdownOptions = {}): s
         }
     }
     return `${lines.join('\n')}\n`;
+}
+
+/**
+ * The rows of the problems, sharing one budget: the worst `maxFindings` of each list, and never past
+ * what GitHub takes (a job summary is cut at 1 MiB, a comment at 65 536 characters).
+ */
+class Table {
+    private size: number;
+    private readonly report: Report;
+    private readonly maxFindings: number;
+
+    constructor(report: Report, maxFindings: number, size: number) {
+        this.report = report;
+        this.maxFindings = maxFindings;
+        this.size = size;
+    }
+
+    rows(findings: readonly ReportFinding[], before?: (finding: ReportFinding) => number | undefined): string[] {
+        const lines = before
+            ? ['| Folder | Rule | Before | Now | Problem |', '| --- | --- | ---: | ---: | --- |']
+            : ['| Folder | Rule | Problem |', '| --- | --- | --- |'];
+        let shown = 0;
+        for (const finding of findings) {
+            const rule = finding.url ? `[${escapeText(finding.rule)}](${finding.url})` : escapeText(finding.rule);
+            const numbers = before ? ` ${before(finding) ?? ''} | ${finding.measured} |` : '';
+            const row = `| ${codeSpan(folderLabel(finding.folder))} | ${rule} |${numbers} ${escapeText(plainMessage(this.report, finding))} |`;
+            if (shown >= shownOf(findings.length, this.maxFindings) || this.size + row.length + 1 > BUDGET) {
+                break;
+            }
+            lines.push(row);
+            this.size += row.length + 1;
+            shown++;
+        }
+        if (shown < findings.length) {
+            lines.push(
+                '',
+                `_… and ${plural(findings.length - shown, 'more problem')} (the ${shown} worst are listed; \`--max-findings\` changes that, \`--format json\` has them all)._`,
+            );
+        }
+        return lines;
+    }
+}
+
+/**
+ * For a pull request: what is new, what grew and what improved against the base, then what the base
+ * already had, folded. A comment that lists 40 old problems under 1 new one hides the new one.
+ */
+function changeSections(
+    report: Report,
+    change: NonNullable<Report['change']>,
+    sorted: readonly ReportFinding[],
+    table: Table,
+): string[] {
+    const beforeOf = (finding: ReportFinding): number | undefined => change.before[findingId(finding)];
+    const added = sorted.filter(finding => beforeOf(finding) === undefined);
+    const grew = sorted.filter(finding => (beforeOf(finding) ?? Infinity) < finding.measured);
+    const same = sorted.filter(finding => {
+        const before = beforeOf(finding);
+        return before !== undefined && before >= finding.measured;
+    });
+    const label = codeSpan(change.label);
+    const lines = [
+        `Against ${label}: **${added.length} new**, **${grew.length} grew**, ${change.improved.length} improved${same.length > 0 || (report.knownOnBase?.count ?? 0) > 0 ? `, ${same.length + (report.knownOnBase?.count ?? 0)} as they were` : ''}.`,
+        '',
+    ];
+    if (added.length > 0) {
+        lines.push(`### New (${added.length})`, '', ...table.rows(added), '');
+    }
+    if (grew.length > 0) {
+        lines.push(`### Grew (${grew.length})`, '', ...table.rows(grew, beforeOf), '');
+    }
+    if (change.improved.length > 0) {
+        lines.push(`### Improved (${change.improved.length})`, '');
+        const shown = shownOf(change.improved.length, IMPROVED_SHOWN);
+        for (const item of change.improved.slice(0, shown)) {
+            const key = item.key === undefined ? '' : ` ${codeSpan(item.key)}`;
+            const now = item.after === null ? 'gone' : `${item.before} → ${item.after}`;
+            lines.push(`- ${codeSpan(folderLabel(item.folder))} ${escapeText(item.rule)}${key}: ${now}`);
+        }
+        if (change.improved.length > shown) {
+            lines.push(`- _… and ${change.improved.length - shown} more._`);
+        }
+        lines.push('');
+    }
+    if (same.length > 0) {
+        lines.push(
+            '<details>',
+            `<summary>As they were on ${escapeText(change.label)} (${same.length})</summary>`,
+            '',
+            ...table.rows(same),
+            '',
+            '</details>',
+        );
+    }
+    while (lines.at(-1) === '') {
+        lines.pop();
+    }
+    return lines;
 }
 
 /** Errors and warnings per project (or per top-level folder without projects), the worst first. */

@@ -182,6 +182,21 @@
                 "count": { "type": "integer", "minimum": 0 }
             }
         },
+        "configChange": {
+            "type": "object",
+            "description": "With --compare-config <ref>: what the configuration changed since the ref, and the problems that changes silences or adds over the same files.",
+            "required": ["label", "settings", "silenced", "silencedFolders", "added", "addedFolders", "summary"],
+            "additionalProperties": false,
+            "properties": {
+                "label": { "type": "string" },
+                "settings": { "type": "array", "items": { "type": "string" } },
+                "silenced": { "type": "integer", "minimum": 0 },
+                "silencedFolders": { "type": "integer", "minimum": 0 },
+                "added": { "type": "integer", "minimum": 0 },
+                "addedFolders": { "type": "integer", "minimum": 0 },
+                "summary": { "type": "string" }
+            }
+        },
         "folders": {
             "type": "array",
             "description": "Every folder with its numbers. Only with --stats.",

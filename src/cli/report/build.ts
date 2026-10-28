@@ -81,6 +81,10 @@ export interface BuildInput {
     readonly addedFiles?: ReadonlySet<string>;
     /** With a base known: before and after, for the folders over their `max-files` limit. */
     readonly addedByFolder?: Report['addedByFolder'];
+    /** With a base known and a Markdown report: new, grew and improved. */
+    readonly change?: Report['change'];
+    /** With `--compare-config`. */
+    readonly configChange?: Report['configChange'];
 }
 
 /** Everything the output formats need to know about a run. */
@@ -118,6 +122,8 @@ export function buildReport(input: BuildInput): Report {
         hiddenWarnings: input.hiddenWarnings,
         ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
         ...(input.knownOnBase && { knownOnBase: input.knownOnBase }),
+        ...(input.change && { change: input.change }),
+        ...(input.configChange && { configChange: input.configChange }),
         ...((args.moves || args.movesScript !== undefined) && {
             references: referencesOf(input.findings, session),
         }),
