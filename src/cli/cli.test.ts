@@ -269,9 +269,10 @@ describe('the command', () => {
         const root = repository(render);
         const ran = await cli(root, ['explain', 'cli']);
         assert.equal(ran.code, 0, ran.err);
-        assert.match(ran.out, /render-json ← render-json\.ts {2}· render json {2}· render/u);
+        assert.match(ran.out, /render-json <- render-json\.ts {2}\| render json {2}\| render/u);
         assert.match(ran.out, /error prefix-groups/u);
         assert.equal((await cli(root, ['explain', 'nowhere'])).code, 2);
+        assert.match(ran.out, /error {1,2}prefix-groups <- preset recommended/u);
     });
 
     it('explains what is not reported, and which companion joins IProfile and MProfile (Marta, 13-10)', async () => {
@@ -290,7 +291,7 @@ describe('the command', () => {
         const profile = await cli(root, ['explain', 'other']);
         assert.match(
             profile.out,
-            /IProfile, MProfile {2}· profile: .*naming\.companions \["\^\(\?:I\|M\)\(\?=\\\\p\{Lu\}\)"\]/u,
+            /IProfile, MProfile {2}\| profile: .*naming\.companions \["\^\(\?:I\|M\)\(\?=\\\\p\{Lu\}\)"\]/u,
         );
     });
 

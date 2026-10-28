@@ -33,10 +33,10 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             return 0;
         }
         if (args.command === 'presets') {
-            return listPresets(io);
+            return listPresets(args, io);
         }
         if (args.command === 'rules') {
-            return listRules(io);
+            return listRules(args, io);
         }
         const session = await openSession(args, io);
         for (const notice of session.notices) {
@@ -48,10 +48,10 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
                 return await init(args, io, session);
             }
             case 'explain': {
-                return explain(args, io, session);
+                return await explain(args, io, session);
             }
             case 'print-config': {
-                return printConfig(args, io, session);
+                return await printConfig(args, io, session);
             }
             default: {
                 return check(args, io, session);

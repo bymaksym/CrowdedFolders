@@ -231,8 +231,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
     if (command === 'explain' && paths.length !== 1 && !values.help) {
         throw new UsageError('explain takes one folder: crowded-folders explain src/components');
     }
-    if ((command === 'presets' || command === 'rules') && paths.length > 0) {
-        throw new UsageError(`${command} takes no paths`);
+    if ((command === 'presets' || command === 'rules') && paths.length > 1) {
+        throw new UsageError(`${command} takes one name to filter by: crowded-folders ${command} ${paths[0] ?? ''}`);
     }
 
     return {
