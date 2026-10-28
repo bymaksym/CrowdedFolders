@@ -36,9 +36,19 @@ export function plainMessage(report: Pick<Report, 'hide'>, finding: Pick<ReportF
  * The one sentence every format uses for a finding: `folder: message`, safe to print. A finding of
  * the `config/*` rules is about the configuration, not a folder, and says so itself.
  */
-export function describe(report: Pick<Report, 'hide'>, finding: ReportFinding): string {
+export function describe(report: Pick<Report, 'addedByFolder' | 'hide'>, finding: ReportFinding): string {
     const message = safe(plainMessage(report, finding));
-    return finding.rule.startsWith('config/') ? message : `${safe(folderLabel(finding.folder))}: ${message}`;
+    return finding.rule.startsWith('config/')
+        ? message
+        : `${safe(folderLabel(finding.folder))}: ${message}${addedNote(report, finding)}`;
+}
+
+/** With a base known: what the change adds to a folder over its limit, as " This change adds 1 (14→15).". */
+function addedNote(report: Pick<Report, 'addedByFolder'>, finding: ReportFinding): string {
+    const counts = finding.rule === 'max-files' ? report.addedByFolder?.[finding.folder] : undefined;
+    return counts === undefined || counts.after <= counts.before
+        ? ''
+        : ` This change adds ${counts.after - counts.before} (${counts.before}→${counts.after}).`;
 }
 
 /** Why a run failed, for a person: the machine's folders out and control characters escaped, line breaks kept. */

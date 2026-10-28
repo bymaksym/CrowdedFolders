@@ -15,7 +15,7 @@ import {
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
-import { buildReport, enrichFindings, wantsAnchors } from '../report/build.ts';
+import { addedByFolder, buildReport, enrichFindings, wantsAnchors } from '../report/build.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
 import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
@@ -142,6 +142,9 @@ export function check(args: Args, io: Io, session: Session): number {
         hiddenWarnings,
         ...(knownOnBase && { knownOnBase }),
         ...(annotationBase && { addedFiles: addedSince(annotationBase, files) }),
+        ...(annotationBase && {
+            addedByFolder: addedByFolder({ findings: reported, baseFiles: annotationBase.files, files, session }),
+        }),
     });
 
     // Each report goes to the file checked above, or to standard output.
