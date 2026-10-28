@@ -55,18 +55,24 @@ export function joinPath(folder: string, name: string): string {
 export function buildTree(filePaths: Iterable<string>): FolderEntry[] {
     const files = new Map<string, Set<string>>();
     const folders = new Map<string, Set<string>>();
+    // A loop up to the first folder already known, not recursion: a tree ten thousand folders deep
+    // must not overflow the stack.
     const ensure = (folder: string): void => {
-        if (folders.has(folder)) {
-            return;
+        let child: string | undefined;
+        for (let current = folder; ; current = parentOf(current)) {
+            const isKnown = folders.has(current);
+            if (!isKnown) {
+                folders.set(current, new Set());
+                files.set(current, new Set());
+            }
+            if (child !== undefined) {
+                folders.get(current)?.add(baseName(child));
+            }
+            if (isKnown || current === '.') {
+                return;
+            }
+            child = current;
         }
-        folders.set(folder, new Set());
-        files.set(folder, new Set());
-        if (folder === '.') {
-            return;
-        }
-        const parent = parentOf(folder);
-        ensure(parent);
-        folders.get(parent)?.add(baseName(folder));
     };
 
     ensure('.');

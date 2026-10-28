@@ -98,10 +98,10 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                 description: 'Packages or files whose default export is a plugin: more rules and presets.',
             },
             include: GLOBS(
-                'Globs of the files looked at. Default: every file git knows about, or every file under the root without git.',
+                'Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git.',
             ),
             exclude: GLOBS(
-                'Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth.',
+                'Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth; "!x" removes an inherited x, and brings no file back.',
             ),
             naming: NAMING,
             rules: rulesProperty,

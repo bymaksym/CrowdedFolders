@@ -59,7 +59,7 @@ describe('runEngine', () => {
         assert.equal(runEngine({ files: crowded, config, rules: BUILT_IN_RULES }).findings.length, 0);
     });
 
-    it('reports only the folders asked for, while still counting the rest', () => {
+    it('checks and counts only the folders asked for (crowded-folders src/app/shared counted the whole repository)', () => {
         const files = [...crowded, ...crowded.map(path => path.replace('legacy', 'other'))];
         const config = resolve({ rules: { 'max-files': ['error', { max: 5 }] } });
         const result = runEngine({ files, config, rules: BUILT_IN_RULES, only: ['src/other'] });
@@ -67,7 +67,8 @@ describe('runEngine', () => {
             result.findings.map(finding => finding.folder),
             ['src/other'],
         );
-        assert.equal(result.fileCount, 12);
+        assert.equal(result.fileCount, 6);
+        assert.equal(result.folderCount, 1);
     });
 
     it('runs plugin rules with their defaults under the configured options', () => {

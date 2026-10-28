@@ -71,7 +71,7 @@
                 "type": "string",
                 "minLength": 1
             },
-            "description": "Globs of the files looked at. Default: every file git knows about, or every file under the root without git."
+            "description": "Globs of the files looked at; like exclude, a pattern matches a file or any folder above it (\"src\" takes everything in src). Default: every file git knows about, or every file under the root without git."
         },
         "exclude": {
             "type": "array",
@@ -79,7 +79,7 @@
                 "type": "string",
                 "minLength": 1
             },
-            "description": "Globs of files and folders left out, on top of .gitignore. A pattern without \"/\" matches at any depth."
+            "description": "Globs of files and folders left out, on top of .gitignore. A pattern without \"/\" matches at any depth; \"!x\" removes an inherited x, and brings no file back."
         },
         "naming": {
             "type": "object",
