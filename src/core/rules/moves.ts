@@ -151,7 +151,8 @@ export interface Plan {
  * name when it says nothing), never onto a path that exists or that another move takes, compared
  * without case: Windows and macOS would overwrite `Text.ts` with `text.ts`. A module whose new
  * names are taken keeps its names; when those are taken too, it stays where it is. A module moves
- * whole or not at all.
+ * whole or not at all. `taken` carries the paths earlier plans took, compared without case, when
+ * modules of several folders go to one.
  */
 export function planMoves(
     modules: readonly Module[],
@@ -159,10 +160,10 @@ export function planMoves(
     target: string,
     rename: (file: string, module: Module) => string | undefined,
     existing: RuleContext<object>['existing'],
+    taken = new Set<string>(),
 ): Plan {
     const moves: Move[] = [];
     const notes: string[] = [];
-    const taken = new Set<string>();
     /** Why a path cannot be taken, or `undefined` when it is free. */
     const clashAt = (path: string, from: string): string | undefined => {
         if (path === from) {

@@ -173,6 +173,35 @@ describe('state shared between folders and runs', () => {
         );
     });
 
+    it('built-in rules change nothing they are given: run as plugins, on frozen views, they report the same', () => {
+        // The engine skips freezing where only built-in rules run (it cost a tenth of a run); this is
+        // what makes that safe. A copy of a rule is not built in, so it gets frozen views.
+        const files = [
+            ...['render-json', 'render-text', 'render-pr', 'render-sarif', 'main'].map(name => `src/${name}.ts`),
+            ...Array.from({ length: 25 }, (_, index) => `big/file-${index}.ts`),
+            'src/render/render-x.ts',
+            'src/render/render-y.ts',
+            'lone/only.ts',
+            'case/Foo.ts',
+            'case/foo.ts',
+            'app/controller/OrderController.ts',
+            'app/service/OrderService.ts',
+            'app/model/Order.ts',
+            'art/icon.png.import',
+            'art/Textures/rock.png',
+        ];
+        const everyRule = Object.fromEntries(Object.keys(BUILT_IN_RULES).map(name => [name, 'error' as const]));
+        const config = configOf({ rules: { ...everyRule, 'max-folders': ['error', { max: 3 }] } });
+        const copies = Object.fromEntries(Object.entries(BUILT_IN_RULES).map(([name, rule]) => [name, { ...rule }]));
+        const plain = runEngine({ files, config, rules: BUILT_IN_RULES });
+        assert.deepEqual(
+            new Set(plain.findings.map(finding => finding.rule)),
+            new Set(Object.keys(BUILT_IN_RULES)),
+            'every built-in rule fires here',
+        );
+        assert.deepEqual(runEngine({ files, config, rules: copies }).findings, plain.findings);
+    });
+
     it('frozenCopy copies lists and plain objects all the way down, and leaves the original alone', () => {
         const original = { a: [1, { b: [2] }], c: /x/u };
         const copy = frozenCopy(original);

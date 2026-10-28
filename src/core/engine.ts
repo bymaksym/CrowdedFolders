@@ -1,4 +1,5 @@
-import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
+import { foldersOf } from './changes.ts';
+import { mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
 import {
     type EngineInput,
@@ -11,21 +12,17 @@ import {
     toFinding,
 } from './findings.ts';
 import { counterpartsOf, foldMirrors } from './mirrors.ts';
-import { type Naming, readFolder } from './naming/modules.ts';
-import {
-    type CompiledOverride,
-    expiredOverrideFindings,
-    OverrideIndex,
-    todayInUtc,
-    unusedOverrideFindings,
-} from './overrides.ts';
+import { readFolder } from './naming/modules.ts';
+import { type CompiledOverride, expiredOverrideFindings, todayInUtc, unusedOverrideFindings } from './overrides.ts';
 import { compileGlob, PathMatcher } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
 import { parseMirrors } from './paths/mirrors.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
-import { callRule, frozenCopy, LATE_REPORT, ReadOnlySet, reportProblem, RuleError } from './rules/guard.ts';
+import { callRule, frozenCopy, LATE_REPORT, reportProblem, RuleError } from './rules/guard.ts';
+import { BUILT_IN_RULES } from './rules/index.ts';
 import { caseless } from './rules/moves.ts';
 import type { FolderView, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
+import { FolderSettings, type Settings } from './settings.ts';
 
 export type { EngineInput, EngineResult, Finding, FolderExplanation, FolderStat } from './findings.ts';
 
@@ -48,10 +45,11 @@ export function runEngine(input: EngineInput): EngineResult {
     // problem folded into its mirror is folded the same way as in a run over everything.
     const mirrors = parseMirrors(input.config.naming.mirrors);
     const reach = only && [...only, ...only.flatMap(path => counterpartsOf(path, mirrors))];
-    const all = selectFiles(inScope(filesOf(input.files), reach), input.config);
+    const listed = inScope(filesOf(input.files), reach);
+    const all = selectFiles(listed, input.config);
     const files = only ? inScope(all, only) : all;
     const tree = buildTree(all);
-    const context = new FolderContext(input.config, input.rules, tree);
+    const context = new FolderContext(input.config, input.rules, tree, listed);
 
     let findings: Finding[] = [];
     let folderCount = 0;
@@ -98,6 +96,19 @@ export interface OverrideCoverage {
     readonly overrides: readonly { readonly state: OverrideState; readonly folders: readonly string[] }[];
 }
 
+/**
+ * The numbers of every folder (or every folder under `only`), without running a rule: what
+ * `crowded-folders history` measures at each commit it samples.
+ */
+export function measureFolders(input: EngineInput): FolderStat[] {
+    const only = scopeOf(input.only);
+    const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));
+    const context = new FolderContext(input.config, input.rules, tree);
+    return tree
+        .filter(entry => !only || only.some(path => isInside(entry.path, path)))
+        .map(entry => context.statsOf(entry));
+}
+
 export function overrideCoverage(input: EngineInput): OverrideCoverage {
     const only = scopeOf(input.only);
     const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));
@@ -118,12 +129,13 @@ export function overrideCoverage(input: EngineInput): OverrideCoverage {
 
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
 export function explainFolder(input: EngineInput, path: string): FolderExplanation | undefined {
-    const tree = buildTree(selectFiles(inScope(filesOf(input.files), scopeOf([path])), input.config));
+    const listed = inScope(filesOf(input.files), scopeOf([path]));
+    const tree = buildTree(selectFiles(listed, input.config));
     const entry = tree.find(candidate => candidate.path === path);
     if (!entry) {
         return undefined;
     }
-    const context = new FolderContext(input.config, input.rules, tree);
+    const context = new FolderContext(input.config, input.rules, tree, listed);
     const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
@@ -147,14 +159,14 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
     };
 }
 
+/** The built-in rules, by identity: a plugin that re-exports one under its own name gets it as built in. */
+const BUILT_IN: ReadonlySet<Rule | undefined> = new Set(Object.values(BUILT_IN_RULES));
+
 /** The settings of each folder, with the work that repeats between folders done once. */
 class FolderContext {
-    private readonly config: ResolvedConfig;
     private readonly rules: Readonly<Record<string, Rule>>;
-    /** The configuration's overrides, compiled; `used` is set as folders match them. */
-    readonly overrides: CompiledOverride[];
-    private readonly index: OverrideIndex;
-    private readonly namingCache = new Map<string, Naming>();
+    /** The settings of each folder, shared by the folders the same overrides match. */
+    private readonly settings: FolderSettings;
     /** The options of each rule for each state it is in, over its defaults and frozen: shared, never changed. */
     private readonly optionsCache = new Map<string, WeakMap<RuleState, Readonly<Record<string, unknown>>>>();
     /** What `create` returned, for the rules that have it, made on the first folder where each is on. */
@@ -166,55 +178,44 @@ class FolderContext {
     private readonly tree: readonly FolderEntry[];
     private folders: Map<string, FolderEntry> | undefined;
     private paths: Map<string, string> | undefined;
+    /** Every file given, before include and exclude: what `inRepository` answers from. */
+    private readonly listed: readonly string[];
+    private present: Set<string> | undefined;
 
-    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>, tree: readonly FolderEntry[]) {
-        this.config = config;
+    constructor(
+        config: ResolvedConfig,
+        rules: Readonly<Record<string, Rule>>,
+        tree: readonly FolderEntry[],
+        listed: readonly string[] = [],
+    ) {
         this.rules = rules;
         this.tree = tree;
-        this.overrides = config.overrides.map(state => ({
-            state,
-            globs: state.folders.map(compileGlob),
-            withFiles: state.withFiles.map(compileGlob),
-            within: state.within.map(compileGlob),
-            used: false,
-        }));
-        this.index = new OverrideIndex(this.overrides);
+        this.listed = listed;
+        this.settings = new FolderSettings(config, name => BUILT_IN.has(rules[name]));
     }
 
-    settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): {
-        naming: NamingState;
-        rules: Record<string, RuleState>;
-        overrides: OverrideState[];
-    } {
-        let naming = this.config.naming;
-        const rules: Record<string, RuleState> = { ...this.config.rules };
-        const applied: OverrideState[] = [];
-        for (const override of this.index.candidatesFor(entry.path)) {
-            if (
-                override.globs.every(glob => !glob.test(entry.path)) ||
-                (override.within.length > 0 && override.within.every(glob => !glob.test(entry.path))) ||
-                (override.withFiles.length > 0 &&
-                    entry.files.every(file => override.withFiles.every(glob => !glob.test(file))))
-            ) {
-                continue;
-            }
-            override.used = true;
-            applied.push(override.state);
-            naming = mergeNaming(naming, override.state.naming);
-            for (const [name, setting] of Object.entries(override.state.rules)) {
-                rules[name] = applySetting(rules[name], setting);
-            }
-        }
-        return { naming, rules, overrides: applied };
+    /** The configuration's overrides, compiled; `used` is set as folders match them. */
+    get overrides(): readonly CompiledOverride[] {
+        return this.settings.overrides;
+    }
+
+    settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): Settings {
+        return this.settings.settingsFor(entry);
     }
 
     /**
      * The folder as a rule sees it, frozen: every rule of the folder gets the same one, so a rule that
-     * sorted `files` or pushed to `modules` would change what the next rule sees.
+     * sorted `files` or pushed to `modules` would change what the next rule sees. With `frozen` false
+     * the modules are left as they are made, for the folders where only built-in rules run: they
+     * change nothing they are given (the tests run each one on frozen views to keep it so), and
+     * freezing every module of every folder cost a tenth of a run.
      */
-    viewOf(entry: FolderEntry, state: NamingState): FolderView {
-        const naming = this.compileNaming(state);
+    viewOf(entry: FolderEntry, state: NamingState, frozen = true): FolderView {
+        const naming = this.settings.namingOf(state);
         const { modules, uncounted } = readFolder(entry.files, naming, entry.folders);
+        if (!frozen) {
+            return { ...entry, naming, modules, uncounted };
+        }
         for (const module of modules) {
             Object.freeze(module.files);
             Object.freeze(module.words);
@@ -259,7 +260,7 @@ class FolderContext {
                 : undefined;
         return {
             path: entry.path,
-            modules: this.viewOf(entry, naming).modules.length,
+            modules: this.viewOf(entry, naming, false).modules.length,
             files: entry.files.length,
             subfolders: entry.folders.length,
             limit: typeof max === 'number' ? max : null,
@@ -269,12 +270,11 @@ class FolderContext {
     /** Runs the rules on one folder; with `notes`, also collects what they chose not to report. */
     check(entry: FolderEntry, notes?: RuleNote[]): Finding[] {
         this.visited.set(entry.path, entry);
-        const { naming, rules } = this.settingsFor(entry);
-        const active = Object.entries(rules).filter(([, state]) => state.severity !== 'off');
+        const { naming, rules, active, onlyBuiltIn } = this.settingsFor(entry);
         if (active.length === 0) {
             return [];
         }
-        const view = this.viewOf(entry, naming);
+        const view = this.viewOf(entry, naming, !onlyBuiltIn);
         const settingsOf: RuleContext<object>['settingsOf'] = other => {
             const state = rules[other];
             const rule = this.rules[other];
@@ -313,6 +313,7 @@ class FolderContext {
                 report,
                 settingsOf,
                 existing: this.existing,
+                inRepository: this.inRepository,
                 ...(note && { note }),
             });
             const visitor = rule.create ? this.visitorOf(name, rule) : undefined;
@@ -398,6 +399,20 @@ class FolderContext {
         return this.paths.get(caseless(path));
     };
 
+    /**
+     * Whether a file or folder is in the repository, include and exclude aside: a `.meta` whose asset
+     * is excluded still has its asset. Built the first time a rule asks.
+     */
+    readonly inRepository = (path: string): boolean => {
+        if (!this.present) {
+            this.present = foldersOf(this.listed);
+            for (const file of this.listed) {
+                this.present.add(file);
+            }
+        }
+        return this.present.has(path);
+    };
+
     /** The tree as folding the mirrors reads it. */
     mirrorTree(): Parameters<typeof foldMirrors>[1] {
         return {
@@ -408,30 +423,6 @@ class FolderContext {
             viewOf: entry => this.viewOf(entry, this.settingsFor(entry).naming),
             existing: this.existing,
         };
-    }
-
-    private compileNaming(state: NamingState): Naming {
-        const id = JSON.stringify(state);
-        const cached = this.namingCache.get(id);
-        if (cached) {
-            return cached;
-        }
-        // Frozen: every folder with the same naming shares this object.
-        const naming: Naming = Object.freeze({
-            companions: Object.freeze(state.companions.map(pattern => new RegExp(pattern, 'u'))),
-            ignoreLeadingWords: new ReadOnlySet(state.ignoreLeadingWords),
-            groupNumericPrefixes: state.groupNumericPrefixes,
-            folderFiles: Object.freeze(state.folderFiles.map(glob => Object.freeze(compileGlob(glob)))),
-            folderCompanions: Object.freeze([...state.folderCompanions]),
-            folderCase: state.folderCase,
-            reservedWords: new ReadOnlySet(state.reservedWords),
-            keepInPlace: Object.freeze(state.keepInPlace.map(glob => Object.freeze(compileGlob(glob)))),
-            routes: state.routes,
-            groupFileStays: state.groupFileStays,
-            mirrors: Object.freeze(parseMirrors(state.mirrors)),
-        });
-        this.namingCache.set(id, naming);
-        return naming;
     }
 }
 

@@ -195,6 +195,9 @@ function pushSummary(
     if (lines.length > 0) {
         lines.push('');
     }
+    if (report.configChange) {
+        pushWrapped(lines, '', 0, say(safe(report.configChange.summary)), options.width);
+    }
     const suffix = ` (${details.join('; ')}).`;
     if (parts.length === 0) {
         const ok = symbols ? '✔' : 'OK';

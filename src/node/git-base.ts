@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process';
+import { basename, dirname } from 'node:path';
 
 import { normalisePath } from '../core/paths/tree.ts';
 import { markedByAttributes } from './files.ts';
@@ -76,9 +77,27 @@ export function readBase(root: string, ref: string, label = ref): BaseResult {
     }
     const mergeBase = git(root, ['merge-base', tip, 'HEAD'])?.trim();
     const commit = mergeBase === undefined || mergeBase === '' ? tip : mergeBase;
+    const files = filesAt(root, commit);
+    if (files === undefined) {
+        return { problem: `git could not list the files of "${ref}"` };
+    }
+    return {
+        label,
+        commit,
+        withoutMergeBase: mergeBase === undefined || mergeBase === '',
+        files,
+    };
+}
+
+/**
+ * The files a commit had under `root`, as `listFiles` gives them: blobs only (a submodule is another
+ * repository), without what its `.gitattributes` marks generated or vendored. `undefined` when git
+ * cannot list it.
+ */
+export function filesAt(root: string, commit: string): string[] | undefined {
     const listing = git(root, ['ls-tree', '-r', '-z', commit]);
     if (listing === undefined) {
-        return { problem: `git could not list the files of "${ref}"` };
+        return undefined;
     }
     const files: string[] = [];
     for (const record of listing.split('\0')) {
@@ -92,15 +111,38 @@ export function readBase(root: string, ref: string, label = ref): BaseResult {
             files.push(path);
         }
     }
-    // The base's own list is complete: without a .gitattributes in it, nothing is marked, and git need not be asked.
+    // The commit's own list is complete: without a .gitattributes in it, nothing is marked, and git need not be asked.
     const hasAttributes = files.some(path => path === '.gitattributes' || path.endsWith('/.gitattributes'));
     const marked = (hasAttributes ? markedByAttributes(root, files) : undefined) ?? new Set<string>();
-    return {
-        label,
-        commit,
-        withoutMergeBase: mergeBase === undefined || mergeBase === '',
-        files: files.filter(path => !marked.has(path)),
-    };
+    return marked.size === 0 ? files : files.filter(path => !marked.has(path));
+}
+
+/** One commit of the first-parent history: its hash and its committer date (ISO 8601). */
+export interface LoggedCommit {
+    readonly commit: string;
+    readonly date: string;
+}
+
+/**
+ * The commits of `ref` along its first parents, newest first: the history of the branch itself, one
+ * commit per merge, not every commit of every merged branch. `undefined` when git cannot read it.
+ */
+export function firstParentLog(root: string, ref = 'HEAD'): LoggedCommit[] | undefined {
+    if (ref.startsWith('-')) {
+        return undefined;
+    }
+    const log = git(root, ['log', '--first-parent', '--format=%H %cI', ref, '--']);
+    if (log === undefined) {
+        return undefined;
+    }
+    return log
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line !== '')
+        .map(line => {
+            const space = line.indexOf(' ');
+            return { commit: line.slice(0, space), date: line.slice(space + 1) };
+        });
 }
 
 function git(root: string, args: readonly string[]): string | undefined {
@@ -113,4 +155,23 @@ function git(root: string, args: readonly string[]): string | undefined {
     } catch {
         return undefined;
     }
+}
+
+/**
+ * The text of a file as it was at `ref` (`git show <ref>:./<name>`, from the file's folder), or why it
+ * cannot be read: the ref is unknown, or the file did not exist there.
+ */
+export function textAt(path: string, ref: string): { readonly text: string } | { readonly problem: string } {
+    if (ref.startsWith('-')) {
+        return { problem: `"${ref}" is not a ref` };
+    }
+    const dir = dirname(path);
+    const tip = git(dir, ['rev-parse', '--verify', '--quiet', `${ref}${PEEL_TO_COMMIT}`])?.trim();
+    if (tip === undefined || tip === '') {
+        return {
+            problem: `git does not know "${ref}". Fetch it first: git fetch --depth=1 origin <branch>:refs/remotes/origin/<branch>`,
+        };
+    }
+    const text = git(dir, ['show', `${tip}:./${basename(path)}`]);
+    return text === undefined ? { problem: `${basename(path)} did not exist on ${ref}` } : { text };
 }

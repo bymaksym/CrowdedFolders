@@ -56,6 +56,9 @@ The two rules that matter, at limits measured on real repositories: at most 20 m
 - **`redundant-prefix`:** `off`
 - **`single-file-folders`:** `off`
 - **`case-collision`:** `off`
+- **`scattered-feature`:** `off`
+- **`orphan-companions`:** `off`
+- **`type-folders`:** `off`
 - **Left out:** `node_modules`, `/vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `**/fastlane/metadata`, `migrations`, `**/db/migrate`, `**/alembic/versions`, `**/db/migration`, `{V,U}[0-9]*__*`, `R__*`, `*.{up,down}.sql`, `[0-9][0-9][0-9][0-9][0-9][0-9]*[_-]*.{sql,ts,js,mjs,cjs,php,rb,py,cs,exs}`, `__generated__`, `*.generated.*`, `/generated`, `/gen`, `**/src/generated`, `**/src/gen`, `dist`, `coverage`, `__pycache__`, `.git`
 - **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/[lL]ocali[sz]ation`, `**/[lL]ocali[sz]ation/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
 - **In `**/scripts`, `**/scripts/**`, `**/tooling`, `**/tooling/**`, `**/bin`, `**/bin/**`:** . Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.
@@ -440,11 +443,12 @@ Sources:
 
 ## unity
 
-Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here.
+Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.
 
 - **Extends:** [dotnet](#dotnet)
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Unity's guide splits a project by asset type and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here.","hintFor":["!*.{cs,fs,vb}"]}`
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
+- **`orphan-companions`:** `error`
 - **Companions:** `_?\d+$`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/ProjectSettings`, `/Packages/*.json`, `Assets/Plugins`, `Assets/TextMesh Pro`, `Assets/Samples`, `Assets/ThirdParty`, `*~`
 - **In `**/Scripts`, `**/Scripts/**`:** . A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
@@ -459,14 +463,14 @@ Sources:
 
 ## unreal
 
-Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp.
+Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp. In Content/ a folder named Assets, Meshes, Textures or Materials is a warning (type-folders, guide rule 2.6); Animations, Audio and MaterialLibrary are folders the guide itself names (2.7, 2.8).
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `warn` `{"max":50,"count":"modules"}`
 - **`prefix-groups`:** `warn` `{"min":15,"dropPrefix":false,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\"","hintFor":["*.{uasset,umap}"]}`
 - **Leading words skipped:** `u`, `i`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `__ExternalActors__`, `__ExternalObjects__`, `.vs`
-- **In `**/Content`, `**/Content/**`:** . Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).
+- **In `**/Content`, `**/Content/**`:** `type-folders` `warn` `{"hint":"Allar 2.6.2: \"Creating a folder named Meshes, Textures, or Materials is redundant.\""}`. Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).
 - **In `**/Source`, `**/Source/**`:** `max-files` `error` `{"max":20,"count":"modules"}`, `prefix-groups` `warn` `{"min":5,"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.","hintFor":["*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}"]}`. The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).
 
 Sources:
@@ -477,9 +481,11 @@ Sources:
 
 ## godot
 
-Godot: a scene and its script are one (player.tscn, player.gd), and so are the .import and .uid files next to an asset. Godot's guide asks to keep resources close to the scenes that use them — folders by feature — so numbered frames (run_01.png … run_24.png) are one animation, not 24 modules. .godot and addons/ (third-party resources, in the guide's words) are left out; `crowded-folders init` lists the addons it finds and writes one exclusion for each, so that your own plugins can be checked by deleting their line.
+Godot: a scene and its script are one (player.tscn, player.gd), and so are the .import and .uid files next to an asset. Godot's guide asks to keep resources close to the scenes that use them — folders by feature — so numbered frames (run_01.png … run_24.png) are one animation, not 24 modules. .godot and addons/ (third-party resources, in the guide's words) are left out; `crowded-folders init` lists the addons it finds and writes one exclusion for each, so that your own plugins can be checked by deleting their line. An .import or .uid file without its asset is an error (orphan-companions), and a folder named textures/, materials/ or meshes/ a warning (type-folders): the guide groups assets by what uses them and names no type folder, so this is read from it, not quoted.
 
 - **Extends:** [recommended](#recommended)
+- **`orphan-companions`:** `error`
+- **`type-folders`:** `warn` `{"names":["!assets"],"hint":"Godot's guide: 'group assets as close to scenes as possible'."}`
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Godot's guide groups assets \"as close to scenes as possible\" and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here."}`
 - **Companions:** `_\d+$`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `.godot`, `/addons`
@@ -489,6 +495,7 @@ Sources:
 - [Godot: project organization](https://docs.godotengine.org/en/stable/tutorials/best_practices/project_organization.html)
 - [Allar's UE5 style guide, rule 2.7: the number 15 is borrowed from it, Godot's guide gives none](https://github.com/Allar/ue5-style-guide)
 - [Godot 4.4: .uid files](https://godotengine.org/article/uid-changes-coming-to-godot-4-4/)
+- [Godot: import process, "Make sure to commit these files to your version control system, as these files contain important metadata"](https://docs.godotengine.org/en/stable/tutorials/assets_pipeline/import_process.html)
 
 ## terraform
 

@@ -126,3 +126,38 @@ Two files or folders of one folder whose names differ only in case or in Unicode
 [More about `case-collision`](rules/case-collision.md)
 
 No options.
+
+### `scattered-feature`
+
+A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.
+
+[More about `scattered-feature`](rules/scattered-feature.md)
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `layers` | string[] | `["controller","service","repository","repo","dao","dto","model","entity","mapper"]` | Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`. |
+| `min` | integer | `3` | In how many layer folders of one folder a word has to start a name to be reported. |
+| `ignore` | string[] | `[]` | Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`. |
+| `hint` | string | `""` | Added to the message: what a feature folder is in this ecosystem. |
+
+### `orphan-companions`
+
+A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.
+
+[More about `orphan-companions`](rules/orphan-companions.md)
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `suffixes` | string[] | `[".meta",".import",".uid"]` | The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. "!.uid" takes one out. |
+| `emptyFolders` | boolean | `false` | Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's. |
+
+### `type-folders`
+
+A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.
+
+[More about `type-folders`](rules/type-folders.md)
+
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `names` | string[] | `["assets","meshes","textures","materials"]` | Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`. |
+| `hint` | string | `""` | Added to the message: the guide's words, where they come from. |

@@ -152,3 +152,69 @@ export function compareWithBase(
     }
     return { kept, known };
 }
+
+/** A problem as a base and a run both name it: folder, rule and key. */
+export function findingId(finding: Pick<Finding, 'folder' | 'key' | 'rule'>): string {
+    return `${finding.folder}\0${finding.rule}\0${finding.key ?? ''}`;
+}
+
+/** A problem of the base that is smaller now, or gone. */
+export interface Improvement {
+    readonly rule: string;
+    /** As this run names it: a renamed folder under its new name. */
+    readonly folder: string;
+    readonly key: string | undefined;
+    readonly before: number;
+    /** `null` when it is gone. */
+    readonly after: number | null;
+}
+
+/**
+ * What a change did to the problems, for a pull request comment: what each problem of this run
+ * measured on the base (by `findingId`, so that "new" and "grew" can be told apart), and what
+ * improved. `findings` are the run's before suppressions, so that a suppressed problem does not look
+ * fixed; `inScope` keeps the base's to the folders the run judged.
+ */
+export function changeAgainstBase(
+    findings: readonly Finding[],
+    base: readonly Finding[],
+    options: {
+        readonly label: string;
+        readonly renamed?: ReadonlyMap<string, string>;
+        readonly inScope?: (folder: string) => boolean;
+    },
+): { readonly label: string; readonly before: Readonly<Record<string, number>>; readonly improved: Improvement[] } {
+    const before: Record<string, number> = {};
+    const named = new Map<string, Finding>();
+    for (const finding of base) {
+        if (finding.rule.startsWith('config/')) {
+            continue;
+        }
+        const folder = options.renamed?.get(finding.folder) ?? finding.folder;
+        if (options.inScope && !options.inScope(folder)) {
+            continue;
+        }
+        const id = findingId({ ...finding, folder });
+        before[id] = Math.max(before[id] ?? 0, finding.measured);
+        named.set(id, { ...finding, folder });
+    }
+    const now = new Map<string, number>();
+    for (const finding of findings) {
+        now.set(findingId(finding), Math.max(now.get(findingId(finding)) ?? 0, finding.measured));
+    }
+    const improved: Improvement[] = [];
+    for (const [id, finding] of named) {
+        const after = now.get(id);
+        const was = before[id] ?? 0;
+        if (after === undefined || after < was) {
+            improved.push({
+                rule: finding.rule,
+                folder: finding.folder,
+                key: finding.key,
+                before: was,
+                after: after ?? null,
+            });
+        }
+    }
+    return { label: options.label, before, improved };
+}

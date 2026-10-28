@@ -6,7 +6,7 @@ const NUMBERED = String.raw`_?\d+$`;
 
 export const unity: Preset = {
     description:
-        'Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here.',
+        'Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.',
     sources: [
         {
             title: 'Unity manual: asset metadata (.meta files)',
@@ -64,6 +64,9 @@ export const unity: Preset = {
                 },
             ],
             'max-files': ['error', { max: 30, count: 'modules' }],
+            // "Meta files … must stay with the asset file they relate to"; "if an asset loses its .meta
+            // file, any reference to that asset is broken" (Unity manual, asset metadata).
+            'orphan-companions': 'error',
         },
     },
 };

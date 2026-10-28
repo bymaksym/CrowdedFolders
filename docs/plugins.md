@@ -85,6 +85,10 @@ the file or folder at a path as the tree writes it, compared without case: a mov
 `Text.ts` with `text.ts`, which Windows and macOS take for the same file. `folder.naming` also
 carries what decides a destination: `folderCase`, `reservedWords`, `keepInPlace`, `routes`.
 
+`inRepository(path)` says whether a file or folder is in the repository at all, whether or not
+`include` and `exclude` keep it: Unity's `Plugins.meta` still has its folder when `Plugins/` is left out
+of the check ([`orphan-companions`](rules/orphan-companions.md) asks it).
+
 Helpers exported for rules: `splitWords`, `stemOf`, `groupKeyOf`, `modulesOf`.
 
 **A rule must be pure:** no file reads, no network, no state between calls. It sees paths only, the

@@ -163,6 +163,10 @@ describe('explain --prompt', () => {
     it('is a usage error on a command that has no prompt', async () => {
         const ran = await cli(repository({ 'a.ts': '' }), ['rules', '--prompt']);
         assert.equal(ran.code, 2);
-        assert.match(ran.err, /--prompt does not apply to rules; it applies to check, explain/u);
+        assert.match(ran.err, /--prompt does not apply to rules; it applies to explain$/mu);
+        // Nor on check, which would have printed the report as if it had not been given.
+        const check = await cli(repository({ 'a.ts': '' }), ['--prompt']);
+        assert.equal(check.code, 2);
+        assert.match(check.err, /--prompt does not apply to check; it applies to explain/u);
     });
 });

@@ -8,6 +8,7 @@ import { type Args, parseCommandLine, UsageError } from './args.ts';
 import { initAgents } from './commands/agents.ts';
 import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
+import { history } from './commands/history.ts';
 import { hook } from './commands/hook.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
@@ -68,11 +69,14 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             case 'overrides': {
                 return overrides(args, io, session);
             }
+            case 'history': {
+                return history(args, io, session);
+            }
             case 'print-config': {
                 return await printConfig(args, io, session);
             }
             default: {
-                return check(args, io, session);
+                return await check(args, io, session);
             }
         }
     } catch (error_) {

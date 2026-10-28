@@ -2,7 +2,7 @@ import { parseArgs } from 'node:util';
 
 import { closest } from '../core/paths/suggest.ts';
 import { joinNegativeOne, maxWarningsOf, refuseAgentMisuse, refuseFolder, wholeNumber } from './args-values.ts';
-import { takes } from './command-options.ts';
+import { optionNotTaken } from './command-options.ts';
 import { HELP } from './help.ts';
 import { UsageError } from './usage-error.ts';
 
@@ -16,6 +16,7 @@ export const COMMANDS = [
     'rules',
     'print-config',
     'overrides',
+    'history',
 ] as const;
 export type Command = (typeof COMMANDS)[number];
 
@@ -107,6 +108,10 @@ export interface Args {
     readonly changed: boolean;
     /** `--new-since <ref>`: fail only on problems that are new or grew since `ref`. */
     readonly newSince: string | undefined;
+    /** `history --samples <n>`: how many commits to measure. */
+    readonly samples: number | undefined;
+    /** `--compare-config <ref>`: also say what the configuration changed since `ref`. */
+    readonly compareConfig: string | undefined;
     readonly force: boolean;
     /** `where --fail-on worse`: exit 1 when a file would create or worsen a problem. */
     readonly failOn: 'worse' | undefined;
@@ -168,6 +173,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 since: { type: 'string' },
                 changed: { type: 'boolean' },
                 'new-since': { type: 'string' },
+                samples: { type: 'string' },
+                'compare-config': { type: 'string' },
                 force: { type: 'boolean' },
                 'fail-on': { type: 'string' },
                 prompt: { type: 'boolean' },
@@ -188,7 +195,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
     const command: Command = isCommand ? (first as Command) : 'check';
     const paths = isCommand ? rest : positionals;
     if (!values.help && !values.version) {
-        refuseOptionsOfOtherCommands(command, tokens);
+        const notTaken = optionNotTaken(command, tokens, COMMANDS);
+        if (notTaken !== undefined) {
+            throw new UsageError(notTaken);
+        }
     }
 
     const movesScript = moveScriptOf(values.moves);
@@ -237,6 +247,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
         ['--since', values.since],
         ['--new-since', values['new-since']],
         ['--base', values.base],
+        ['--compare-config', values['compare-config']],
     ] as const) {
         if (ref?.trim() === '') {
             throw new UsageError(`${flag} needs a ref: ${flag} origin/main`);
@@ -253,6 +264,14 @@ export function parseCommandLine(argv: readonly string[]): Args {
     refuseAgentMisuse({ command, paths, values, outputs });
     if ((command === 'presets' || command === 'rules') && paths.length > 1) {
         throw new UsageError(`${command} takes one name to filter by: crowded-folders ${command} ${paths[0] ?? ''}`);
+    }
+    if (command === 'history' && paths.length > 1) {
+        throw new UsageError(
+            'history takes one folder, or none for the folders that grew most: crowded-folders history src/cli',
+        );
+    }
+    if (command === 'history' && values.format?.some(value => !['text', 'json'].includes(value))) {
+        throw new UsageError('history prints text or json: --format json');
     }
     if (command === 'overrides' && paths.length > 0) {
         throw new UsageError('overrides takes no paths');
@@ -305,6 +324,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
         since: values.since,
         changed: values.changed ?? false,
         newSince: values['new-since'],
+        samples: wholeNumber('--samples', values.samples, 2),
+        compareConfig: values['compare-config'],
         force: values.force ?? false,
         failOn: values['fail-on'] === 'worse' ? 'worse' : undefined,
         prompt: values.prompt ?? false,
@@ -401,19 +422,6 @@ function refuseRepeated(tokens: Tokens): void {
             throw new UsageError(`--${token.name} is given more than once, and it takes one value`);
         }
         seen.add(token.name);
-    }
-}
-
-/** An option the command does not take is not ignored: `explain -f json` answered in text, `rules --suppress-all` did nothing. */
-function refuseOptionsOfOtherCommands(command: Command, tokens: Tokens): void {
-    for (const token of tokens) {
-        if (token.kind !== 'option' || takes(command, token.name)) {
-            continue;
-        }
-        const where = COMMANDS.filter(other => takes(other, token.name));
-        throw new UsageError(
-            `--${token.name} does not apply to ${command}${where.length === 0 ? '' : `; it applies to ${where.join(', ')}`}`,
-        );
     }
 }
 

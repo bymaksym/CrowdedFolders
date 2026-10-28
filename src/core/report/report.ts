@@ -1,6 +1,8 @@
 import type { Finding, FolderStat } from '../engine.ts';
 
 export type { FolderStat } from '../engine.ts';
+import type { Improvement } from '../changes.ts';
+import type { ConfigChange } from '../config/compare.ts';
 import type { StaleSuppression } from '../suppressions.ts';
 
 /** A finding with what the report adds to it: the project it belongs to and who owns it. */
@@ -75,6 +77,18 @@ export interface Report {
      * text names one of the paths it moves, which the move would break. Found outside the core.
      */
     readonly references?: Readonly<Record<string, readonly string[]>>;
+    /**
+     * With a base known and a Markdown report asked for: what each problem measured on the base (by
+     * `findingId`), and the base's problems that are smaller now or gone. The pull-request comment's
+     * "new / grew / improved".
+     */
+    readonly change?: {
+        readonly label: string;
+        readonly before: Readonly<Record<string, number>>;
+        readonly improved: readonly Improvement[];
+    };
+    /** With `--compare-config`: what the configuration changed since a ref. */
+    readonly configChange?: ConfigChange;
     /** With `--new-since`: the base, and how many problems it already had (they do not fail). */
     readonly knownOnBase?: { readonly label: string; readonly count: number };
     /** The folders nearest to their `max-files` limit, nearest first, for a clean run to show. */

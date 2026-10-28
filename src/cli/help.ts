@@ -17,6 +17,7 @@ Usage
   crowded-folders rules [name]            list the rules and their options
   crowded-folders print-config [folder]   print the configuration in effect
   crowded-folders overrides               list every override and what it covers
+  crowded-folders history [folder]        how folders grew along the git history
   crowded-folders <command> --help        one command's options, and an example
 
 Where it looks (paths given to options start from the current folder)
@@ -94,6 +95,10 @@ Adopting it in a repository that already has problems
                            package)
       --new-since <ref>    fail only on problems that are new or grew since
                            <ref> (git): adopting it without a suppressions file
+      --compare-config <ref>
+                           also say what the configuration changed since <ref>
+                           (git show <ref>:<file>; JSON configurations only):
+                           the limits it raised, the problems it silences
 
 Only what a change touched
       --since <ref>        check only the folders the change since <ref>
@@ -130,6 +135,7 @@ Other
                            write over a file git tracks, or over the
                            configuration; with CI set, let --suppress-all and
                            --prune-suppressions write the suppressions file
+      --samples <n>        history: how many commits to measure (default 12)
   -h, --help               this help
   -v, --version            the version
 
@@ -221,4 +227,11 @@ a quarter of the folders is pointed out: it is the rule of the repository, not
 an exception. It reports and does not fail (exit 0).
   -c, --config <file>  --root <dir>  --project <dir>  -f, --format text|json
 Example: crowded-folders overrides`,
+    history: `crowded-folders history [folder] [options]
+
+How a folder grew: its modules at a few commits along the first parents of
+HEAD, as a line of bars and "went from 8 to 31 modules in six months". Without
+a folder, the ten that grew most. Names only (git ls-tree), no checkout.
+  --samples <n>  commits to measure (default 12)  -f, --format text|json
+Example: crowded-folders history src/cli`,
 } as const;
