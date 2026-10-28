@@ -113,7 +113,6 @@ describe('what the presets change', () => {
         const files = many('Services', [
             'IUserService.cs',
             'UserService.cs',
-            'UserServiceTests.cs',
             'UserStore.cs',
             'IUserStore.cs',
             'UserView.cs',

@@ -2,7 +2,7 @@ import type { Preset } from '../../config/types.ts';
 
 export const python: Preset = {
     description:
-        'Recommended, read the way pytest names tests: test_parser.py and parser_test.py are the module parser. tests/ mirrors the package, so it is not asked to group on its own — split the package and the tests follow.',
+        'Recommended, read the way pytest names tests: test_parser.py and parser_test.py are the module parser, and __init__.py, which is the package itself, does not count. tests/ mirrors the package, so it is not asked to group on its own — split the package and the tests follow.',
     sources: [
         { title: 'PEP 8: package and module names', url: 'https://peps.python.org/pep-0008/' },
         {
@@ -24,7 +24,8 @@ export const python: Preset = {
             '.ruff_cache',
             '*.egg-info',
         ],
-        naming: { companions: ['^test_', '_test$', '_tests$'] },
+        // __init__.py makes the folder a package and holds what it exports: it is the folder, not one more module in it.
+        naming: { companions: ['^test_', '_test$', '_tests$'], folderFiles: ['__init__.py', '__init__.pyi'] },
         overrides: [
             {
                 folders: ['tests', 'tests/**', '**/tests', '**/tests/**'],

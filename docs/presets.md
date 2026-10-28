@@ -51,6 +51,7 @@ The two rules that matter, at limits measured on real repositories: at most 20 m
 - **`max-folders`:** `off`
 - **`redundant-prefix`:** `off`
 - **`single-file-folders`:** `off`
+- **`case-collision`:** `off`
 - **Left out:** `node_modules`, `vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `migrations`, `migrate`, `**/alembic/versions`, `**/db/migration`, `dist`, `coverage`, `__pycache__`, `.git`
 - **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/Localization`, `**/Localization/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
 - **In `.`:** `max-files` `error` `{"max":40}`. The root holds what tools look for there on their own: manifests, lockfiles, licences, configs.
@@ -62,7 +63,7 @@ Sources:
 
 ## strict
 
-Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, and no folder holding a single file. An opinion, not a measurement: use it when you want the tree tidier than most.
+Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. An opinion, not a measurement: use it when you want the tree tidier than most.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":12,"count":"modules"}`
@@ -70,6 +71,7 @@ Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a pr
 - **`max-folders`:** `error` `{"max":20}`
 - **`redundant-prefix`:** `error`
 - **`single-file-folders`:** `warn`
+- **`case-collision`:** `error`
 
 Sources:
 
@@ -116,7 +118,7 @@ Sources:
 
 ## react-native
 
-React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository.
+React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count.
 
 - **Extends:** [react](#react)
 - **Left out:** `/ios`, `/android`, `.expo`
@@ -124,6 +126,7 @@ React, plus the native projects: ios/ and android/ next to the app are the Xcode
 Sources:
 
 - [Expo: continuous native generation — prebuild "creates the android and ios directories"](https://docs.expo.dev/workflow/continuous-native-generation/)
+- [Expo Router: notation (_layout, +html, +not-found, [param], (group))](https://docs.expo.dev/router/basics/notation/)
 
 ## vue
 
@@ -179,7 +182,7 @@ Sources:
 
 ## python
 
-Recommended, read the way pytest names tests: test_parser.py and parser_test.py are the module parser. tests/ mirrors the package, so it is not asked to group on its own — split the package and the tests follow.
+Recommended, read the way pytest names tests: test_parser.py and parser_test.py are the module parser, and __init__.py, which is the package itself, does not count. tests/ mirrors the package, so it is not asked to group on its own — split the package and the tests follow.
 
 - **Extends:** [recommended](#recommended)
 - **Companions:** `^test_`, `_test$`, `_tests$`
@@ -205,7 +208,7 @@ Sources:
 
 ## go
 
-Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo. Go's own guidance: "There is no 'one type, one file' convention"; net/http has 17 files and the go command 34.
+Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo, and does not count doc.go, the package comment. Go's own guidance: "There is no 'one type, one file' convention"; net/http has 17 files and the go command 34.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":30,"count":"modules","hint":"In Go a folder is a package: split off a part that has its own API, not just to shorten the list."}`
@@ -222,7 +225,7 @@ Sources:
 
 ## rust
 
-Recommended for Rust: render_json.rs and render_pr.rs become render.rs and render/json.rs, the module layout the Rust reference prefers. Cargo builds one target per file in src/bin, examples, benches and tests, so those stay flat.
+Recommended for Rust: render_json.rs and render_pr.rs become render.rs and render/json.rs, the module layout the Rust reference prefers. mod.rs, the module of the folder itself, does not count. Cargo builds one target per file in src/bin, examples, benches and tests, so those stay flat.
 
 - **Extends:** [recommended](#recommended)
 - **Left out:** `target`
@@ -235,13 +238,14 @@ Sources:
 
 ## java
 
-Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceTest and UserServiceIT are read as UserService. One top-level class per file makes folders larger than in TypeScript, hence 20.
+Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; package-info.java and module-info.java describe the package and do not count. One top-level class per file makes folders larger than in TypeScript, hence 20.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer."}`
 - **`prefix-groups`:** `error` `{"hint":"A folder is a package: they would be the package of that feature."}`
-- **Companions:** `(Test|Tests|IT|IntegrationTest|Spec)$`
+- **Companions:** `Impl$`
 - **Left out:** `target`, `build`, `.gradle`, `generated`, `generated-sources`
+- **In `**/src/test`, `**/src/test/**`, `**/src/*Test`, `**/src/*Test/**`:** . A test class is named after the class it tests (UserServiceTest, UserServiceIT), and only in test sources: elsewhere SpeedTest and AuditIT are names of their own.
 
 Sources:
 
@@ -264,14 +268,15 @@ Sources:
 
 ## dotnet
 
-C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an interface is not what it is about (IUserService belongs with UserService), and UserServiceTests is UserService. One type per file, hence 20.
+C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an interface is not what it is about (IUserService belongs with UserService), and in test projects UserServiceTests is UserService. One type per file, hence 20.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"In C# a folder is a namespace (IDE0130)."}`
 - **`prefix-groups`:** `error` `{"hint":"In C# a folder is a namespace (IDE0130)."}`
-- **Companions:** `^I(?=[A-Z])`, `(Tests|Test)$`
+- **Companions:** `^I(?=[A-Z])`
 - **Leading words skipped:** `i`
 - **Left out:** `bin`, `obj`, `Migrations`, `wwwroot/lib`, `Properties`, `.vs`
+- **In `**/*Tests`, `**/*Tests/**`, `**/*Test`, `**/*Test/**`, `**/tests`, `**/tests/**`:** . A test class is named after the class it tests (UserServiceTests), and only in test projects: elsewhere SpeedTest is a class of its own.
 
 Sources:
 
@@ -280,11 +285,12 @@ Sources:
 
 ## swift
 
-Swift and iOS: User+Codable.swift is an extension of User and belongs with it, and UserTests is User. Asset catalogs, localisation folders and Xcode bundles are left out.
+Swift and iOS: User+Codable.swift is an extension of User and belongs with it, and in test targets UserTests is User. Asset catalogs, localisation folders and Xcode bundles are left out.
 
 - **Extends:** [recommended](#recommended)
-- **Companions:** `\+.+$`, `(Tests|Test|Spec)$`
+- **Companions:** `\+.+$`
 - **Left out:** `*.xcassets`, `*.lproj`, `*.xcodeproj`, `*.xcworkspace`, `DerivedData`, `Pods`, `Carthage`, `.build`
+- **In `**/*Tests`, `**/*Tests/**`:** . A test case is named after the type it tests (UserTests), and only in test targets: elsewhere SpeedTest and ABTest are types of their own.
 
 Sources:
 
@@ -353,13 +359,14 @@ Sources:
 
 ## unity
 
-Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), numbered series such as Model1, Model2 are one asset family, and Library, Temp, Packages and third-party plugins are left out. C# reads as in the dotnet preset.
+Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, Packages and third-party plugins are left out. C# reads as in the dotnet preset.
 
 - **Extends:** [dotnet](#dotnet)
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar's rule 2.7, the one number game guides give: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
 - **Companions:** `_?\d+$`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/Packages`, `Assets/Plugins`, `*~`
+- **In `**/Scripts`, `**/Scripts/**`:** . A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
 
 Sources:
 
