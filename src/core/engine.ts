@@ -1,3 +1,4 @@
+import { foldersOf } from './changes.ts';
 import { mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
 import {
@@ -44,10 +45,11 @@ export function runEngine(input: EngineInput): EngineResult {
     // problem folded into its mirror is folded the same way as in a run over everything.
     const mirrors = parseMirrors(input.config.naming.mirrors);
     const reach = only && [...only, ...only.flatMap(path => counterpartsOf(path, mirrors))];
-    const all = selectFiles(inScope(filesOf(input.files), reach), input.config);
+    const listed = inScope(filesOf(input.files), reach);
+    const all = selectFiles(listed, input.config);
     const files = only ? inScope(all, only) : all;
     const tree = buildTree(all);
-    const context = new FolderContext(input.config, input.rules, tree);
+    const context = new FolderContext(input.config, input.rules, tree, listed);
 
     let findings: Finding[] = [];
     let folderCount = 0;
@@ -114,12 +116,13 @@ export function overrideCoverage(input: EngineInput): OverrideCoverage {
 
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
 export function explainFolder(input: EngineInput, path: string): FolderExplanation | undefined {
-    const tree = buildTree(selectFiles(inScope(filesOf(input.files), scopeOf([path])), input.config));
+    const listed = inScope(filesOf(input.files), scopeOf([path]));
+    const tree = buildTree(selectFiles(listed, input.config));
     const entry = tree.find(candidate => candidate.path === path);
     if (!entry) {
         return undefined;
     }
-    const context = new FolderContext(input.config, input.rules, tree);
+    const context = new FolderContext(input.config, input.rules, tree, listed);
     const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
@@ -162,10 +165,19 @@ class FolderContext {
     private readonly tree: readonly FolderEntry[];
     private folders: Map<string, FolderEntry> | undefined;
     private paths: Map<string, string> | undefined;
+    /** Every file given, before include and exclude: what `inRepository` answers from. */
+    private readonly listed: readonly string[];
+    private present: Set<string> | undefined;
 
-    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>, tree: readonly FolderEntry[]) {
+    constructor(
+        config: ResolvedConfig,
+        rules: Readonly<Record<string, Rule>>,
+        tree: readonly FolderEntry[],
+        listed: readonly string[] = [],
+    ) {
         this.rules = rules;
         this.tree = tree;
+        this.listed = listed;
         this.settings = new FolderSettings(config, name => BUILT_IN.has(rules[name]));
     }
 
@@ -288,6 +300,7 @@ class FolderContext {
                 report,
                 settingsOf,
                 existing: this.existing,
+                inRepository: this.inRepository,
                 ...(note && { note }),
             });
             const visitor = rule.create ? this.visitorOf(name, rule) : undefined;
@@ -371,6 +384,20 @@ class FolderContext {
             }
         }
         return this.paths.get(caseless(path));
+    };
+
+    /**
+     * Whether a file or folder is in the repository, include and exclude aside: a `.meta` whose asset
+     * is excluded still has its asset. Built the first time a rule asks.
+     */
+    readonly inRepository = (path: string): boolean => {
+        if (!this.present) {
+            this.present = foldersOf(this.listed);
+            for (const file of this.listed) {
+                this.present.add(file);
+            }
+        }
+        return this.present.has(path);
     };
 
     /** The tree as folding the mirrors reads it. */

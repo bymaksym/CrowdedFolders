@@ -103,6 +103,12 @@ export interface RuleContext<Options extends object> {
      * on it: on Windows and macOS `text.ts` overwrites `Text.ts`.
      */
     readonly existing?: (path: string) => string | undefined;
+    /**
+     * Whether a file or folder (relative to the root, as written) is in the repository, whether or
+     * not `include` and `exclude` keep it: Unity's `Plugins.meta` has its folder even when `Plugins/`
+     * is left out of the check.
+     */
+    readonly inRepository?: (path: string) => boolean;
 }
 
 /** What a rule did not report, and why. */

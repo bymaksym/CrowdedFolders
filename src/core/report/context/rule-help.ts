@@ -16,6 +16,12 @@ export const WHEN_IT_FIRES: Readonly<Record<string, string>> = {
         'A folder holds one file and no subfolders: a level of nesting with nothing to group. Move the file up, unless a convention needs the folder.',
     'case-collision':
         'Two files or folders of one folder have names that differ only in case or in Unicode normalisation (`Components/` and `components/`). Windows and macOS keep one of them: git cannot check both out there. Rename one, or join them.',
+    'scattered-feature':
+        'One word starts module names in at least `min` layer folders of one folder (`controller/RegistroController`, `service/RegistroService`, `repository/RegistroRepository`): a feature split by layer. Package by feature: move them into `registro/`; the moves are in the result, tests included where a mirror is configured.',
+    'orphan-companions':
+        "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import`) has no asset beside it: the asset was moved, renamed or deleted outside the editor, or never committed, and every reference to it is broken. Move the companion with its asset, or delete it if the asset is gone.",
+    'type-folders':
+        'A folder of a game project is named after a type of asset (`Textures/`, `Materials/`, `Meshes/`). Put each asset next to what uses it (`Rocks/` with its mesh, textures and materials); the editor filters by type.',
     'config/unused-override':
         'An override in the configuration matches no folder. Fix its globs, or remove it: an override that does nothing hides a mistake.',
     'config/expired-override':

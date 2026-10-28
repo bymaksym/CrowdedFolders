@@ -56,6 +56,9 @@ The two rules that matter, at limits measured on real repositories: at most 20 m
 - **`redundant-prefix`:** `off`
 - **`single-file-folders`:** `off`
 - **`case-collision`:** `off`
+- **`scattered-feature`:** `off`
+- **`orphan-companions`:** `off`
+- **`type-folders`:** `off`
 - **Left out:** `node_modules`, `/vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `**/fastlane/metadata`, `migrations`, `**/db/migrate`, `**/alembic/versions`, `**/db/migration`, `{V,U}[0-9]*__*`, `R__*`, `*.{up,down}.sql`, `[0-9][0-9][0-9][0-9][0-9][0-9]*[_-]*.{sql,ts,js,mjs,cjs,php,rb,py,cs,exs}`, `__generated__`, `*.generated.*`, `/generated`, `/gen`, `**/src/generated`, `**/src/gen`, `dist`, `coverage`, `__pycache__`, `.git`
 - **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/[lL]ocali[sz]ation`, `**/[lL]ocali[sz]ation/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
 - **In `**/scripts`, `**/scripts/**`, `**/tooling`, `**/tooling/**`, `**/bin`, `**/bin/**`:** . Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.

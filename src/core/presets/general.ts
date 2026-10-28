@@ -161,6 +161,14 @@ export const recommended: Preset = {
             // Off: a rule on by default would fail repositories that passed (a breaking change);
             // strict turns it on.
             'case-collision': 'off',
+            // Off, measured on the field trial (docs/field-trial.md): scattered-feature finds only the
+            // layering NestJS, Rails and Laravel ask for (immich 34, koel 8, mastodon 4, Java 0), and
+            // type-folders is about game engines, whose presets turn it on (elsewhere `assets/` and
+            // Angular's `material/` are names, not asset types). orphan-companions is for the files
+            // Unity and Godot write, and their presets turn it on.
+            'scattered-feature': 'off',
+            'orphan-companions': 'off',
+            'type-folders': 'off',
         },
         overrides: [
             {
