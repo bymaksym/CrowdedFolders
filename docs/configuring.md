@@ -96,6 +96,7 @@ so.
 ```
 
 - `folders` are globs matched against **folder** paths relative to the root (the root is `.`).
+- `withFiles` (optional) narrows the override to the folders that hold one of those files directly: `"folders": ["**"], "withFiles": ["package.json"]` is the root of every package, which is how `recommended` gives it the limit of the root of the repository.
 - `reason` is required, and is shown by `crowded-folders explain`. An override is a silence; a silence
   without a reason cannot be reviewed, and nobody knows a year later whether it still holds.
 - Overrides apply in order, after the global settings; several can match one folder.
