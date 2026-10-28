@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
@@ -100,5 +102,67 @@ describe('explain and the companions it applies', () => {
         );
         const alone = await cli(repository({ 'src/a.ts': '', 'src/b.ts': '' }), ['explain', 'src']);
         assert.match(alone.out, /joined by: +nothing/u);
+    });
+});
+
+describe('explain --prompt', () => {
+    const files = Object.fromEntries(
+        [
+            'render-json',
+            'render-text',
+            'render-pr',
+            'render-sarif',
+            'page-home',
+            'page-about',
+            'main',
+            'util',
+            'types',
+            'index',
+        ].flatMap(stem => [[`src/${stem}.ts`, ''] as const, [`src/${stem}.spec.ts`, ''] as const]),
+    );
+
+    it('prints the task: what is reported, the modules, the groups, the moves and the files to update', async () => {
+        const root = repository({
+            ...files,
+            'cli/run.ts': "import { renderJson } from '../src/render-json';\n",
+            'crowded-folders.config.json': JSON.stringify({ extends: ['recommended'] }),
+        });
+        const ran = await cli(root, ['explain', 'src', '--prompt']);
+        assert.equal(ran.code, 0, ran.err);
+        assert.match(ran.out, /^# Reorganise `src\/`\n/u);
+        assert.match(ran.out, /## What it reports\n- error prefix-groups: 4 modules start with "render"/u);
+        assert.match(ran.out, /^- render-json: render-json\.spec\.ts, render-json\.ts$/mu);
+        assert.match(
+            ran.out,
+            /^- `render-\*` \(4\): render-json, render-pr, render-sarif, render-text - a folder nobody made$/mu,
+        );
+        assert.match(ran.out, /Near-groups[^\n]*\n- `page-\*` \(2\): page-about, page-home/u);
+        assert.match(
+            ran.out,
+            /```sh\n# src: prefix-groups "render"\nmkdir -p src\/render\ngit mv src\/render-json\.spec\.ts src\/render\/json\.spec\.ts/u,
+        );
+        assert.match(ran.out, /## Files that name these paths\n[^\n]*\n- cli\/run\.ts\n/u);
+        assert.match(ran.out, /update every import/iu);
+        assert.match(ran.out, /Run the type check and the tests/u);
+        assert.equal(existsSync(join(root, 'src', 'render')), false, 'nothing is moved');
+    });
+
+    it('says so for a folder with no problem, and for one with no move to propose', async () => {
+        const root = repository({
+            ...files,
+            'crowded-folders.config.json': JSON.stringify({ rules: { 'max-files': ['error', { max: 5 }] } }),
+            'ok/a.ts': '',
+        });
+        const clean = await cli(root, ['explain', 'ok', '--prompt']);
+        assert.match(clean.out, /^# Nothing to reorganise in `ok\/`/u);
+        const drawer = await cli(root, ['explain', 'src', '--prompt']);
+        assert.match(drawer.out, /## Proposed moves\nThe tool proposes no move/u);
+        assert.doesNotMatch(drawer.out, /## Files that name these paths/u);
+    });
+
+    it('is a usage error on a command that has no prompt', async () => {
+        const ran = await cli(repository({ 'a.ts': '' }), ['rules', '--prompt']);
+        assert.equal(ran.code, 2);
+        assert.match(ran.err, /--prompt does not apply to rules; it applies to check, explain/u);
     });
 });

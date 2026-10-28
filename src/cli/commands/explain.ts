@@ -1,12 +1,14 @@
 import { explainFolder, type Finding } from '../../core/engine.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
-import { type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
+import { compareText, type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
 import { plural } from '../../core/plural.ts';
+import { reorganisationPrompt } from '../../core/prompt.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
 import type { Args } from '../args.ts';
 import { type Io, wantsSymbols } from '../io.ts';
+import { referencesOf } from '../report/build.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
 import { isEmptyOption, labelOf, patternOrigin, ruleOrigins, withOverrides } from './provenance.ts';
 
@@ -74,6 +76,32 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
             ? prefixOptions['words']
             : 1;
     const min = typeof prefixOptions?.['min'] === 'number' ? prefixOptions['min'] : 2;
+    if (args.prompt) {
+        const grouped = [...groupModules(view.modules, words, min, view.naming)].map(([key, members]) => ({
+            key,
+            modules: members.map(shownName),
+        }));
+        io.write(
+            say(
+                reorganisationPrompt({
+                    folder: view.path,
+                    files: view.files.length,
+                    subfolders: view.folders,
+                    modules: view.modules.map(module => ({ stem: module.stem, files: module.files })),
+                    groups: grouped.filter(group =>
+                        findings.some(finding => finding.rule === 'prefix-groups' && finding.key === group.key),
+                    ),
+                    nearGroups: grouped
+                        .filter(group => group.modules.length >= 2 && group.modules.length < min)
+                        .toSorted((a, b) => b.modules.length - a.modules.length || compareText(a.key, b.key)),
+                    min,
+                    findings,
+                    references: referencesOf(findings, session),
+                }),
+            ),
+        );
+        return 0;
+    }
     const groupOf = new Map<Module, string>();
     for (const [key, members] of groupModules(view.modules, words, min, view.naming)) {
         for (const module of members) {

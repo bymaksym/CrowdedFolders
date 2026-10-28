@@ -128,7 +128,7 @@ export function buildReport(input: BuildInput): Report {
  * For each finding that moves files, the files that name what it moves (`--moves`): read here, in
  * the command, because the core never reads a file's contents.
  */
-function referencesOf(findings: readonly Finding[], session: Session): Record<string, readonly string[]> {
+export function referencesOf(findings: readonly Finding[], session: Session): Record<string, readonly string[]> {
     const groups = new Map(
         findings
             .filter(finding => finding.moves.length > 0)
