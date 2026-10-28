@@ -1,9 +1,7 @@
 import { changeBetween, compareWithBase, foldersOf, type TreeChange } from '../../core/changes.ts';
 import { type Finding, runEngine, selectFiles } from '../../core/engine.ts';
 import { joinPath } from '../../core/paths/tree.ts';
-import { formatGithub, formatJson, formatMarkdown, formatSarif } from '../../core/report/machine.ts';
 import { exitCodeOf, isOverMaxWarnings, type Report, totalsOf } from '../../core/report/report.ts';
-import { formatText } from '../../core/report/text.ts';
 import {
     addSuppressions,
     applySuppressions,
@@ -15,37 +13,41 @@ import {
 } from '../../core/suppressions.ts';
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
-import { type Io, wantsColor, writeFileAtomic } from '../io.ts';
+import { emit } from '../emit.ts';
+import type { Io } from '../io.ts';
+import { buildReport, enrichFindings, wantsAnchors } from '../report-build.ts';
 import {
     foldersFromPaths,
     isCi,
     noticeIfOutside,
-    outputPathOf,
+    outputPathsOf,
     type Session,
     suppressionsPathOf,
     within,
 } from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
-import { TOOL } from '../tool.ts';
 
 /** The default command: checks the repository and prints the report. Returns the exit code. */
 export function check(args: Args, io: Io, session: Session): number {
     refuseWritesInCi(args, io);
-    // Before anything is written: a folder or a tracked file given to --output is refused first.
-    const outputPath = outputPathOf(args, session);
+    // Before anything is written: a folder or a tracked file given as a report's file is refused first.
+    const outputPaths = outputPathsOf(args, session);
     const config = session.loaded.config;
     const location = args.suppressionsLocation ?? config.suppressions;
+    const suppressionsPath = suppressionsPathOf(args, session, DEFAULT_SUPPRESSIONS);
     const store = new SuppressionStore(
         session.base,
-        location === PER_PROJECT ? PER_PROJECT : suppressionsPathOf(args, session, DEFAULT_SUPPRESSIONS),
+        location === PER_PROJECT ? PER_PROJECT : suppressionsPath,
         session.files,
     );
     // What the tool writes itself is not part of the repository's shape: after --suppress-all the
-    // count of files must not go up by one.
+    // count of files must not go up by one, nor after a run that wrote its reports in the repository.
     const own = new Set(store.ownFiles());
-    const output = outputPath === undefined ? undefined : within(session.base, outputPath);
-    if (output !== undefined) {
-        own.add(output);
+    for (const path of outputPaths) {
+        const inside = path === undefined ? undefined : within(session.base, path);
+        if (inside !== undefined) {
+            own.add(inside);
+        }
     }
     const files = own.size === 0 ? session.files : session.files.filter(path => !own.has(path));
 
@@ -56,7 +58,13 @@ export function check(args: Args, io: Io, session: Session): number {
     }
 
     const only = args.paths.length > 0 ? foldersFromPaths(args.paths, session, io.cwd) : session.only;
-    const result = runEngine({ files, config, rules: session.loaded.rules, ...(only && { only }) });
+    const result = runEngine({
+        files,
+        config,
+        rules: session.loaded.rules,
+        ...(only && { only }),
+        stats: args.stats,
+    });
 
     // The folders this run judges: those asked for (or the root's, when it sits inside the
     // configuration's folder), and of those, with --since, the ones the change reshaped.
@@ -116,43 +124,47 @@ export function check(args: Args, io: Io, session: Session): number {
         kept = compared.kept;
         knownOnBase = { label: newSince.label, count: compared.known.length };
     }
-    const hiddenWarnings = args.quiet ? kept.filter(finding => finding.severity === 'warn').length : 0;
-
-    const report: Report = {
-        tool: TOOL,
-        findings: args.quiet ? kept.filter(finding => finding.severity === 'error') : kept,
-        suppressedCount: outcome.suppressed.length,
-        staleSuppressions: args.passOnUnprunedSuppressions ? [] : outcome.stale,
-        folderCount: result.folderCount,
-        fileCount: result.fileCount,
-        rules: Object.entries(config.rules)
-            .filter(([, state]) => state.severity !== 'off')
-            .map(([id]) => ({
-                id,
-                description: session.loaded.rules[id]?.meta.description ?? '',
-                url: session.loaded.rules[id]?.meta.url,
-            })),
-        hiddenWarnings,
-        ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
-        ...(knownOnBase && { knownOnBase }),
-    };
-
-    const isColor = outputPath === undefined && wantsColor(args.color, io);
-    const rendered = render(report, args, isColor);
-    if (outputPath === undefined) {
-        io.write(rendered);
-    } else {
-        writeFileAtomic(outputPath, rendered);
-        noticeIfOutside(io, session, outputPath);
+    let reported = enrichFindings(kept, session, args);
+    if (args.owners.length > 0) {
+        // --owner runs the check for one team: the exit code follows what is left.
+        const wanted = new Set(args.owners.map(owner => owner.toLowerCase()));
+        reported = reported.filter(finding => finding.owners?.some(owner => wanted.has(owner.toLowerCase())));
     }
-    const summaryShown = args.format === 'text' && outputPath === undefined;
-    if (session.detected && summaryShown) {
+    const hiddenWarnings = args.quiet ? reported.filter(finding => finding.severity === 'warn').length : 0;
+
+    const annotationBase = wantsAnchors(args, session)
+        ? (anchorBase(args, io, session, own) ?? since?.base ?? newSince)
+        : undefined;
+    const report = buildReport({
+        args,
+        io,
+        session,
+        result,
+        findings: args.quiet ? reported.filter(finding => finding.severity === 'error') : reported,
+        suppressedCount: outcome.suppressed.length,
+        stale: args.passOnUnprunedSuppressions ? [] : outcome.stale,
+        suppressionsPath,
+        suppressionFile: store.locate,
+        hiddenWarnings,
+        ...(knownOnBase && { knownOnBase }),
+        ...(annotationBase && { addedFiles: addedSince(annotationBase, files) }),
+    });
+
+    // Each report goes to the file checked above, or to standard output.
+    const outputs = args.outputs.map((spec, index) => ({ ...spec, target: outputPaths[index] }));
+    const { textToStdout } = emit(report, { ...args, outputs }, io);
+    for (const path of outputPaths) {
+        if (path !== undefined) {
+            noticeIfOutside(io, session, path);
+        }
+    }
+    if (session.detected && textToStdout) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');
         io.error(
             `No configuration file: used the presets detected — ${presets}. \`crowded-folders init\` writes them down.\n`,
         );
     }
-    if (isOverMaxWarnings(report) && !summaryShown) {
+    if (isOverMaxWarnings(report) && !textToStdout) {
         const warnings = totalsOf(report.findings).warnings + hiddenWarnings;
         io.error(`${warnings} warnings, over --max-warnings ${args.maxWarnings ?? 0}.\n`);
     }
@@ -191,32 +203,19 @@ function changedSince(
     if (args.since !== undefined) {
         base = baseOrThrow(session, args.since, '--since', own);
     } else if (args.changed) {
-        const candidates = ciBaseOf(io.env);
-        if (candidates.length === 0) {
+        const found = ciBase(io, session, own);
+        if (found.candidates === 0) {
             io.error(
                 '--changed: no pull-request base in the environment (GITHUB_BASE_REF, CI_MERGE_REQUEST_TARGET_BRANCH_NAME, …), so everything is checked. Pass --since <ref> to name one.\n',
             );
             return undefined;
         }
-        const tried: string[] = [];
-        for (const candidate of candidates) {
-            for (const ref of candidate.refs) {
-                const found = readBase(session.root, ref);
-                if (!('problem' in found)) {
-                    base = asSessionFiles(found, session, own);
-                    break;
-                }
-                tried.push(`${ref} (${candidate.variable})`);
-            }
-            if (base) {
-                break;
-            }
-        }
-        if (!base) {
+        if (!found.base) {
             throw new UsageError(
-                `--changed: git knows none of ${tried.join(', ')}. Fetch the base first (git fetch --depth=1 origin <branch>:refs/remotes/origin/<branch>), or check out with fetch-depth: 0`,
+                `--changed: git knows none of ${found.tried.join(', ')}. Fetch the base first (git fetch --depth=1 origin <branch>:refs/remotes/origin/<branch>), or check out with fetch-depth: 0`,
             );
         }
+        base = found.base;
     }
     if (!base) {
         return undefined;
@@ -230,6 +229,51 @@ function changedSince(
         `${args.changed ? '--changed' : '--since'} ${base.label}: ${change.touched.size} folder${change.touched.size === 1 ? '' : 's'} reshaped (${change.added} file${change.added === 1 ? '' : 's'} added, ${change.removed} removed); suppressions of other folders are left alone.\n`,
     );
     return { base, change };
+}
+
+/** The first base the CI names that git knows, and what was tried. */
+function ciBase(
+    io: Io,
+    session: Session,
+    own: ReadonlySet<string>,
+): { readonly base: Base | undefined; readonly candidates: number; readonly tried: readonly string[] } {
+    const candidates = ciBaseOf(io.env);
+    const tried: string[] = [];
+    for (const candidate of candidates) {
+        for (const ref of candidate.refs) {
+            const found = readBase(session.root, ref);
+            if (!('problem' in found)) {
+                return { base: asSessionFiles(found, session, own), candidates: candidates.length, tried };
+            }
+            tried.push(`${ref} (${candidate.variable})`);
+        }
+    }
+    return { base: undefined, candidates: candidates.length, tried };
+}
+
+/**
+ * The base annotations are anchored against: `--base`, else (when no --since or --new-since names
+ * one) the pull request's, as `--changed` reads it. Only a nicer place for an annotation, so a base
+ * git does not know is said and skipped, never an error.
+ */
+function anchorBase(args: Args, io: Io, session: Session, own: ReadonlySet<string>): Base | undefined {
+    if (args.base !== undefined) {
+        const found = readBase(session.root, args.base);
+        if ('problem' in found) {
+            io.error(`--base ${args.base}: ${found.problem}; the annotations go on any file of each folder.\n`);
+            return undefined;
+        }
+        return asSessionFiles(found, session, own);
+    }
+    // --since and --new-since name their base: the caller uses it.
+    const named = args.since !== undefined || args.changed || args.newSince !== undefined;
+    return named ? undefined : ciBase(io, session, own).base;
+}
+
+/** The files of this run that the base did not have. */
+function addedSince(base: Base, files: readonly string[]): Set<string> {
+    const before = new Set(base.files);
+    return new Set(files.filter(path => !before.has(path)));
 }
 
 function baseOrThrow(session: Session, ref: string, flag: string, own: ReadonlySet<string>): Base {
@@ -259,25 +303,5 @@ function noteBase(flag: string, base: Base, io: Io): void {
         io.error(
             `${flag} ${base.label}: git found no merge base with HEAD (a shallow clone?), so this compares with the tip of ${base.label}. With fetch-depth: 0 it compares with where the branch started.\n`,
         );
-    }
-}
-
-function render(report: Report, args: Args, color: boolean): string {
-    switch (args.format) {
-        case 'json': {
-            return formatJson(report);
-        }
-        case 'sarif': {
-            return formatSarif(report);
-        }
-        case 'github': {
-            return formatGithub(report);
-        }
-        case 'markdown': {
-            return formatMarkdown(report);
-        }
-        default: {
-            return formatText(report, { color, moves: args.moves });
-        }
     }
 }

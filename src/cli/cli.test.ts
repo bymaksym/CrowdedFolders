@@ -552,6 +552,14 @@ describe('--output and the files it writes', () => {
         assert.match(config.err, /is the configuration/u);
         assert.equal((await cli(root, ['-o', 'src/other.ts', '--force'])).code, 1);
         assert.match(readFileSync(join(root, 'src/other.ts'), 'utf8'), /prefix-groups/u);
+
+        // The same for every report of a run with several: -f format=file is an --output too.
+        git(root, 'checkout', '--', 'src/other.ts');
+        const several = await cli(root, ['-f', 'text', '-f', 'json=src/other.ts']);
+        assert.equal(several.code, 2);
+        assert.match(several.err, /--format json=src\/other\.ts: git tracks .*other\.ts/u);
+        assert.equal(readFileSync(join(root, 'src/other.ts'), 'utf8'), 'code');
+        assert.equal((await cli(root, ['-f', 'sarif=out/'])).code, 2);
     });
 
     it('reads every path option from the current folder, and says when it writes outside the root', async () => {

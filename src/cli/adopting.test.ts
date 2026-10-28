@@ -234,6 +234,13 @@ describe('suppressions', () => {
             const report = readJson(root, 'report.json') as { summary: { filesChecked: number } };
             assert.equal(report.summary.filesChecked, before);
         }
+        // Nor any of the reports of a run that writes several.
+        const other = repository(renderers('cli'));
+        for (let time = 0; time < 2; time++) {
+            await cli(other, ['-f', 'json=a.json', '-f', 'sarif=b.sarif', '-f', 'markdown=c.md']);
+            const report = readJson(other, 'a.json') as { summary: { filesChecked: number } };
+            assert.equal(report.summary.filesChecked, before);
+        }
     });
 
     // Point 25 (Daniel): one file per package.
@@ -302,6 +309,19 @@ describe('comparing with a base', () => {
         assert.match(ran.err, /no merge base with HEAD \(a shallow clone\?\)/u);
         const text = await cli(clone, ['--new-since', 'origin/main']);
         assert.match(text.out, /1 problem already on origin\/main/u);
+
+        // The machine formats say it too, and the annotations go on the files the change added.
+        const machine = await cli(clone, ['--new-since', 'origin/main', '-f', 'json', '-f', 'sarif=out.sarif']);
+        assert.deepEqual((JSON.parse(machine.out) as { knownOnBase: unknown }).knownOnBase, {
+            label: 'origin/main',
+            count: 1,
+        });
+        const sarif = readJson(clone, 'out.sarif') as {
+            runs: { properties: { knownOnBase: unknown } }[];
+        };
+        assert.deepEqual(sarif.runs[0]?.properties.knownOnBase, { label: 'origin/main', count: 1 });
+        const github = await cli(clone, ['--new-since', 'origin/main', '-f', 'github']);
+        assert.match(github.out, /^::error file=fresh\/render-\w+\.ts,/mu);
 
         write(clone, { 'old/render-md.ts': '' });
         assert.match((await cli(clone, ['--new-since', 'origin/main'])).out, /4 on origin\/main; it has grown/u);

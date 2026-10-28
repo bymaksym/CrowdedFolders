@@ -166,29 +166,37 @@ export function foldersFromPaths(paths: readonly string[], session: Session, cwd
 }
 
 /**
- * Where `--output` writes, checked before anything runs: a folder is a usage error, not a crash, and
- * a file the repository keeps (the configuration, a tracked source file) is not replaced by a report
- * unless `--force` says so.
+ * Where each report is written (`-o`, `-f format=file`), checked before anything runs: a folder is a
+ * usage error, not a crash, and a file the repository keeps (the configuration, a tracked source
+ * file) is not replaced by a report unless `--force` says so. The same order as `args.outputs`, each
+ * absolute, `undefined` for standard output.
  */
-export function outputPathOf(args: Args, session: Session): string | undefined {
-    if (args.output === undefined) {
-        return undefined;
-    }
-    const path = resolve(session.cwd, args.output);
+export function outputPathsOf(args: Args, session: Session): (string | undefined)[] {
+    return args.outputs.map(({ format, target }) => {
+        if (target === undefined) {
+            return;
+        }
+        const option = args.output === target ? `--output ${target}` : `--format ${format}=${target}`;
+        return reportPathOf(option, target, args, session);
+    });
+}
+
+function reportPathOf(option: string, target: string, args: Args, session: Session): string {
+    const path = resolve(session.cwd, target);
     if (existsSync(path) && statSync(path).isDirectory()) {
         throw new UsageError(
-            `--output ${args.output}: ${path} is a folder; give the file to write in it, such as ${join(args.output, 'crowded-folders.sarif')}`,
+            `${option}: ${path} is a folder; give the file to write in it, such as ${join(target, 'crowded-folders.sarif')}`,
         );
     }
     if (!args.force && existsSync(path)) {
         if (session.configPath !== undefined && realPath(path) === realPath(session.configPath)) {
             throw new UsageError(
-                `--output ${args.output} is the configuration: the report would replace it. Pass --force to write it anyway.`,
+                `${option} is the configuration: the report would replace it. Pass --force to write it anyway.`,
             );
         }
         if (isTrackedByGit(path)) {
             throw new UsageError(
-                `--output ${args.output}: git tracks ${path}, and the report would replace it. Write it elsewhere, or pass --force.`,
+                `${option}: git tracks ${path}, and the report would replace it. Write it elsewhere, or pass --force.`,
             );
         }
     }

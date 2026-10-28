@@ -132,6 +132,11 @@ export class SuppressionStore {
         return written;
     }
 
+    /** The file a `Suppression.file` names: where it is, and the folder its keys start at. */
+    readonly locate = (label: string): { readonly absolute: string; readonly base: string } | undefined => {
+        return this.known.get(label);
+    };
+
     private fileAt(label: string): StoreFile {
         const existing = this.known.get(label);
         if (existing) {

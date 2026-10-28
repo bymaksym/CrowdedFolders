@@ -69,7 +69,9 @@ of errors (warnings are read for a week).
 
 **Decided:** `--since`, `--changed` and `--new-since` read the base's file names with `git ls-tree` and
 compare them with the run's own list; what was added or removed reshapes its folder, and files that left
-one folder for another with the same names mark it as moved.
+one folder for another with the same names mark it as moved. `--base`, which only chooses the file an
+annotation goes on, reads its ref the same way (and defaults to theirs, or to the pull request's): one
+way of reading a ref, not three.
 **Why:** the run's list already has the untracked files `git diff` leaves out, and the comparison is the
 same with `--stdin`; names are all the check reads, so the base needs no checkout and a clone of depth 1
 is enough. A run over some folders judges only their suppressions: it says nothing about the rest.

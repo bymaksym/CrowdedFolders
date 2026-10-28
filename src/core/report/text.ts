@@ -1,10 +1,18 @@
 import type { StaleSuppression } from '../suppressions.ts';
+import { type GroupBy, groupFindings, overview } from './context/group.ts';
+import { hyperlink, ruleFooter } from './context/links.ts';
+import { plainMessage, staleReason } from './describe.ts';
 import { exitCodeOf, isOverMaxWarnings, plural, type Report, totalsOf } from './report.ts';
+import { safe } from './sanitize.ts';
 
 export interface TextOptions {
     readonly color: boolean;
     /** Print the suggested moves under each finding. */
     readonly moves: boolean;
+    /** Make the rule names links (OSC 8), for a terminal; without it a footer lists the URLs. */
+    readonly hyperlinks?: boolean;
+    /** How the findings are grouped; default: by folder. */
+    readonly groupBy?: GroupBy;
 }
 
 const CODES = {
@@ -25,26 +33,46 @@ export function formatText(report: Report, options: TextOptions): string {
     const lines: string[] = [];
     const ruleWidth = Math.max(0, ...report.findings.map(finding => finding.rule.length));
 
-    let folder: string | undefined;
-    for (const finding of report.findings) {
-        if (finding.folder !== folder) {
-            if (folder !== undefined) {
-                lines.push('');
-            }
-            folder = finding.folder;
-            lines.push(paint('bold', folder === '.' ? '. (the root)' : `${folder}/`));
+    const grouping = options.groupBy ?? 'folder';
+    const groups = groupFindings(report.findings, grouping);
+    if (grouping !== 'folder') {
+        lines.push(
+            ...overview(groups, grouping === 'project' ? 'projects' : 'owners').map(line => paint('dim', line)),
+            '',
+        );
+    }
+    const urls = new Map(report.findings.map(finding => [finding.rule, finding.url] as const));
+    for (const [index, group] of groups.entries()) {
+        if (index > 0) {
+            lines.push('');
         }
-        const mark = finding.severity === 'error' ? paint('red', '✖ error') : paint('yellow', '⚠ warn ');
-        lines.push(`  ${mark}  ${paint('dim', finding.rule.padEnd(ruleWidth))}  ${finding.message}`);
-        if (options.moves && finding.moves.length > 0) {
-            for (const move of finding.moves) {
-                lines.push(`           ${paint('dim', `git mv ${quote(move.from)} ${quote(move.to)}`)}`);
+        lines.push(paint('bold', safe(group.title)));
+        for (const finding of group.findings) {
+            const mark = finding.severity === 'error' ? paint('red', '✖ error') : paint('yellow', '⚠ warn ');
+            const url = urls.get(finding.rule);
+            const name = finding.rule.padEnd(ruleWidth);
+            const rule = options.hyperlinks && url !== undefined ? hyperlink(name, url) : name;
+            const where =
+                grouping === 'folder' ? '' : `${safe(finding.folder === '.' ? 'the root' : finding.folder)}: `;
+            lines.push(`  ${mark}  ${paint('dim', rule)}  ${where}${safe(plainMessage(report, finding))}`);
+            if (options.moves && finding.moves.length > 0) {
+                for (const move of finding.moves) {
+                    lines.push(
+                        `           ${paint('dim', `git mv ${quote(safe(move.from))} ${quote(safe(move.to))}`)}`,
+                    );
+                }
             }
         }
     }
 
     pushStale(lines, report.staleSuppressions, paint);
     pushSummary(lines, report, options, paint);
+    if (!options.hyperlinks) {
+        const footer = ruleFooter(report.findings);
+        if (footer.length > 0) {
+            lines.push('', ...footer.map((line, index) => paint(index === 0 ? 'bold' : 'dim', line)));
+        }
+    }
     return `${lines.join('\n')}\n`;
 }
 
@@ -64,11 +92,11 @@ function pushStale(lines: string[], stale: readonly StaleSuppression[], paint: P
         lines.push(paint('bold', 'Progress'));
         for (const entry of progress) {
             lines.push(
-                `  ${paint('green', '↓')} ${entry.folder}  ${entry.id}  ${entry.count} → ${paint('green', String(entry.measured))}`,
+                `  ${paint('green', '↓')} ${safe(entry.folder)}  ${safe(entry.id)}  ${entry.count} → ${paint('green', String(entry.measured))}`,
             );
         }
         lines.push(
-            `  Save it with ${paint('cyan', '--prune-suppressions')} and commit ${progress[0]?.file ?? 'the suppressions file'}: until then the run fails, so the number cannot climb back.`,
+            `  Save it with ${paint('cyan', '--prune-suppressions')} and commit ${safe(progress[0]?.file ?? 'the suppressions file')}: until then the run fails, so the number cannot climb back.`,
         );
     }
     if (other.length === 0) {
@@ -80,30 +108,11 @@ function pushStale(lines: string[], stale: readonly StaleSuppression[], paint: P
     lines.push(paint('bold', 'Suppressions nothing needs any more'));
     for (const entry of other) {
         const mark = entry.status === 'fixed' ? paint('green', '✔') : paint('red', '✖');
-        lines.push(`  ${mark} ${entry.folder}  ${entry.id}  (suppressed at ${entry.count}; ${whyStale(entry)})`);
+        lines.push(
+            `  ${mark} ${safe(entry.folder)}  ${safe(entry.id)}  (suppressed at ${entry.count}; ${safe(staleReason(entry))})`,
+        );
     }
     lines.push(`  Run with ${paint('cyan', '--prune-suppressions')} to remove them: the file only ever shrinks.`);
-}
-
-function whyStale(entry: StaleSuppression): string {
-    switch (entry.status) {
-        case 'unknown-rule': {
-            return `"${entry.rule}" is not a rule`;
-        }
-        case 'missing-folder': {
-            const hint = entry.didYouMean === undefined ? '' : `: did you mean ${entry.didYouMean}?`;
-            return `the folder does not exist, or holds no checked file${hint}`;
-        }
-        case 'moved': {
-            return `looks moved to ${entry.movedTo ?? '?'}: rename its key in ${entry.file} to keep it`;
-        }
-        case 'lowered': {
-            return `now ${entry.measured ?? 0}`;
-        }
-        default: {
-            return 'fixed';
-        }
-    }
 }
 
 /**

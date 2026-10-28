@@ -31,9 +31,20 @@ Where it looks (paths given to options start from the current folder)
                              (default when CI is set; inside a repository a failing git always fails)
 
 What it prints
-  -f, --format <format>      text (default), json, sarif, github (annotations), markdown
-  -o, --output <file>        write the report to a file instead of standard output (never over
-                             a file git tracks without --force)
+  -f, --format <format>      text (default), json, sarif, github (annotations), markdown, gitlab (Code
+                             Quality), checkstyle, azure (Azure Pipelines), auto (github, azure or text,
+                             by the CI it runs in). Repeat it to write several reports in one run, each
+                             to its own file: -f github -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY
+  -o, --output <file>        write the report to a file instead of standard output (with one -f).
+                             No report replaces a file git tracks, or the configuration, without --force
+      --max-findings <n>     markdown: list n problems (default 200); github: n annotations per kind
+                             (default 9: GitHub shows 10 and drops the rest)
+      --no-files             json: leave the files and moves out of each finding
+      --stats                json: also list every folder with its numbers
+      --group-by <what>      text: group by folder (default), project or owner, worst first
+      --owner <owner>        only the problems of this CODEOWNERS owner (e.g. @org/team); repeatable
+      --base <ref>           annotations: prefer the files this change adds against <ref> (default:
+                             the --since or --new-since ref, else the pull request's base, as --changed)
   -q, --quiet                report errors only
       --moves                print a git mv for every file a problem suggests moving
       --color, --no-color    force colours on or off (default: on in a terminal; NO_COLOR and
@@ -62,7 +73,7 @@ Only what a change touched
                              pull request, everything is checked
 
 Other
-      --force                init: overwrite an existing configuration; --output: write over a
+      --force                init: overwrite an existing configuration; a report: write over a
                              file git tracks, or over the configuration; with CI set, let
                              --suppress-all and --prune-suppressions write the suppressions file
   -h, --help                 this help

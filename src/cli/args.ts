@@ -3,8 +3,27 @@ import { parseArgs } from 'node:util';
 export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config'] as const;
 export type Command = (typeof COMMANDS)[number];
 
-export const FORMATS = ['text', 'json', 'sarif', 'github', 'markdown'] as const;
+export const FORMATS = [
+    'text',
+    'json',
+    'sarif',
+    'github',
+    'markdown',
+    'gitlab',
+    'checkstyle',
+    'azure',
+    'auto',
+] as const;
 export type Format = (typeof FORMATS)[number];
+
+export const GROUPINGS = ['folder', 'project', 'owner'] as const;
+export type Grouping = (typeof GROUPINGS)[number];
+
+/** One report to write: in a format, to a file (`undefined` and `-`: standard output). */
+export interface OutputSpec {
+    readonly format: Format;
+    readonly target: string | undefined;
+}
 
 export interface Args {
     readonly command: Command;
@@ -12,8 +31,22 @@ export interface Args {
     readonly config: string | undefined;
     readonly root: string | undefined;
     readonly presets: readonly string[];
+    /** The first of `outputs`: what `--format` and `--output` said when there is one report. */
     readonly format: Format;
     readonly output: string | undefined;
+    /** Every report to write, from `-f format`, `-f format=file` and `-o`. */
+    readonly outputs: readonly OutputSpec[];
+    /** `--max-findings`: how many problems the Markdown lists, and how many annotations GitHub gets per kind. */
+    readonly maxFindings: number | undefined;
+    /** `--no-files`: leave the files and moves out of each finding of the JSON. */
+    readonly files: boolean;
+    /** `--stats`: the JSON also lists every folder with its numbers. */
+    readonly stats: boolean;
+    readonly groupBy: Grouping;
+    /** `--owner`: only the problems of these CODEOWNERS owners. */
+    readonly owners: readonly string[];
+    /** `--base`: the ref a change is compared with, to anchor annotations on the files it adds. */
+    readonly base: string | undefined;
     readonly stdin: boolean;
     readonly git: boolean;
     /** `--require-git`: stop when git cannot list the files. `undefined` when not given: on when CI is set. */
@@ -54,8 +87,14 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 config: { type: 'string', short: 'c' },
                 root: { type: 'string' },
                 preset: { type: 'string', short: 'p', multiple: true },
-                format: { type: 'string', short: 'f' },
+                format: { type: 'string', short: 'f', multiple: true },
                 output: { type: 'string', short: 'o' },
+                'max-findings': { type: 'string' },
+                'no-files': { type: 'boolean' },
+                stats: { type: 'boolean' },
+                'group-by': { type: 'string' },
+                owner: { type: 'string', multiple: true },
+                base: { type: 'string' },
                 stdin: { type: 'boolean' },
                 'no-git': { type: 'boolean' },
                 'require-git': { type: 'boolean' },
@@ -87,10 +126,12 @@ export function parseCommandLine(argv: readonly string[]): Args {
     const command: Command = isCommand ? (first as Command) : 'check';
     const paths = isCommand ? rest : positionals;
 
-    const format = values.format ?? 'text';
-    if (!(FORMATS as readonly string[]).includes(format)) {
-        throw new UsageError(`--format must be one of ${FORMATS.join(', ')}, not "${format}"`);
+    const outputs = outputsOf(values.format ?? [], values.output);
+    const groupBy = values['group-by'] ?? 'folder';
+    if (!(GROUPINGS as readonly string[]).includes(groupBy)) {
+        throw new UsageError(`--group-by must be one of ${GROUPINGS.join(', ')}, not "${groupBy}"`);
     }
+    const maxFindings = wholeNumber('--max-findings', values['max-findings'], 1);
     let maxWarnings: number | undefined;
     if (values['max-warnings'] !== undefined) {
         maxWarnings = Number(values['max-warnings']);
@@ -116,11 +157,6 @@ export function parseCommandLine(argv: readonly string[]): Args {
             `--require-git and ${values.stdin ? '--stdin' : '--no-git'} cannot both be given: one asks git for the files, the other does not`,
         );
     }
-    if (values.output !== undefined && (values.output.trim() === '' || /[/\\]$/u.test(values.output))) {
-        throw new UsageError(
-            `--output ${values.output}: give the file to write${values.output.trim() === '' ? '' : `, such as ${values.output}crowded-folders.sarif`}; that is a folder`,
-        );
-    }
     if (values.since !== undefined && values.changed) {
         throw new UsageError('--since and --changed cannot both be given: --changed is --since the base the CI names');
     }
@@ -132,6 +168,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
     for (const [flag, ref] of [
         ['--since', values.since],
         ['--new-since', values['new-since']],
+        ['--base', values.base],
     ] as const) {
         if (ref?.trim() === '') {
             throw new UsageError(`${flag} needs a ref: ${flag} origin/main`);
@@ -155,8 +192,15 @@ export function parseCommandLine(argv: readonly string[]): Args {
         config: values.config,
         root: values.root,
         presets: values.preset ?? [],
-        format: format as Format,
-        output: values.output,
+        format: outputs[0]?.format ?? 'text',
+        output: outputs[0]?.target,
+        outputs,
+        maxFindings,
+        files: !(values['no-files'] ?? false),
+        stats: values.stats ?? false,
+        groupBy: groupBy as Grouping,
+        owners: values.owner ?? [],
+        base: values.base,
         stdin: values.stdin ?? false,
         git: !(values['no-git'] ?? false),
         requireGit: values['require-git'],
@@ -176,4 +220,65 @@ export function parseCommandLine(argv: readonly string[]): Args {
         help: values.help ?? false,
         version: values.version ?? false,
     };
+}
+
+/**
+ * Reads `-f` and `-o`. `-f github -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY` writes three
+ * reports in one run; `-f sarif -o out.sarif` still works. Only one report can go to standard output.
+ */
+function outputsOf(formats: readonly string[], output: string | undefined): OutputSpec[] {
+    const specs: OutputSpec[] = formats.map(value => {
+        const equals = value.indexOf('=');
+        const format = equals === -1 ? value : value.slice(0, equals);
+        if (!(FORMATS as readonly string[]).includes(format)) {
+            throw new UsageError(`--format must be one of ${FORMATS.join(', ')}, not "${format}"`);
+        }
+        const target = equals === -1 ? undefined : value.slice(equals + 1);
+        if (target === '') {
+            throw new UsageError(`--format ${value}: the file after "=" is empty`);
+        }
+        if (target !== undefined) {
+            refuseFolder(`--format ${value}`, target);
+        }
+        return { format: format as Format, target: target === '-' ? undefined : target };
+    });
+    if (specs.length === 0) {
+        specs.push({ format: 'text', target: undefined });
+    }
+    if (output !== undefined) {
+        refuseFolder(`--output ${output}`, output);
+        const [only] = specs;
+        if (specs.length !== 1 || only === undefined || (only.target !== undefined && formats.length > 0)) {
+            throw new UsageError(
+                '--output goes with one --format that has no file of its own; with several, name each file: -f sarif=out.sarif -f markdown=summary.md',
+            );
+        }
+        specs[0] = { format: only.format, target: output };
+    }
+    if (specs.filter(spec => spec.target === undefined).length > 1) {
+        throw new UsageError(
+            'only one report can go to standard output: give the others a file, as in -f github -f sarif=out.sarif',
+        );
+    }
+    return specs;
+}
+
+/** A report goes to a file: blank or ending in a separator, it names a folder. */
+function refuseFolder(option: string, target: string): void {
+    if (target.trim() === '' || /[/\\]$/u.test(target)) {
+        throw new UsageError(
+            `${option}: give the file to write${target.trim() === '' ? '' : `, such as ${target}crowded-folders.sarif`}; that is a folder`,
+        );
+    }
+}
+
+function wholeNumber(option: string, value: string | undefined, minimum: number): number | undefined {
+    if (value === undefined) {
+        return undefined;
+    }
+    const number = /^\d+$/u.test(value) ? Number(value) : NaN;
+    if (!Number.isSafeInteger(number) || number < minimum) {
+        throw new UsageError(`${option} must be a whole number of ${minimum} or more, not "${value}"`);
+    }
+    return number;
 }

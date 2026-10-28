@@ -60,6 +60,7 @@ try {
         'dist/index.d.ts',
         'dist/cli/main.js',
         'schema.json',
+        'report.schema.json',
         'README.md',
         'LICENSE',
     ]) {

@@ -1,11 +1,12 @@
 import { FileListError } from '../core/paths/input.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
-import { parseCommandLine, UsageError } from './args.ts';
+import { type Args, parseCommandLine, UsageError } from './args.ts';
 import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
+import { writeFailureReports } from './failure.ts';
 import { HELP } from './help.ts';
 import { type Io, processIo } from './io.ts';
 import { openSession } from './session.ts';
@@ -13,8 +14,9 @@ import { TOOL } from './tool.ts';
 
 /** Runs the command and returns its exit code: 0 clean, 1 problems, 2 the input was wrong or it broke. */
 export async function run(argv: readonly string[], io: Io = processIo()): Promise<number> {
+    let args: Args | undefined;
     try {
-        const args = parseCommandLine(argv);
+        args = parseCommandLine(argv);
         if (args.help) {
             io.write(HELP);
             return 0;
@@ -49,6 +51,9 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             }
         }
     } catch (error) {
+        if (args) {
+            writeFailureReports(args, io, error);
+        }
         if (error instanceof UsageError) {
             io.error(`crowded-folders: ${error.message}\nRun crowded-folders --help for the options.\n`);
             return 2;

@@ -23,6 +23,16 @@ export interface Finding {
     readonly url: string | undefined;
 }
 
+/** The numbers of one folder, for `--stats`. */
+export interface FolderStat {
+    readonly path: string;
+    readonly modules: number;
+    readonly files: number;
+    readonly subfolders: number;
+    /** The `max-files` limit in effect for the folder; `null` when that rule is off there. */
+    readonly limit: number | null;
+}
+
 export interface EngineInput {
     /** File paths relative to the root, `/`-separated. */
     readonly files: readonly string[];
@@ -34,12 +44,16 @@ export interface EngineInput {
      * left out before the tree is built, so one folder of a large repository is quick to check.
      */
     readonly only?: readonly string[];
+    /** Also return the numbers of every folder reported on. */
+    readonly stats?: boolean;
 }
 
 export interface EngineResult {
     readonly findings: readonly Finding[];
     readonly folderCount: number;
     readonly fileCount: number;
+    /** Every folder reported on, when `stats` was asked for. */
+    readonly folderStats?: readonly FolderStat[];
 }
 
 /** What `explain` shows about one folder: everything a rule would see, and why. */
@@ -73,19 +87,28 @@ export function runEngine(input: EngineInput): EngineResult {
 
     const findings: Finding[] = [];
     let folderCount = 0;
+    const folderStats: FolderStat[] = [];
     for (const entry of tree) {
         if (only?.every(path => !isInside(entry.path, path))) {
             continue;
         }
         folderCount++;
         findings.push(...context.check(entry));
+        if (input.stats) {
+            folderStats.push(context.statsOf(entry));
+        }
     }
     // Whether an override matches no folder is a question about the whole tree: a run over some
     // folders cannot answer it.
     if (!only) {
         findings.push(...context.unusedOverrideFindings());
     }
-    return { findings: sortFindings(findings), folderCount, fileCount: files.length };
+    return {
+        findings: sortFindings(findings),
+        folderCount,
+        fileCount: files.length,
+        ...(input.stats && { folderStats }),
+    };
 }
 
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
@@ -162,6 +185,23 @@ class FolderContext {
     viewOf(entry: FolderEntry, state: NamingState): FolderView {
         const naming = this.compileNaming(state);
         return { ...entry, naming, modules: modulesOf(entry.files, naming) };
+    }
+
+    statsOf(entry: FolderEntry): FolderStat {
+        const { naming, rules } = this.settingsFor(entry.path);
+        const state = rules['max-files'];
+        const rule = this.rules['max-files'];
+        const max =
+            state && rule && state.severity !== 'off'
+                ? mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options)['max']
+                : undefined;
+        return {
+            path: entry.path,
+            modules: this.viewOf(entry, naming).modules.length,
+            files: entry.files.length,
+            subfolders: entry.folders.length,
+            limit: typeof max === 'number' ? max : null,
+        };
     }
 
     check(entry: FolderEntry): Finding[] {
