@@ -1,0 +1,90 @@
+name: Binaries
+
+# Single-file executables of the command (Node SEA: the built command inside a copy of Node), for the
+# machines that have no Node. They are built when release-please makes a release, never on a push:
+# release-please.yml starts this by hand, because a tag pushed with GITHUB_TOKEN starts no workflow, as it
+# does for publish.yml. Run it again for a tag from the Actions tab (Run workflow, with the tag as the ref).
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: binaries-${{ github.ref_name }}
+
+env:
+  TAG: ${{ github.ref_name }}
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-x64, os: ubuntu-latest }
+          - { target: linux-arm64, os: ubuntu-24.04-arm }
+          - { target: macos-arm64, os: macos-latest }
+          - { target: macos-x64, os: macos-15-intel }
+          - { target: win-x64, os: windows-latest }
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with: { node-version: 24, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: The tag is the version
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "${TAG#v}" != "$version" ]; then
+            echo "::error::Tag $TAG does not match package.json $version"
+            exit 1
+          fi
+      - run: pnpm run build
+      # esbuild and postject run through npx, pinned in the script: they are not dependencies of the package.
+      - name: Build the executable
+        run: node tooling/build-binary.mjs --out binaries
+      - name: It checks this repository
+        run: |
+          bin=./binaries/crowded-folders
+          if [ "$RUNNER_OS" = Windows ]; then bin="$bin.exe"; fi
+          "$bin" --version
+          "$bin" --no-color
+      - name: Archive it, with its checksum
+        run: |
+          name="crowded-folders-${TAG}-${{ matrix.target }}"
+          cp LICENSE binaries/
+          cd binaries
+          if [ "$RUNNER_OS" = Windows ]; then
+            archive="$name.zip"
+            powershell -NoProfile -Command "Compress-Archive -Path crowded-folders.exe, LICENSE -DestinationPath $archive"
+          else
+            archive="$name.tar.gz"
+            tar -czf "$archive" crowded-folders LICENSE
+          fi
+          if command -v sha256sum > /dev/null; then sha256sum "$archive" > "$archive.sha256"; else shasum -a 256 "$archive" > "$archive.sha256"; fi
+          cat "$archive.sha256"
+          echo "ARCHIVE=binaries/$archive" >> "$GITHUB_ENV"
+      - name: Upload to the release
+        run: gh release upload "$TAG" "$ARCHIVE" "$ARCHIVE.sha256" --clobber
+
+  checksums:
+    name: SHA256SUMS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: One file with every checksum
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.sha256' --dir sums
+          cat sums/*.sha256 | sort -k2 > SHA256SUMS
+          cat SHA256SUMS
+          [ "$(wc -l < SHA256SUMS)" -eq 5 ] || { echo "::error::expected 5 binaries"; exit 1; }
+          gh release upload "$TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY" --clobber
