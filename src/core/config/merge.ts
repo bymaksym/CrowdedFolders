@@ -59,6 +59,12 @@ export function mergeNaming(base: NamingState, layer: NamingConfig | undefined):
         groupNumericPrefixes: layer.groupNumericPrefixes ?? base.groupNumericPrefixes,
         folderFiles: mergeList(base.folderFiles, layer.folderFiles),
         folderCompanions: mergeList(base.folderCompanions, layer.folderCompanions),
+        folderCase: layer.folderCase ?? base.folderCase,
+        reservedWords: mergeList(base.reservedWords, layer.reservedWords),
+        keepInPlace: mergeList(base.keepInPlace, layer.keepInPlace),
+        routes: layer.routes ?? base.routes,
+        groupFileStays: layer.groupFileStays ?? base.groupFileStays,
+        mirrors: mergeList(base.mirrors, layer.mirrors),
     };
 }
 

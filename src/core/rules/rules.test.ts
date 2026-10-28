@@ -72,7 +72,7 @@ describe('prefix-groups', () => {
         assert.equal(finding?.key, 'render');
         assert.equal(finding?.measured, 4);
         assert.match(finding?.message ?? '', /cli\/render\/\.$/u);
-        assert.deepEqual(finding?.moves[0], { from: 'cli/render-json.ts', to: 'cli/render/render-json.ts' });
+        assert.deepEqual(finding?.moves[0], { from: 'cli/render-json.ts', to: 'cli/render/json.ts' });
     });
 
     it('counts modules, not files, and needs `min` of them', () => {

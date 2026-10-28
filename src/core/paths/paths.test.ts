@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 import { type IgnoreFile, isIgnored, parseGitignore } from './gitignore.ts';
 import { compileGlob, globProblem, matchesSelfOrAncestor } from './glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from './input.ts';
+import { type Mirror, mirrorOf, parseMirror, sourceOf } from './mirrors.ts';
 import { closest, editDistance } from './suggest.ts';
 import { buildTree, joinPath, normalisePath, parentOf } from './tree.ts';
 
@@ -221,5 +222,38 @@ describe('buildTree', () => {
         const tree = buildTree([deep]);
         assert.equal(tree.length, 10_001);
         assert.equal(tree.at(-1)?.files[0], 'x.ts');
+    });
+});
+
+describe('mirrors', () => {
+    const read = (text: string): Mirror => {
+        const mirror = parseMirror(text);
+        assert.ok(typeof mirror !== 'string', mirror as string);
+        return mirror;
+    };
+    const problem = (text: string): string => {
+        const mirror = parseMirror(text);
+        return typeof mirror === 'string' ? mirror : 'read';
+    };
+
+    it('maps a folder to its mirror and back, keeping the shared parts', () => {
+        const maven = read('**/src/main/java/** => **/src/test/java/**');
+        assert.equal(mirrorOf('api/src/main/java/com/a', maven), 'api/src/test/java/com/a');
+        assert.equal(sourceOf('api/src/test/java/com/a', maven), 'api/src/main/java/com/a');
+        assert.equal(mirrorOf('src/test/java/com/a', maven), undefined);
+        const jest = read('** => **/__tests__');
+        assert.equal(mirrorOf('src/cli', jest), 'src/cli/__tests__');
+        assert.equal(mirrorOf('.', jest), '__tests__');
+        assert.equal(sourceOf('src/cli/__tests__', jest), 'src/cli');
+        const rails = read('app/** => spec/**');
+        assert.equal(mirrorOf('app/models', rails), 'spec/models');
+        assert.equal(mirrorOf('src/app/models', rails), undefined);
+    });
+
+    it('says what is wrong with one it cannot read', () => {
+        assert.match(problem('src/main => '), /mirror: is empty/u);
+        assert.match(problem('src/main/java'), /source => mirror/u);
+        assert.match(problem('** => test/**'), /same parts/u);
+        assert.match(problem('src/*/java/** => test/**'), /"\*" is not a folder name/u);
     });
 });

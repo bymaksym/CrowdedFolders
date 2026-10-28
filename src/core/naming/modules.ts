@@ -1,4 +1,6 @@
+import type { FolderCase } from '../config/types.ts';
 import type { Glob } from '../paths/glob.ts';
+import type { Mirror } from '../paths/mirrors.ts';
 import { sameWord } from './inflect.ts';
 import { isDigit, isNumericWord, readName, splitWords } from './words.ts';
 
@@ -25,6 +27,18 @@ export interface Naming {
      * not counted: Unity's `Scripts.meta`, next to `Scripts/`.
      */
     readonly folderCompanions?: readonly string[];
+    /** How a folder that a move proposes is written from its words; default `kebab`. */
+    readonly folderCase?: FolderCase;
+    /** Folder names the language reserves (`abstract`, `async`): a move proposes another. */
+    readonly reservedWords?: ReadonlySet<string>;
+    /** Paths (from the root) a move never touches: a tool reads them by name and place. */
+    readonly keepInPlace?: readonly Glob[];
+    /** Whether a file's path is its address: groups go into a route group, `(name)/`, with their names. */
+    readonly routes?: boolean;
+    /** Whether the module named like a group stays beside its folder (Rust's `render.rs`). */
+    readonly groupFileStays?: boolean;
+    /** Trees that mirror another one, for the engine: a problem in both is reported once. */
+    readonly mirrors?: readonly Mirror[];
 }
 
 /** A module: the files of one folder that share a stem — `foo.ts`, `foo.spec.ts`, `foo.html`. */

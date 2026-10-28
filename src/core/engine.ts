@@ -1,9 +1,12 @@
 import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
+import { counterpartsOf, foldMirrors } from './mirrors.ts';
 import { compareText, type Naming, readFolder } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
+import { type Mirror, parseMirror } from './paths/mirrors.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
+import { caseless } from './rules/moves.ts';
 import type { FolderView, Move, Note, Problem, Rule, RuleContext } from './rules/rule.ts';
 
 /** One problem in one folder, as every output format receives it. */
@@ -88,22 +91,35 @@ export function selectFiles(files: readonly string[], config: Pick<ResolvedConfi
 /** Runs every rule that is on over every folder (or every folder under `only`). */
 export function runEngine(input: EngineInput): EngineResult {
     const only = scopeOf(input.only);
-    const files = selectFiles(inScope(filesOf(input.files), only), input.config);
-    const tree = buildTree(files);
-    const context = new FolderContext(input.config, input.rules);
+    // A run over some folders also reads the trees that mirror them (naming.mirrors), so that a
+    // problem folded into its mirror is folded the same way as in a run over everything.
+    const mirrors = parseMirrors(input.config.naming.mirrors);
+    const reach = only && [...only, ...only.flatMap(path => counterpartsOf(path, mirrors))];
+    const all = selectFiles(inScope(filesOf(input.files), reach), input.config);
+    const files = only ? inScope(all, only) : all;
+    const tree = buildTree(all);
+    const context = new FolderContext(input.config, input.rules, tree);
 
-    const findings: Finding[] = [];
+    let findings: Finding[] = [];
     let folderCount = 0;
     const folderStats: FolderStat[] = [];
     for (const entry of tree) {
-        if (only?.every(path => !isInside(entry.path, path))) {
+        if (reach?.every(path => !isInside(entry.path, path))) {
+            continue;
+        }
+        const counted = !only || only.some(path => isInside(entry.path, path));
+        findings.push(...context.check(entry));
+        if (!counted) {
             continue;
         }
         folderCount++;
-        findings.push(...context.check(entry));
         if (input.stats) {
             folderStats.push(context.statsOf(entry));
         }
+    }
+    findings = foldMirrors(findings, context.mirrorTree());
+    if (only) {
+        findings = findings.filter(finding => only.some(path => isInside(finding.folder, path)));
     }
     // Whether an override matches no folder is a question about the whole tree: a run over some
     // folders cannot answer it.
@@ -125,7 +141,7 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
     if (!entry) {
         return undefined;
     }
-    const context = new FolderContext(input.config, input.rules);
+    const context = new FolderContext(input.config, input.rules, tree);
     const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
@@ -167,10 +183,14 @@ class FolderContext {
     private readonly rules: Readonly<Record<string, Rule>>;
     private readonly overrides: CompiledOverride[];
     private readonly namingCache = new Map<string, Naming>();
+    private readonly tree: readonly FolderEntry[];
+    private folders: Map<string, FolderEntry> | undefined;
+    private paths: Map<string, string> | undefined;
 
-    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
+    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>, tree: readonly FolderEntry[]) {
         this.config = config;
         this.rules = rules;
+        this.tree = tree;
         this.overrides = config.overrides.map(state => ({
             state,
             globs: state.folders.map(compileGlob),
@@ -265,9 +285,39 @@ class FolderContext {
                       notes.push({ rule: name, ...found });
                   }
                 : undefined;
-            rule.check(view, { options, report, settingsOf, ...(note && { note }) });
+            rule.check(view, { options, report, settingsOf, existing: this.existing, ...(note && { note }) });
         }
         return findings;
+    }
+
+    /**
+     * The file or folder at a path as the tree writes it, compared without case: built the first
+     * time a rule asks, which is when a move is planned.
+     */
+    readonly existing = (path: string): string | undefined => {
+        if (!this.paths) {
+            this.paths = new Map();
+            for (const entry of this.tree) {
+                this.paths.set(caseless(entry.path), entry.path);
+                for (const file of entry.files) {
+                    const full = joinPath(entry.path, file);
+                    this.paths.set(caseless(full), full);
+                }
+            }
+        }
+        return this.paths.get(caseless(path));
+    };
+
+    /** The tree as folding the mirrors reads it. */
+    mirrorTree(): Parameters<typeof foldMirrors>[1] {
+        return {
+            folder: path => {
+                this.folders ??= new Map(this.tree.map(entry => [entry.path, entry]));
+                return this.folders.get(path);
+            },
+            viewOf: entry => this.viewOf(entry, this.settingsFor(entry).naming),
+            existing: this.existing,
+        };
     }
 
     unusedOverrideFindings(): Finding[] {
@@ -299,10 +349,21 @@ class FolderContext {
             groupNumericPrefixes: state.groupNumericPrefixes,
             folderFiles: state.folderFiles.map(compileGlob),
             folderCompanions: state.folderCompanions,
+            folderCase: state.folderCase,
+            reservedWords: new Set(state.reservedWords),
+            keepInPlace: state.keepInPlace.map(compileGlob),
+            routes: state.routes,
+            groupFileStays: state.groupFileStays,
+            mirrors: parseMirrors(state.mirrors),
         };
         this.namingCache.set(id, naming);
         return naming;
     }
+}
+
+/** The mirrors that can be read; the configuration has already said what is wrong with the others. */
+function parseMirrors(texts: readonly string[]): Mirror[] {
+    return texts.map(text => parseMirror(text)).filter((mirror): mirror is Mirror => typeof mirror !== 'string');
 }
 
 /** The file paths, read the way the command reads them (`./a`, `a\b`); a path outside the root is an error. */

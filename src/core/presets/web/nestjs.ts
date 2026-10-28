@@ -9,6 +9,8 @@ export const nestjs: Preset = {
         extends: ['recommended'],
         rules: {
             'max-files': ['error', { hint: 'NestJS groups a feature as a module folder.' }],
+            // cats/cats.service.ts: a Nest file keeps the feature's name inside the feature's folder.
+            'prefix-groups': ['error', { dropPrefix: false }],
         },
     },
 };

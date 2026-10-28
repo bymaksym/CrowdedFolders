@@ -31,6 +31,12 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | `groupNumericPrefixes` | boolean | Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. Default: false. |
 | `folderFiles` | string[] | Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs. |
 | `folderCompanions` | string[] | Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/. |
+| `folderCase` | `"kebab"` \| `"snake"` \| `"camel"` \| `"pascal"` \| `"lower"` | How the folder a move proposes is written from the words of its group: "kebab" user-list (default), "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages). |
+| `reservedWords` | string[] | Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it. |
+| `keepInPlace` | string[] | Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames. |
+| `routes` | boolean | Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them. Default: false. |
+| `groupFileStays` | boolean | Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). Default: false: render.ts goes into render/. |
+| `mirrors` | string[] | Trees that mirror another one, as "source => mirror", where "**" stands for the part both share: "**/src/main/java/** => **/src/test/java/**". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along. |
 
 ## `overrides[]`
 
@@ -75,6 +81,7 @@ At least `min` modules whose names start with the same word belong in a folder n
 | `words` | see below | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; "auto" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`). |
 | `ignore` | string[] | `[]` | Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`. |
 | `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
+| `dropPrefix` | boolean | `true` | Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true. |
 | `hint` | string | `""` | Added to the message: what making a folder costs in this ecosystem ("In Go a folder is a package: …"). |
 
 ### `max-folders`

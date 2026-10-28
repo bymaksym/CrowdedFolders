@@ -63,7 +63,7 @@ export const GENERATED: readonly string[] = [
  */
 export const recommended: Preset = {
     description:
-        'The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github). Migrations are left out by their name as well as by their folder (Flyway V1__init.sql, golang-migrate 000001_x.up.sql), and so are fastlane/metadata and the usual names of generated code (__generated__, *.generated.*). The root of every package (a folder with package.json, go.mod, Cargo.toml…) gets the 40 of the repository root, scripts/ and tooling/ read validate-i18n as being about i18n, and __tests__ and stories follow the code they sit next to.',
+        'The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github). Migrations are left out by their name as well as by their folder (Flyway V1__init.sql, golang-migrate 000001_x.up.sql), and so are fastlane/metadata and the usual names of generated code (__generated__, *.generated.*). The root of every package (a folder with package.json, go.mod, Cargo.toml…) gets the 40 of the repository root, scripts/ and tooling/ read validate-i18n as being about i18n, and __tests__ and stories follow the code they sit next to: a problem of both is reported once, in the code, and its moves take the tests along. The .patch files in a patches/ folder stay where they are: patch-package reads them there, by name.',
     sources: [
         {
             title: 'Angular style guide: "consider splitting further"',
@@ -84,6 +84,14 @@ export const recommended: Preset = {
         {
             title: 'Relay: "ahead-of-time compilation of GraphQL queries and fragments to generate artifacts" (kept in __generated__ folders)',
             url: 'https://relay.dev/docs/guides/compiler/',
+        },
+        {
+            title: 'patch-package: "patches are applied from the patches directory", named package-name+version.patch',
+            url: 'https://github.com/ds300/patch-package#readme',
+        },
+        {
+            title: 'Jest: test files in __tests__ folders, next to the code they test',
+            url: 'https://jestjs.io/docs/configuration#testmatch-arraystring',
         },
         {
             title: 'docs/presets.md: how the limits were measured',
@@ -132,6 +140,9 @@ export const recommended: Preset = {
         ],
         naming: {
             groupNumericPrefixes: false,
+            // patch-package (and pnpm and yarn patches) read them flat, by the name of the package.
+            keepInPlace: ['**/patches/*.patch'],
+            mirrors: ['** => **/__tests__'],
         },
         rules: {
             // 20 modules is about the median 95th percentile of folder sizes (19) measured over 36 repositories

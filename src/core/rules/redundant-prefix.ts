@@ -1,8 +1,7 @@
-import { sameWord } from '../naming/inflect.ts';
-import { gluedWords, shownName } from '../naming/modules.ts';
-import { readName, splitWords } from '../naming/words.ts';
-import { joinPath } from '../paths/tree.ts';
-import { defineRule, listNames, type Move } from './rule.ts';
+import { shownName } from '../naming/modules.ts';
+import { splitWords } from '../naming/words.ts';
+import { planMoves, repeatedWords, staysInPlace, withoutPrefix } from './moves.ts';
+import { defineRule, listNames } from './rule.ts';
 
 export interface RedundantPrefixOptions {
     readonly min: number;
@@ -26,7 +25,7 @@ export const redundantPrefix = defineRule<RedundantPrefixOptions>({
             },
         },
     },
-    check(folder, { options, report }) {
+    check(folder, { options, report, note, existing }) {
         if (folder.path === '.') {
             return;
         }
@@ -37,55 +36,35 @@ export const redundantPrefix = defineRule<RedundantPrefixOptions>({
         if (repeating.length < options.min) {
             return;
         }
-        const moves: Move[] = [];
-        for (const file of repeating.flatMap(module => module.files)) {
-            const renamed = withoutPrefix(file, prefix);
-            if (renamed !== undefined) {
-                moves.push({ from: joinPath(folder.path, file), to: joinPath(folder.path, renamed) });
-            }
+        const names = (modules: typeof repeating): string => listNames(modules.map(shownName));
+        if (folder.naming.routes) {
+            note?.({
+                message: `${names(repeating)} repeat the folder's name "${folder.name}", but here a file's path is its address (naming.routes): a shorter name would change it`,
+            });
+            return;
         }
+        // A name a tool reads (naming.keepInPlace) is not the author's to shorten.
+        const kept = repeating.filter(module => staysInPlace(module, folder.path, folder.naming));
+        const renamed = repeating.filter(module => !kept.includes(module));
+        if (kept.length > 0 && renamed.length < options.min) {
+            note?.({
+                message: `${names(kept)} repeat the folder's name "${folder.name}", but a tool reads them by that name (naming.keepInPlace)`,
+            });
+            return;
+        }
+        const plan = planMoves(
+            renamed,
+            folder.path,
+            folder.path,
+            (file, module) => withoutPrefix(file, module, prefix),
+            existing,
+        );
         report({
-            message: `${repeating.length} modules repeat the folder's name "${folder.name}" (${listNames(repeating.map(shownName))}): the folder already says it.`,
-            measured: repeating.length,
+            message: `${renamed.length} modules repeat the folder's name "${folder.name}" (${names(renamed)}): the folder already says it.${plan.notes.map(sentence => ` ${sentence}`).join('')}`,
+            measured: renamed.length,
             limit: options.min - 1,
-            files: repeating.flatMap(module => module.files),
-            moves,
+            files: renamed.flatMap(module => module.files),
+            moves: plan.moves,
         });
     },
 });
-
-/**
- * The file name without the folder's name in front, keeping its own convention: `render-json.ts` →
- * `json.ts`, `RenderJson.cs` → `Json.cs`, `render_json_test.go` → `json_test.go`, `category-list.ts`
- * in `categories/` → `list.ts`. `undefined` when the name does not start with it (an ignored leading
- * word comes first, say).
- */
-function withoutPrefix(file: string, prefix: readonly string[]): string | undefined {
-    const name = file.normalize('NFC');
-    const { words, spans } = readName(name);
-    const repeated = repeatedWords(words, prefix);
-    if (repeated === 0 || spans[0]?.[0] !== 0) {
-        return undefined;
-    }
-    let rest = name.slice(spans[repeated - 1]?.[1] ?? 0);
-    while (rest.startsWith('-') || rest.startsWith('_') || rest.startsWith(' ')) {
-        rest = rest.slice(1);
-    }
-    return rest !== '' && !rest.startsWith('.') ? rest : undefined;
-}
-
-/**
- * How many leading words of `words` repeat the folder's words `prefix`, the plural allowed, with
- * something after them; 0 when they do not. A folder that glues its words (`dayplan`) is repeated by
- * `DayPlanList`: two words.
- */
-function repeatedWords(words: readonly string[], prefix: readonly string[]): number {
-    if (prefix.length === 0) {
-        return 0;
-    }
-    if (words.length > prefix.length && prefix.every((word, index) => sameWord(words[index] ?? '', word))) {
-        return prefix.length;
-    }
-    const glued = prefix.length === 1 ? gluedWords(words, prefix[0] ?? '') : 0;
-    return glued > 1 && words.length > glued ? glued : 0;
-}

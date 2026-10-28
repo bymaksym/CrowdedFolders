@@ -40,6 +40,10 @@ export const swift: Preset = {
             companions: [String.raw`\+.+$`],
             ignoreLeadingWords: ['fake', 'mock', 'stub', 'spy', 'dummy'],
         },
+        rules: {
+            // A file is named after the type it holds (UserService.swift): a move keeps the name.
+            'prefix-groups': ['error', { dropPrefix: false }],
+        },
         overrides: [
             {
                 folders: ['**/*Tests', '**/*Tests/**'],

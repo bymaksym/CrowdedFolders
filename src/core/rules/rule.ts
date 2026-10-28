@@ -66,6 +66,12 @@ export interface RuleContext<Options extends object> {
     readonly settingsOf?: (
         rule: string,
     ) => { readonly severity: Severity; readonly options: Readonly<Record<string, unknown>> } | undefined;
+    /**
+     * The file or folder at a path (relative to the root) as the tree writes it, found without
+     * regard to case or Unicode normalisation; `undefined` when nothing is there. A move must not land
+     * on it: on Windows and macOS `text.ts` overwrites `Text.ts`.
+     */
+    readonly existing?: (path: string) => string | undefined;
 }
 
 /** What a rule did not report, and why. */

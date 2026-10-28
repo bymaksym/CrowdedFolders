@@ -6,7 +6,7 @@ const GOARCH = '386|amd64|arm|arm64|loong64|mips|mipsle|mips64|mips64le|ppc64|pp
 
 export const go: Preset = {
     description:
-        "Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo, and does not count doc.go, the package comment. Go's own guidance: \"There is no 'one type, one file' convention\"; net/http has 17 files and the go command 34.",
+        "Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo, and does not count doc.go, the package comment. Go's own guidance: \"There is no 'one type, one file' convention\"; net/http has 17 files and the go command 34. A move proposes a package as Go names them, lowercase in one word (httpserver/), never a keyword.",
     sources: [
         {
             title: 'Go: organizing a Go module: multiple programs in the same repository will typically have separate directories (prog1/main.go)',
@@ -14,6 +14,8 @@ export const go: Preset = {
         },
         { title: 'Google Go style: package size', url: 'https://google.github.io/styleguide/go/best-practices' },
         { title: 'The Go blog: organizing Go code', url: 'https://go.dev/blog/organizing-go-code' },
+        { title: 'The Go blog: package names are lowercase, single-word', url: 'https://go.dev/blog/package-names' },
+        { title: 'The Go specification: keywords', url: 'https://go.dev/ref/spec#Keywords' },
         { title: 'go build: _test.go, testdata and build constraints in file names', url: 'https://pkg.go.dev/cmd/go' },
     ],
     detect: { files: ['go.mod'] },
@@ -32,7 +34,16 @@ export const go: Preset = {
             '*.pb.gw.go',
         ],
         // doc.go holds the package comment: it describes the folder, it is not one more file in it.
-        naming: { companions: ['_test$', `_(${GOOS})$`, `_(${GOARCH})$`], folderFiles: ['doc.go'] },
+        naming: {
+            companions: ['_test$', `_(${GOOS})$`, `_(${GOARCH})$`],
+            folderFiles: ['doc.go'],
+            folderCase: 'lower',
+            reservedWords: [
+                'break case chan const continue default defer else fallthrough for',
+                'func go goto if import interface map package range return select',
+                'struct switch type var',
+            ].flatMap(line => line.split(' ')),
+        },
         rules: {
             'max-files': [
                 'error',
