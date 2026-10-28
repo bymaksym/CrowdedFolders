@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { type IgnoreFile, isIgnored, parseGitignore } from './gitignore.ts';
 import { compileGlob, globProblem, matchesSelfOrAncestor } from './glob.ts';
+import { FileListError, isAbsolutePath, normaliseFileList } from './input.ts';
+import { closest, editDistance } from './suggest.ts';
 import { buildTree, joinPath, normalisePath, parentOf } from './tree.ts';
 
 describe('compileGlob', () => {
@@ -48,6 +51,14 @@ describe('compileGlob', () => {
         assert.equal(matches('a.ts', 'abts'), false);
     });
 
+    it('lets a final /** take the folder itself, as minimatch does (src/generated/** missed src/generated)', () => {
+        assert.equal(matches('src/app/**', 'src/app'), true);
+        assert.equal(matches('src/app/**', 'src/app/x/y.ts'), true);
+        assert.equal(matches('src/app/**', 'src/apps'), false);
+        assert.equal(matches('**/generated/**', 'lib/generated'), true);
+        assert.equal(matches('**', 'anything/at/all'), true);
+    });
+
     it('matches the root folder as "."', () => {
         assert.equal(matches('.', '.'), true);
     });
@@ -59,6 +70,114 @@ describe('matchesSelfOrAncestor', () => {
         assert.equal(matchesSelfOrAncestor('fixtures/vite/dist/main.js', globs), true);
         assert.equal(matchesSelfOrAncestor('src/fixtures.ts', globs), false);
         assert.equal(matchesSelfOrAncestor('src/a.ts', []), false);
+        assert.equal(matchesSelfOrAncestor('fixtures', globs), true);
+    });
+});
+
+describe('normaliseFileList', () => {
+    it('reads ./ and \\ the way the command does (lint({ files }) made a folder "./src")', () => {
+        const { files, problems } = normaliseFileList(['./src/a.ts', String.raw`src\b.ts`, 'src/a.ts', '', 'c.ts']);
+        assert.deepEqual(files, ['src/a.ts', 'src/b.ts', 'c.ts']);
+        assert.deepEqual(problems, []);
+    });
+
+    it('refuses a path that climbs out, or an absolute one with no root to read it from', () => {
+        const { files, problems } = normaliseFileList(['../outside/a.ts', '/src/a.ts', String.raw`C:\repo\a.ts`]);
+        assert.deepEqual(files, []);
+        assert.deepEqual(
+            problems.map(problem => problem.path),
+            ['../outside/a.ts', '/src/a.ts', String.raw`C:\repo\a.ts`],
+        );
+        assert.match(new FileListError(problems).message, /3 paths of the file list cannot be read/u);
+    });
+
+    it('makes an absolute path under the root relative to it (C:\\repo\\src\\a.ts made a folder C:/repo/src)', () => {
+        const windows = normaliseFileList(
+            [String.raw`c:\Repo\src\a.ts`, String.raw`D:\other\b.ts`],
+            String.raw`C:\repo`,
+        );
+        assert.deepEqual(windows.files, ['src/a.ts']);
+        assert.deepEqual(
+            windows.problems.map(problem => problem.path),
+            [String.raw`D:\other\b.ts`],
+        );
+        const posix = normaliseFileList(['/home/u/proj/src/a.ts', '/home/u/project/b.ts'], '/home/u/proj');
+        assert.deepEqual(posix.files, ['src/a.ts']);
+        assert.equal(posix.problems.length, 1, 'the same prefix of another folder is not inside the root');
+        assert.deepEqual(normaliseFileList(['/Home/u/proj/a.ts'], '/home/u/proj').files, [], 'POSIX keeps case');
+    });
+
+    it('tells an absolute path on any system', () => {
+        assert.equal(isAbsolutePath('/a'), true);
+        assert.equal(isAbsolutePath(String.raw`\\server\share`), true);
+        assert.equal(isAbsolutePath('C:/a'), true);
+        assert.equal(isAbsolutePath('a:b'), false);
+        assert.equal(isAbsolutePath('src/a.ts'), false);
+    });
+});
+
+describe('closest', () => {
+    it('suggests what is one swap, or a case, away; nothing for a wild guess', () => {
+        assert.equal(closest('explian', ['check', 'explain', 'init']), 'explain');
+        assert.equal(closest('SRC/LIB', ['src/lib', 'src/app']), 'src/lib');
+        assert.equal(closest('src/libb', ['src/lib', 'src/app']), 'src/lib');
+        assert.equal(closest('xyz', ['check', 'init']), undefined);
+        assert.equal(editDistance('ab', 'ba'), 1);
+        assert.equal(editDistance('', 'abc'), 3);
+    });
+});
+
+describe('gitignore', () => {
+    const ignores = (text: string, folder = '', above = ''): IgnoreFile[] => [
+        { folder, above, rules: parseGitignore(text), ignoreCase: false },
+    ];
+
+    it('reads a name at any depth, a folder-only pattern, and anchored ones', () => {
+        const rules = ignores('# comment\nbuild/\n/dist\n*.log\ndocs/*.tmp\n');
+        assert.equal(isIgnored(rules, 'android/app/build', true), true);
+        assert.equal(isIgnored(rules, 'android/app/build', false), false, 'build/ is a folder only');
+        assert.equal(isIgnored(rules, 'dist', true), true);
+        assert.equal(isIgnored(rules, 'lib/dist', true), false);
+        assert.equal(isIgnored(rules, 'a/b/x.log', false), true);
+        assert.equal(isIgnored(rules, 'docs/a.tmp', false), true);
+        assert.equal(isIgnored(rules, 'other/docs/a.tmp', false), false);
+    });
+
+    it('lets the last match win, ! bring a file back, and \\ escape', () => {
+        const rules = ignores('*.ts\n!keep.ts\n\\#hash\n\\!bang\ntrailing \n');
+        assert.equal(isIgnored(rules, 'a.ts', false), true);
+        assert.equal(isIgnored(rules, 'src/keep.ts', false), false);
+        assert.equal(isIgnored(rules, '#hash', false), true);
+        assert.equal(isIgnored(rules, '!bang', false), true);
+        assert.equal(isIgnored(rules, 'trailing', false), true);
+    });
+
+    it('reads ** as any number of folders, and a final /** as what is inside', () => {
+        const rules = ignores('**/gen\na/**/z\nout/**\n');
+        assert.equal(isIgnored(rules, 'x/y/gen', true), true);
+        assert.equal(isIgnored(rules, 'a/z', false), true);
+        assert.equal(isIgnored(rules, 'a/b/c/z', false), true);
+        assert.equal(isIgnored(rules, 'out/x', false), true);
+        assert.equal(isIgnored(rules, 'out', true), false);
+    });
+
+    it('reads ?, classes and stars in a name, and a long name that fails is quick', () => {
+        const rules = ignores('v?.md\n[ab].c\n[!x]y\n*a*b*c*d*e\n');
+        assert.equal(isIgnored(rules, 'v1.md', false), true);
+        assert.equal(isIgnored(rules, 'b.c', false), true);
+        assert.equal(isIgnored(rules, 'zy', false), true);
+        assert.equal(isIgnored(rules, 'xy', false), false);
+        assert.equal(isIgnored(rules, `${'a'.repeat(5000)}bcd`, false), false);
+    });
+
+    it('reads a nested file from its folder, and one above the root from where the root is', () => {
+        const nested = ignores('/build\n', 'android');
+        assert.equal(isIgnored(nested, 'android/build', true), true);
+        assert.equal(isIgnored(nested, 'build', true), false);
+        const above = ignores('android/app/build\n', '', 'android');
+        assert.equal(isIgnored(above, 'app/build', true), true);
+        const caseless: IgnoreFile[] = [{ folder: '', above: '', rules: parseGitignore('Build/'), ignoreCase: true }];
+        assert.equal(isIgnored(caseless, 'build', true), true);
     });
 });
 
@@ -95,5 +214,12 @@ describe('buildTree', () => {
         assert.equal(parentOf('a'), '.');
         assert.equal(joinPath('.', 'a'), 'a');
         assert.equal(joinPath('src', 'a'), 'src/a');
+    });
+
+    it('builds a tree ten thousand folders deep without overflowing the stack', () => {
+        const deep = `${Array.from({ length: 10_000 }, () => 'd').join('/')}/x.ts`;
+        const tree = buildTree([deep]);
+        assert.equal(tree.length, 10_001);
+        assert.equal(tree.at(-1)?.files[0], 'x.ts');
     });
 });
