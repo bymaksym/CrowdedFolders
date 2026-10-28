@@ -985,4 +985,24 @@ describe('detectPresets', () => {
         assert.deepEqual(found.find(detection => detection.preset === 'react-native')?.folders, ['apps/mobile', '.']);
         assert.deepEqual(excludesFor(found, files, BUILT_IN_PRESETS), ['apps/mobile/ios']);
     });
+
+    // spring-boot's 11 958 files piped to --stdin with no configuration took 53 s: each of its Gradle
+    // modules tried its /build and /target against every file of the repository.
+    it('reads only the files of each folder it was found in: 400 Gradle modules in well under a second', () => {
+        const files: string[] = [];
+        for (let module = 0; module < 400; module++) {
+            files.push(`modules/m${module}/build.gradle`);
+            for (let file = 0; file < 30; file++) {
+                files.push(`modules/m${module}/src/main/java/com/acme/Thing${file}.java`);
+            }
+        }
+        // One module has what Gradle writes, next to its build.gradle; another a package called build.
+        files.push('modules/m7/build/classes/Thing.class', 'modules/m8/src/main/java/com/acme/build/Steps.java');
+        const found = detectPresets(files, new Map(), BUILT_IN_PRESETS);
+        const started = performance.now();
+        const excludes = excludesFor(found, files, BUILT_IN_PRESETS);
+        // 13 s before; 0.1 s after. The bound leaves room for a slow CI machine.
+        assert.ok(performance.now() - started < 3000, `${Math.round(performance.now() - started)} ms`);
+        assert.deepEqual(excludes, ['modules/m7/build']);
+    });
 });

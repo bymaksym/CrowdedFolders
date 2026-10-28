@@ -1,4 +1,5 @@
 import type { OverrideConfig, Preset } from '../config/types.ts';
+import { compareText } from '../naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from '../paths/glob.ts';
 import { parentOf } from '../paths/tree.ts';
 import { TEST_DATA } from './general.ts';
@@ -177,6 +178,7 @@ export function excludesFor(
     presets: Readonly<Record<string, Preset>>,
 ): string[] {
     const found: { readonly folder: string; readonly pattern: string }[] = [];
+    const under = filesUnder(files);
     for (const detection of detections) {
         const sources = [{ preset: detection.preset, folders: detection.folders }, ...(detection.extended ?? [])];
         for (const { preset, folders } of sources) {
@@ -186,7 +188,9 @@ export function excludesFor(
                 }
                 for (const pattern of anchoredPatterns(preset, presets)) {
                     const glob = compileGlob(`${folder}/${pattern}`);
-                    if (files.some(file => matchesSelfOrAncestor(file, [glob]))) {
+                    // Anchored at the folder: only its own files can match. Trying every file of the
+                    // repository for each of 400 Gradle modules took 13 s on 12 000 files.
+                    if (under(folder).some(file => matchesSelfOrAncestor(file, [glob]))) {
                         found.push({ folder, pattern });
                     }
                 }
@@ -194,6 +198,40 @@ export function excludesFor(
         }
     }
     return collapseSiblings(found);
+}
+
+/**
+ * The files under a folder, found by a binary search in the sorted list: every path that starts with
+ * `folder/` sits in one run of it. Each folder's answer is kept, for the patterns after the first.
+ */
+function filesUnder(files: readonly string[]): (folder: string) => readonly string[] {
+    // By code unit, as `<` compares in the search below.
+    const sorted = files.toSorted(compareText);
+    const cache = new Map<string, readonly string[]>();
+    return folder => {
+        const cached = cache.get(folder);
+        if (cached) {
+            return cached;
+        }
+        const prefix = `${folder}/`;
+        let low = 0;
+        let high = sorted.length;
+        while (low < high) {
+            const middle = (low + high) >>> 1;
+            if ((sorted[middle] ?? '') < prefix) {
+                low = middle + 1;
+            } else {
+                high = middle;
+            }
+        }
+        let end = low;
+        while (end < sorted.length && (sorted[end] ?? '').startsWith(prefix)) {
+            end++;
+        }
+        const found = sorted.slice(low, end);
+        cache.set(folder, found);
+        return found;
+    };
 }
 
 /**
