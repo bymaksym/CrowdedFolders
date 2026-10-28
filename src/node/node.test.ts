@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { runEngine } from '../core/engine.ts';
-import { findConfig, readConfigFile } from './config-file.ts';
-import { listFiles, parseFileList } from './files.ts';
+import { findConfig, locate, readConfigFile } from './config-file.ts';
+import { GitError, listFiles, parseFileList } from './files.ts';
 import { ConfigError, loadConfig, loadConfigFile, pluginProblem } from './load-config.ts';
 import { resolveSpecifier } from './modules.ts';
 
@@ -231,8 +231,108 @@ describe('listFiles', () => {
         );
     });
 
-    it('reads a list from text, one path per line or NUL-separated', () => {
-        assert.deepEqual(parseFileList('a.ts\r\n./src/b.ts\n\nsrc/b.ts\n'), ['a.ts', 'src/b.ts']);
+    it('reads a list from text, one path per line or NUL-separated, as given', () => {
+        assert.deepEqual(parseFileList('a.ts\r\n./src/b.ts\n\nsrc/b.ts\n'), ['a.ts', './src/b.ts', 'src/b.ts']);
         assert.deepEqual(parseFileList('a.ts\0b c.ts\0'), ['a.ts', 'b c.ts']);
     });
+
+    it('splits on a lone \\r too (classic Mac line ends read as one path)', () => {
+        assert.deepEqual(parseFileList('a.ts\rsrc/b.ts\r'), ['a.ts', 'src/b.ts']);
+    });
+});
+
+describe('listFiles when git cannot answer', () => {
+    it('fails inside a repository whose git is broken, with what git said, instead of reading the disk', () => {
+        // A .git file that points nowhere: what a broken GIT_DIR or a copied worktree looks like.
+        const root = folder({ '.git': 'gitdir: ./nowhere\n', '.gitignore': 'build/\n', 'a.ts': '', 'build/x.ts': '' });
+        assert.throws(
+            () => listFiles(root, { git: true }),
+            (error: unknown) => {
+                assert.ok(error instanceof GitError, String(error));
+                assert.match(error.message, /git could not list the files of .*\n {2}fatal: not a git repository/u);
+                assert.match(error.message, /--no-git/u);
+                return true;
+            },
+        );
+    });
+
+    it('reads the disk outside a repository and says so, unless git is required', () => {
+        const root = folder({ 'a.ts': '' });
+        const list = listFiles(root, { git: true });
+        assert.equal(list.source, 'filesystem');
+        assert.match(list.notice ?? '', /is not in a git repository: the files were read from the disk/u);
+        assert.throws(() => listFiles(root, { git: true, requireGit: true }), GitError);
+    });
+
+    it('leaves out an untracked nested repository, which git lists as "nested/"', () => {
+        const root = folder({ 'a.ts': '', 'nested/b.ts': '' });
+        execFileSync('git', ['-C', root, 'init', '-q'], { stdio: 'ignore' });
+        execFileSync('git', ['-C', join(root, 'nested'), 'init', '-q'], { stdio: 'ignore' });
+        assert.deepEqual(listFiles(root, { git: true }).files, ['a.ts']);
+    });
+});
+
+describe('listFiles without git', () => {
+    it('reads .gitignore files, nested ones from their folder (--no-git counted android/build)', () => {
+        const root = folder({
+            '.gitignore': '*.log\n!keep.log\n',
+            'android/.gitignore': 'build/\n/local.properties\n',
+            'android/app/build/intermediates/x.dex': '',
+            'android/app/src/Main.kt': '',
+            'android/local.properties': '',
+            'android/app/local.properties': '',
+            'debug.log': '',
+            'keep.log': '',
+        });
+        assert.deepEqual(listFiles(root, { git: false }).files, [
+            '.gitignore',
+            'android/.gitignore',
+            'android/app/local.properties',
+            'android/app/src/Main.kt',
+            'keep.log',
+        ]);
+    });
+
+    it('reads the .gitignore files above the root, up to the top of the repository', () => {
+        const top = folder({
+            '.git/info/exclude': 'secret.txt\n',
+            '.gitignore': 'android/app/build\n',
+            'android/app/build/x.dex': '',
+            'android/app/Main.kt': '',
+            'android/secret.txt': '',
+        });
+        assert.deepEqual(listFiles(join(top, 'android'), { git: false }).files, ['app/Main.kt']);
+    });
+});
+
+describe('locate', () => {
+    it('looks for the configuration from --root, not from where the command runs', () => {
+        const top = folder({
+            'here/crowded-folders.config.json': '{}',
+            'other/crowded-folders.config.json': '{}',
+            'other/a.ts': '',
+        });
+        const found = locate({ cwd: join(top, 'here'), root: join(top, 'other') });
+        assert.equal(found.configPath, join(top, 'other', 'crowded-folders.config.json'));
+        assert.equal(found.root, join(top, 'other'));
+        assert.equal(found.scope, '.');
+    });
+
+    it('keeps the configuration as the base of paths when the root is inside its folder (QR Checker --root android)', () => {
+        const top = folder({ '.config/crowded-folders.json': '{}', 'android/app/a.kt': '' });
+        const found = locate({ cwd: top, root: join(top, 'android') });
+        assert.equal(found.configPath, join(top, '.config', 'crowded-folders.json'));
+        assert.equal(found.base, top);
+        assert.equal(found.scope, 'android');
+    });
+
+    it(
+        'reads every folder as its real path, so a short or differently cased one is the same folder',
+        { skip: process.platform !== 'win32' },
+        () => {
+            const top = folder({ 'a.ts': '' });
+            const found = locate({ cwd: top.toUpperCase() });
+            assert.equal(found.root, realpathSync.native(top));
+        },
+    );
 });

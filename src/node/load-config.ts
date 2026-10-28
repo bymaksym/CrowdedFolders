@@ -32,6 +32,10 @@ export interface LoadedConfig {
     /** Built-in presets and the presets of every plugin. */
     readonly presets: Readonly<Record<string, Preset>>;
     readonly plugins: readonly Plugin[];
+    /** What in the configuration does nothing and is worth saying: a `"!x"` that removes nothing. */
+    readonly warnings: readonly string[];
+    /** The `include` and `exclude` of the configuration itself (not what it extends), to say which match no file. */
+    readonly own: { readonly origin: string; readonly include: readonly string[]; readonly exclude: readonly string[] };
 }
 
 const NAMESPACE = /^[a-z\d][a-z\d-]*$/u;
@@ -50,7 +54,15 @@ export async function loadConfig(
 ): Promise<LoadedConfig> {
     const loader = new Loader(extraRules);
     await loader.applyLayer(raw, origin, dir, true, []);
-    return { config: loader.state, rules: loader.rules, presets: loader.presets, plugins: loader.plugins };
+    const own = raw as Config;
+    return {
+        config: loader.state,
+        rules: loader.rules,
+        presets: loader.presets,
+        plugins: loader.plugins,
+        warnings: loader.warnings,
+        own: { origin, include: own.include ?? [], exclude: own.exclude ?? [] },
+    };
 }
 
 /** Reads and applies a configuration file. */
@@ -66,6 +78,7 @@ class Loader {
     rules: Record<string, Rule>;
     presets: Record<string, Preset> = { ...BUILT_IN_PRESETS };
     plugins: Plugin[] = [];
+    warnings: string[] = [];
     private readonly applied = new Set<string>();
     private readonly pluginPaths = new Map<string, string>();
 
@@ -99,7 +112,24 @@ class Loader {
         for (const entry of config.extends ?? []) {
             await this.applyExtends(entry, dir, origin, [...chain, origin]);
         }
+        this.warnNegations(config, origin);
         this.state = mergeLayer(this.state, config, origin, own);
+    }
+
+    /**
+     * `"!x"` removes `x` from what was inherited. In `exclude` it looks like a gitignore negation
+     * that brings files back, and it is not one: when there is no `x` to remove, it does nothing, so say so.
+     */
+    private warnNegations(config: Config, origin: string): void {
+        for (const key of ['include', 'exclude'] as const) {
+            for (const entry of config[key] ?? []) {
+                if (entry.startsWith('!') && !this.state[key].includes(entry.slice(1))) {
+                    this.warnings.push(
+                        `${origin}: "${entry}" in ${key} removes nothing: "!" only takes out an entry inherited from a preset or an extended file, written the same way. It is not a gitignore negation and brings no file back.`,
+                    );
+                }
+            }
+        }
     }
 
     private async applyExtends(entry: string, dir: string, origin: string, chain: readonly string[]): Promise<void> {
