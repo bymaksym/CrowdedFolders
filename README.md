@@ -166,6 +166,19 @@ so `exitCode` is what the command would exit with. `createLinter()` loads it onc
 hook, `crowded-folders/engine` runs in a browser, and `crowded-folders/testing` has a `RuleTester` for
 plugins: [docs/api.md](docs/api.md).
 
+## The map and the badge
+
+`crowded-folders tree` prints the folders as a tree with how near each is to its limit;
+`crowded-folders -f html=map.html` writes one self-contained page with a zoomable treemap. The summary says
+how many folders are within their limit, and `-f badge=badge.json` writes that figure as a
+[shields.io endpoint](https://shields.io/badges/endpoint-badge):
+
+```md
+![folders within limit](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2FOWNER%2FREPO%2Fbadges%2Fbadge.json)
+```
+
+More in [docs/tree.md](docs/tree.md).
+
 ## Documentation
 
 | Page                                      | For                                                                |
@@ -176,6 +189,7 @@ plugins: [docs/api.md](docs/api.md).
 | [rules/](docs/rules)                      | One page per rule, with examples.                                  |
 | [adopting.md](docs/adopting.md)           | Starting in a repository that already has crowded folders.         |
 | [ci.md](docs/ci.md)                       | GitHub Actions, GitLab, pre-commit, hooks, output formats.         |
+| [tree.md](docs/tree.md)                   | The folder tree, the HTML map, the health figure and the badge.    |
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
 | [how-it-works.md](docs/how-it-works.md)   | How names are read, and why.                                       |

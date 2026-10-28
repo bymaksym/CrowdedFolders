@@ -127,6 +127,22 @@ other rejects.
 `eslint-plugin-n` reads `engines`, so a newer API fails before CI's Node 20.19 job does.
 **Why:** a minimum that nothing runs is a promise kept by luck.
 
+## Sizes are metadata, never content
+
+**Decided:** the tool judges folders by names. The one thing beyond names it uses is a file's size in
+bytes, from `git ls-tree -r -l HEAD`, which git keeps in its records: no file is opened. With it, a
+folder over its limit whose files are mostly under 200 bytes gets a note ("74 of its 92 files are under
+200 bytes: maybe they are one file"), in the text report, `tree` and the HTML map.
+**Why:** 74 of the 92 files of a folder were one line (`export type IExtAssetType = ICatalogValue;`),
+and the fix is to join them, which the usual advice (split by what the files are about) gets backwards.
+A size answers that without the cost or the risk of reading content: the core stays pure, a huge
+repository costs one `git` call, and nothing in a file can change the result.
+**Discarded:** a rule. A size says how big a file is, not what it is (generated stubs, a licence per
+file), so it is a note beside the finding and never fails a run. Reading the files to count lines: it
+would make the tool slower and its answer depend on content, which is what looking at names avoids.
+Sizes of the working tree: untracked or edited files have no committed size; the note is for what is in
+`HEAD`.
+
 ## No moves applied
 
 **Decided:** `--moves` prints `git mv` commands and never moves anything.

@@ -107,7 +107,10 @@ one raises `formatVersion` (now `1`).
   owner's problems, and the exit code follows.
 - `--no-files` leaves `files` and `moves` out of each finding (`fileCount` stays): on a large repository
   they are most of the report. `--stats` adds `folders`: every folder with its `modules`, `files`,
-  `subfolders` and the `max-files` `limit` in effect.
+  `subfolders`, the `max-files` `limit` in effect, and what that rule counts (`unit`) and compares with it
+  (`used`).
+- `--format html` writes one self-contained page with a map of the folders, and `--format badge` a
+  shields.io endpoint with the share of folders within the limit: [tree.md](tree.md).
 
 ## GitHub Actions
 
