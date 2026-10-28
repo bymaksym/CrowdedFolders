@@ -59,6 +59,9 @@ try {
         'dist/index.js',
         'dist/index.d.ts',
         'dist/cli/main.js',
+        '.claude-plugin/plugin.json',
+        'hooks/hooks.json',
+        'skills/crowded-folders/SKILL.md',
         'schema.json',
         'report.schema.json',
         'README.md',
@@ -112,6 +115,37 @@ try {
     expect('--suppress-all adopts it and exits 0', adopted.status === 0, adopted.stdout + adopted.stderr);
     const sarif = run(['--format', 'sarif', '--pass-on-unpruned-suppressions'], sample);
     expect('--format sarif prints SARIF', sarif.stdout.includes('"version": "2.1.0"'), sarif.stderr);
+
+    // The kit for agents: the hook answers from the installed package, as the plugin and init --agents run it.
+    const hookRun = spawnSync(process.execPath, [bin, 'hook', 'claude'], {
+        cwd: sample,
+        encoding: 'utf8',
+        input: JSON.stringify({
+            hook_event_name: 'PreToolUse',
+            tool_name: 'Write',
+            cwd: sample,
+            tool_input: { file_path: join(sample, 'cli', 'render-extra.ts'), content: '' },
+        }),
+    });
+    expect(
+        'the hook warns about a new file and does not decide',
+        hookRun.status === 0 &&
+            hookRun.stdout.includes('"additionalContext"') &&
+            !hookRun.stdout.includes('permissionDecision'),
+        hookRun.stdout + hookRun.stderr,
+    );
+    const where = run(['where', 'cli/render-extra.ts', '--format', 'json'], sample);
+    expect(
+        'where answers in JSON',
+        where.status === 0 && where.stdout.includes('"effect"'),
+        where.stdout + where.stderr,
+    );
+    const agents = run(['init', '--agents', '--dry-run'], sample);
+    expect(
+        'init --agents --dry-run prints a diff',
+        agents.status === 0 && agents.stdout.includes('+++ b/.claude/settings.json'),
+        agents.stdout + agents.stderr,
+    );
 
     const broken = join(work, 'broken');
     mkdirSync(broken);

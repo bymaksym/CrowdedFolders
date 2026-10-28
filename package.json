@@ -35,6 +35,9 @@
     "files": [
         "bin/",
         "dist/",
+        ".claude-plugin/",
+        "hooks/",
+        "skills/",
         "schema.json",
         "report.schema.json",
         "docs/",
