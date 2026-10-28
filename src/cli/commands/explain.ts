@@ -7,8 +7,8 @@ import { plural } from '../../core/plural.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
 import type { Args } from '../args.ts';
 import { type Io, wantsSymbols } from '../io.ts';
-import { isEmptyOption, labelOf, patternOrigin, ruleOrigins, withOverrides } from '../provenance.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
+import { isEmptyOption, labelOf, patternOrigin, ruleOrigins, withOverrides } from './provenance.ts';
 
 /**
  * Shows one folder the way the rules see it: which overrides apply and why, how each file name was

@@ -5,8 +5,8 @@ import { asciiProse, wrapWords } from '../../core/report/ascii.ts';
 import { BUILT_IN_RULES } from '../../core/rules/index.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, terminalWidth, wantsSymbols } from '../io.ts';
-import { isEmptyOption, ruleOrigins, withOverrides } from '../provenance.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
+import { isEmptyOption, ruleOrigins, withOverrides } from './provenance.ts';
 
 /** Where a pipe wraps: the width of a terminal is not known there, and 100 columns is what a diff or a mail shows. */
 const PIPE_WIDTH = 100;

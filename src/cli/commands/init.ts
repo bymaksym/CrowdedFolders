@@ -6,12 +6,12 @@ import { runEngine } from '../../core/engine.ts';
 import { plural } from '../../core/plural.ts';
 import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
-import { wrapWords } from '../../core/report/ascii.ts';
+import { asciiProse, wrapWords } from '../../core/report/ascii.ts';
 import { CONFIG_NAMES, findConfig, PACKAGE_KEY, projectDirOf } from '../../node/config-file.ts';
 import { loadConfig } from '../../node/load-config.ts';
 import { dependenciesOf } from '../../node/manifests.ts';
 import { type Args, UsageError } from '../args.ts';
-import { commandName, type Io, terminalWidth, writeFileAtomic } from '../io.ts';
+import { commandName, type Io, terminalWidth, wantsSymbols, writeFileAtomic } from '../io.ts';
 import { type Session, warnIfTruncated } from '../session.ts';
 import { TOOL } from '../tool.ts';
 
@@ -79,7 +79,8 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     }
     lines.push('');
     pushNextSteps(lines, { errors, warnings, folders: result.folderCount, io, session });
-    io.write(`${lines.join('\n')}\n`);
+    const text = `${lines.join('\n')}\n`;
+    io.write(wantsSymbols(io) ? text : asciiProse(text));
     return 0;
 }
 

@@ -1,7 +1,7 @@
-import type { Config, OverrideState, RuleSetting } from '../core/config/types.ts';
-import { shownPath } from '../node/config-error.ts';
-import { readConfigFile } from '../node/config-file.ts';
-import type { Session } from './session.ts';
+import type { Config, OverrideState, RuleSetting } from '../../core/config/types.ts';
+import { shownPath } from '../../node/config-error.ts';
+import { readConfigFile } from '../../node/config-file.ts';
+import type { Session } from '../session.ts';
 
 /** Rule → setting (`severity`, or an option's name) → where its value was last set. */
 export type Origins = Record<string, Record<string, string>>;

@@ -3,9 +3,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { pinnedSchemaUrl } from '../core/config/schema.ts';
-import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
-import { TOOL } from './tool.ts';
+import { pinnedSchemaUrl } from '../../core/config/schema.ts';
+import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
+import { TOOL } from '../tool.ts';
 
 cleanUpAfterTests();
 

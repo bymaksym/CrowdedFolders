@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
+import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
 
 cleanUpAfterTests();
 

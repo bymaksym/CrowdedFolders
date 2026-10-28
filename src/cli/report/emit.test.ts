@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { shownOf } from '../core/plural.ts';
-import { formatGithub } from '../core/report/machine.ts';
-import type { Report } from '../core/report/report.ts';
-import { prefixGroup } from '../core/report/test-support/fixtures.ts';
-import { listNames } from '../core/rules/rule.ts';
-import { run } from './main.ts';
-import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
+import { shownOf } from '../../core/plural.ts';
+import { formatGithub } from '../../core/report/machine.ts';
+import type { Report } from '../../core/report/report.ts';
+import { prefixGroup } from '../../core/report/test-support/fixtures.ts';
+import { listNames } from '../../core/rules/rule.ts';
+import { run } from '../main.ts';
+import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
 
 cleanUpAfterTests();
 
