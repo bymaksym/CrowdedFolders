@@ -58,6 +58,7 @@ try {
         'bin/crowded-folders.js',
         'dist/index.js',
         'dist/index.d.ts',
+        'dist/eslint.js',
         'dist/cli/main.js',
         'schema.json',
         'report.schema.json',
@@ -100,6 +101,22 @@ try {
         found.status === 1 && found.stdout.includes('prefix-groups'),
         found.stdout + found.stderr,
     );
+
+    // The ESLint plugin, with the context ESLint would give it, over the same repository.
+    const plugin = spawnSync(
+        process.execPath,
+        [
+            '--input-type=module',
+            '-e',
+            "import plugin from 'crowded-folders/eslint';" +
+                'const reports = [];' +
+                `const context = { filename: ${JSON.stringify(join(sample, 'cli', 'main.ts'))}, cwd: ${JSON.stringify(sample)}, options: [], report: r => reports.push(r) };` +
+                'plugin.rules.folder.create(context).Program();' +
+                "if (reports.length !== 1 || !reports[0].data.message.includes('render') || plugin.configs.recommended.plugins['crowded-folders'] !== plugin) process.exit(1);",
+        ],
+        { cwd: consumer, encoding: 'utf8' },
+    );
+    expect('crowded-folders/eslint reports the render group', plugin.status === 0, plugin.stderr);
 
     const init = run(['init'], sample);
     expect(
@@ -145,7 +162,7 @@ try {
             "new RuleTester().run('max-files', BUILT_IN_RULES['max-files'], { invalid: [{ files: ['a/1.ts','a/2.ts'], options: { max: 1 }, errors: 1 }] });",
     );
     expect('crowded-folders/testing imports and runs', testing.status === 0, testing.stderr);
-    for (const entry of ['dist/engine.d.ts', 'dist/testing.d.ts']) {
+    for (const entry of ['dist/engine.d.ts', 'dist/eslint.d.ts', 'dist/testing.d.ts']) {
         expect(`the types of ${entry} are in the tarball`, listing.includes(entry));
     }
     const closed = node("await import('crowded-folders/dist/core/engine.js');");

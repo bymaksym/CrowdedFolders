@@ -50,6 +50,10 @@
             "types": "./dist/engine.d.ts",
             "default": "./dist/engine.js"
         },
+        "./eslint": {
+            "types": "./dist/eslint.d.ts",
+            "default": "./dist/eslint.js"
+        },
         "./testing": {
             "types": "./dist/testing.d.ts",
             "default": "./dist/testing.js"
@@ -84,6 +88,14 @@
         "deps:audit": "pnpm audit --audit-level high",
         "check": "node tooling/check.mjs",
         "check:all": "node tooling/check.mjs --all"
+    },
+    "peerDependencies": {
+        "eslint": "^9.0.0 || ^10.0.0"
+    },
+    "peerDependenciesMeta": {
+        "eslint": {
+            "optional": true
+        }
     },
     "devDependencies": {
         "@arethetypeswrong/cli": "^0.18.5",

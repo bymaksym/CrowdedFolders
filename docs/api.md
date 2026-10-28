@@ -10,13 +10,14 @@ for (const finding of result.kept) {
 process.exitCode = result.exitCode; // what `npx crowded-folders` would exit with
 ```
 
-The package is ESM with TypeScript types, in three entry points; nothing else under `dist/` can be
+The package is ESM with TypeScript types, in four entry points; nothing else under `dist/` can be
 imported (`exports` closes it), so nothing else is part of the API.
 
 | Entry point               | What it is                                                                                                     |
 | ------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `crowded-folders`         | Everything: `lint`, `createLinter`, and all of `crowded-folders/engine`.                                       |
 | `crowded-folders/engine`  | The analysis without Node: it reads no file and touches no `process`, so it bundles for a browser or a worker. |
+| `crowded-folders/eslint`  | The analysis as an ESLint plugin, flat config ([eslint.md](eslint.md)).                                        |
 | `crowded-folders/testing` | `RuleTester`, for the rules of a plugin ([plugins.md](plugins.md#testing-it)).                                 |
 
 The package declares `"sideEffects": false`: importing it runs nothing, so a bundler keeps only what is used.

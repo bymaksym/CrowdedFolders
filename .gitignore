@@ -4,3 +4,5 @@ coverage/
 *.tgz
 *.tmp
 .field-trial/
+.sea/
+binaries/
