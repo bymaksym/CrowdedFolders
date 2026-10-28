@@ -33,7 +33,11 @@ about the 95th percentile of folder sizes, the biggest folder in twenty.
 | [`flutter`](#flutter) | When it finds a file matching `pubspec.yaml`. |
 | [`rails`](#rails) | When it finds a file matching `config/application.rb` or `bin/rails`. |
 | [`php`](#php) | When it finds a file matching `composer.json`. |
+| [`elixir`](#elixir) | When it finds a file matching `mix.exs`. |
+| [`scala`](#scala) | When it finds a file matching `build.sbt`. |
 | [`c-cpp`](#c-cpp) | When it finds a file matching `CMakeLists.txt` or `meson.build` or `configure.ac` or `*.vcxproj` or `conanfile.txt` or `conanfile.py` or `vcpkg.json`. |
+| [`protobuf`](#protobuf) | When it finds a file matching `*.proto` or `buf.yaml` or `buf.gen.yaml`. |
+| [`bazel`](#bazel) | When it finds a file matching `MODULE.bazel` or `WORKSPACE` or `WORKSPACE.bazel`. |
 | [`unity`](#unity) | When it finds a file matching `ProjectSettings/ProjectVersion.txt`. |
 | [`unreal`](#unreal) | When it finds a file matching `*.uproject`. |
 | [`godot`](#godot) | When it finds a file matching `project.godot`. |
@@ -84,15 +88,17 @@ Sources:
 
 ## angular
 
-Angular's own guide: folders by feature, a component's files together, and sub-folders once a folder of the app's src/ passes about ten — the old style guide said seven, and ten when it explained why. Counts a component and its template, styles and spec once. Scripts and tooling outside src/ keep recommended's limit.
+Angular's own guide: folders by feature, a component's files together, and sub-folders as a folder grows. The current guide gives no number ("consider splitting further"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for sub-folders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint.
 
 - **Extends:** [recommended](#recommended)
 - **Left out:** `.angular`, `src/environments`
-- **In `**/src`, `**/src/**`:** `max-files` `error` `{"max":10,"count":"modules","hint":"Angular asks for folders by feature, not by type (no components/ or services/)."}`. The style guide is about the application code, which Angular puts in src/: "All of your Angular UI code (TypeScript, HTML, and styles) should live inside a directory named src".
+- **In `**/src`, `**/src/**`:** `max-files` `error` `{"hint":"Angular asks for folders by feature, not by type (no components/ or services/).","hintFor":["*.ts"]}`. The style guide is about the application code, which Angular puts in src/: "All of your Angular UI code (TypeScript, HTML, and styles) should live inside a directory named src".
+- **In `**/src/**/components`, `**/src/**/services`, `**/src/**/utils`, `**/src/**/helpers`, `**/src/**/models`, `**/src/**/types`, `**/src/**/interfaces`, `**/src/**/enums`, `**/src/**/constants`, `**/src/**/pipes`, `**/src/**/directives`, `**/src/**/guards`, `**/src/**/interceptors`, `**/src/**/resolvers`:** `max-files` `error` `{"hint":"This folder is already by type: group by topic inside, e.g. utils/filters/."}`. A folder that is already by type cannot be told to become a feature: what helps is grouping by topic inside it.
+- **In `**/src/**/features`, `**/src/**/features/**`:** `max-files` `error` `{"max":10}`. The 10 of the former guide, which asked for sub-folders early ("Flat": seven or more files), kept where the guide's feature folders are.
 
 Sources:
 
-- [Angular style guide: project structure](https://angular.dev/style-guide)
+- [Angular style guide: project structure, "As the number of files in a directory grows, consider splitting further into additional sub-directories"](https://angular.dev/style-guide)
 - [Former Angular style guide, 04-04 "Flat": sub-folders at seven or more files](https://raw.githubusercontent.com/angular/angular/17.3.x/aio/content/guide/styleguide.md)
 
 ## react
@@ -123,13 +129,15 @@ Sources:
 
 ## react-native
 
-React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository.
+React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address.
 
 - **Extends:** [react](#react)
+- **`single-file-folders`:** `off` `{"allowed":["**/app/**/index.*","**/app/**/[[]*].*"]}`
 - **Left out:** `/ios`, `/android`, `.expo`
 
 Sources:
 
+- [Expo Router: "an index.tsx file indicates the default route for a directory"; square brackets in a file or directory name are a dynamic route](https://docs.expo.dev/router/basics/notation/)
 - [Expo: continuous native generation — prebuild "creates the android and ios directories"](https://docs.expo.dev/workflow/continuous-native-generation/)
 
 ## vue
@@ -362,6 +370,33 @@ Sources:
 - [PSR-4: autoloading](https://www.php-fig.org/psr/psr-4/)
 - [Laravel: directory structure](https://laravel.com/docs/12.x/structure)
 
+## elixir
+
+Elixir and Phoenix: mix phx.gen.html writes user_controller.ex, user_html.ex and user_json.ex (and user_controller_test.exs) for one resource, and they are one module, user. Contexts and schemas are namespaces, so a folder is a module namespace by convention, not a rule. The limits are recommended's measured 20: no Elixir guide gives a number. _build, deps and the compiled assets are left out.
+
+- **Extends:** [recommended](#recommended)
+- **Companions:** `_(?:controller|html|json|live|channel|view|test)$`
+- **Left out:** `/_build`, `/deps`, `/cover`, `priv/static`
+
+Sources:
+
+- [Phoenix: directory structure (lib/my_app_web/controllers)](https://hexdocs.pm/phoenix/directory_structure.html)
+- [mix phx.gen.html: a controller in controllers/user_controller.ex, an HTML view in controllers/user_html.ex](https://phoenix.hexdocs.pm/Mix.Tasks.Phx.Gen.Html.html)
+- [ExUnit: tests are *_test.exs files](https://hexdocs.pm/ex_unit/ExUnit.html)
+
+## scala
+
+Scala with sbt: the file is named after the class it contains, FooSpec, FooSuite and FooTest are Foo, and the directories of sbt (target, project/target, project/project) are left out. Packages need not follow the folders, but they usually do. The limits are recommended's measured 20: neither the Scala style guide nor sbt gives a number.
+
+- **Extends:** [recommended](#recommended)
+- **Companions:** `(?:Spec|Suite|Test|Tests)$`
+- **Left out:** `/target`, `/project/target`, `/project/project`, `.bsp`, `.metals`
+
+Sources:
+
+- [Scala style guide, files: "the file is named after the class it contains, or if it has more than one class, the parent class"](https://docs.scala-lang.org/style/files.html)
+- [sbt: directory structure (src/main/scala, target, project/)](https://www.scala-sbt.org/1.x/docs/Directories.html)
+
 ## c-cpp
 
 C and C++: foo.h, foo.cc and foo_test.cc are one module. Without namespaces in C, a shared prefix is often the subsystem's name on purpose (Google: "http_server_logs.h rather than logs.h"), so groups are warnings and need five. Generated Qt and protobuf files are left out.
@@ -376,6 +411,33 @@ Sources:
 
 - [Google C++ style guide: file names](https://google.github.io/styleguide/cppguide.html)
 - [Pitchfork: a C++ project layout](https://github.com/vector-of-bool/pitchfork)
+
+## protobuf
+
+Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
+
+- **Extends:** [recommended](#recommended)
+- **Companions:** `_(?:grpc_web_pb|grpc_pb|pb2_grpc|pb2|pb|grpc|connect)$`
+
+Sources:
+
+- [Protocol Buffers, Python generated code: "The extension (.proto) is replaced with _pb2.py"](https://protobuf.dev/reference/python/python-generated/)
+- [Protocol Buffers, Go generated code: "replacing the .proto extension with .pb.go"](https://protobuf.dev/reference/go/go-generated/)
+- [Buf style guide: "All files of the same package should be in the same directory"](https://buf.build/docs/best-practices/style-guide/)
+
+## bazel
+
+Bazel: a folder with a BUILD.bazel is a package, with its own targets and its own visibility, so a new folder is a new BUILD file and a new set of visibility rules, not just a directory (the hint says so on every folder it proposes). The limits are recommended's measured 20 (no Bazel guide gives a number), the root of every package gets the 40 of the repository root, and the bazel-* symlinks to the output are left out.
+
+- **Extends:** [recommended](#recommended)
+- **`max-files`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
+- **`prefix-groups`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
+- **Left out:** `bazel-*`
+
+Sources:
+
+- [Bazel: BUILD files, "By definition, every package contains a BUILD file"](https://bazel.build/concepts/build-files)
+- [Bazel: visibility, "Visibility is specified by listing allowed packages"](https://bazel.build/concepts/visibility)
 
 ## unity
 

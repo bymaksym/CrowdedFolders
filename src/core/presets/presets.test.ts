@@ -708,6 +708,92 @@ describe('expo router', () => {
     });
 });
 
+describe('protobuf, elixir, scala and bazel', () => {
+    const resources = ['user', 'order', 'cart', 'item', 'coupon', 'invoice', 'refund', 'ticket'];
+
+    it('protobuf reads user_pb.ts, user_pb.d.ts, user_grpc_pb.js, user_pb2.py and user_grpc.pb.go as user', () => {
+        const names = [
+            'user_pb.ts',
+            'user_pb.d.ts',
+            'user_grpc_pb.js',
+            'user_pb2.py',
+            'user_pb2_grpc.py',
+            'user_grpc.pb.go',
+            'user_connect.ts',
+            'user.pb.go',
+        ];
+        const view = explainFolder(
+            { files: inFolder('src/api', names), config: resolvePreset('protobuf'), rules: BUILT_IN_RULES },
+            'src/api',
+        );
+        assert.equal(view?.folder.modules.length, 1);
+        const generated = resources.flatMap(name => [
+            `${name}_pb.ts`,
+            `${name}_pb.d.ts`,
+            `${name}_grpc_pb.js`,
+            `${name}_connect.ts`,
+        ]);
+        assert.deepEqual(check('protobuf', inFolder('src/api', generated)), []);
+        assert.equal(check('recommended', inFolder('src/api', generated)).length, 1);
+    });
+
+    it('elixir reads user_controller.ex, user_html.ex and user_json.ex as one module (phx.gen.html)', () => {
+        const files = resources.flatMap(name => [`${name}_controller.ex`, `${name}_html.ex`, `${name}_json.ex`]);
+        assert.deepEqual(check('elixir', inFolder('lib/my_app_web/controllers', files)), []);
+        assert.equal(check('recommended', inFolder('lib/my_app_web/controllers', files)).length, 1);
+        assert.deepEqual(
+            check(
+                'elixir',
+                inFolder(
+                    'test/my_app_web/controllers',
+                    resources.map(name => `${name}_controller_test.exs`),
+                ),
+            ),
+            [],
+        );
+    });
+
+    it('scala reads FooSpec, FooSuite and FooTest as Foo, and leaves out target and project/target', () => {
+        const files = resources.flatMap(name => [
+            `${name[0]?.toUpperCase()}${name.slice(1)}.scala`,
+            `${name[0]?.toUpperCase()}${name.slice(1)}Spec.scala`,
+            `${name[0]?.toUpperCase()}${name.slice(1)}Suite.scala`,
+        ]);
+        assert.deepEqual(check('scala', inFolder('src/test/scala', files)), []);
+        assert.equal(check('recommended', inFolder('src/test/scala', files)).length, 1);
+        const built = series('target/scala-3.3', 40, index => `Class${letters(index)}.class`);
+        assert.deepEqual(
+            check('scala', [...built, ...series('project/target', 40, index => `f${letters(index)}.class`)]),
+            [],
+        );
+    });
+
+    it('bazel warns that a new folder is a new package, and leaves out the bazel-* links', () => {
+        const files = ['a_x', 'a_y', 'a_z', 'a_w', 'b'].map(name => `pkg/${name}.cc`);
+        const [finding] = check('bazel', files);
+        assert.match(finding?.message ?? '', /needs its own BUILD file and its own visibility/u);
+        assert.deepEqual(
+            check(
+                'bazel',
+                series('bazel-out/k8-fastbuild/bin', 40, index => `f${letters(index)}.o`),
+            ),
+            [],
+        );
+    });
+
+    it('detects them by mix.exs, build.sbt, MODULE.bazel and .proto files', () => {
+        const found = detectPresets(
+            ['mix.exs', 'build.sbt', 'MODULE.bazel', 'proto/user.proto'],
+            new Map(),
+            BUILT_IN_PRESETS,
+        );
+        assert.deepEqual(
+            found.map(detection => detection.preset),
+            ['recommended', 'elixir', 'scala', 'protobuf', 'bazel'],
+        );
+    });
+});
+
 describe('detectPresets', () => {
     it('proposes recommended always, and each preset from a file or a dependency', () => {
         const found = detectPresets(

@@ -64,13 +64,13 @@ Conventions differ, and the tool must not fight them. Vue's style guide _asks_ f
 sub-folders, so `activity_*` and `ic_*` are the only grouping there is; in Go a new folder is a new
 package. Each preset follows its ecosystem's own guide, and says which:
 
-| Field                           | Presets                                                                                                                 |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| General                         | `recommended`, `strict`                                                                                                 |
-| Web                             | `angular`, `react`, `nextjs`, `react-native`, `vue`, `nuxt`, `svelte`, `nestjs`                                         |
-| Languages                       | `python`, `django`, `go`, `rust`, `java` (and Kotlin), `android`, `dotnet`, `swift`, `flutter`, `rails`, `php`, `c-cpp` |
-| Games                           | `unity`, `unreal`, `godot`                                                                                              |
-| Infrastructure, documents, data | `terraform`, `docs`, `data-science`, `latex`                                                                            |
+| Field                           | Presets                                                                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General                         | `recommended`, `strict`                                                                                                                                                   |
+| Web                             | `angular`, `react`, `nextjs`, `react-native`, `vue`, `nuxt`, `svelte`, `nestjs`                                                                                           |
+| Languages                       | `python`, `django`, `go`, `rust`, `java` (and Kotlin), `android`, `dotnet`, `swift`, `flutter`, `rails`, `php`, `elixir` (Phoenix), `scala`, `c-cpp`, `protobuf`, `bazel` |
+| Games                           | `unity`, `unreal`, `godot`                                                                                                                                                |
+| Infrastructure, documents, data | `terraform`, `docs`, `data-science`, `latex`                                                                                                                              |
 
 `crowded-folders init` detects them; every preset, what it changes and its sources are in
 [docs/presets.md](docs/presets.md). Plugins add more (`namespace/preset`), and a team can publish its
