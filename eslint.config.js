@@ -131,6 +131,26 @@ export default defineConfig(
         },
     },
     {
+        // crowded-folders/engine and crowded-folders/testing are published as the part that runs in a
+        // browser or a worker: they import the core and nothing else (src/api.test.ts follows the graph).
+        files: ['src/engine.ts', 'src/testing.ts'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        { regex: '^node:', message: 'this entry point runs without Node: import from src/core only.' },
+                        {
+                            regex: String.raw`^\./(node|cli)/`,
+                            message: 'this entry point runs without Node: import from src/core only.',
+                        },
+                    ],
+                },
+            ],
+            'no-restricted-globals': ['error', { name: 'process', message: 'this entry point runs without Node.' }],
+        },
+    },
+    {
         files: ['src/**/*.test.ts'],
         rules: {
             '@typescript-eslint/no-non-null-assertion': 'off', // a test that is wrong should throw, and that is what ! does

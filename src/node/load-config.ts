@@ -3,27 +3,16 @@ import { dirname, resolve } from 'node:path';
 import { isObject } from '../core/config/json-schema.ts';
 import { mergeLayer } from '../core/config/merge.ts';
 import { type Config, EMPTY_CONFIG, type Plugin, type Preset, type ResolvedConfig } from '../core/config/types.ts';
-import { type ConfigProblem, formatProblems, validateConfig } from '../core/config/validate.ts';
+import { ConfigError, validateConfig } from '../core/config/validate.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
+import { ruleShapeProblem } from '../core/rules/guard.ts';
 import { BUILT_IN_RULES } from '../core/rules/index.ts';
 import type { Rule } from '../core/rules/rule.ts';
 import { readConfigFile } from './config-file.ts';
-import { importDefault, resolveSpecifier } from './modules.ts';
+import { compatibilityProblem, importDefault, resolveSpecifier } from './modules.ts';
 
-/** A configuration that cannot be used, with every problem found in it. */
-export class ConfigError extends Error {
-    readonly origin: string;
-    readonly problems: readonly ConfigProblem[];
-
-    constructor(origin: string, problems: readonly ConfigProblem[]) {
-        super(
-            `${origin} has ${problems.length === 1 ? 'a problem' : `${problems.length} problems`}:\n${formatProblems(problems)}`,
-        );
-        this.name = 'ConfigError';
-        this.origin = origin;
-        this.problems = problems;
-    }
-}
+// Defined in the core, where `resolveConfig` throws it too; exported from here as it always was.
+export { ConfigError } from '../core/config/validate.ts';
 
 export interface LoadedConfig {
     readonly config: ResolvedConfig;
@@ -190,6 +179,11 @@ class Loader {
                 { at: 'plugins', message: `"${specifier}" is not a crowded-folders plugin: ${problem}` },
             ]);
         }
+        // Before any of its rules runs: a plugin made for another major version would break halfway.
+        const incompatible = compatibilityProblem(specifier, path);
+        if (incompatible) {
+            throw new ConfigError(origin, [{ at: 'plugins', message: incompatible }]);
+        }
         const plugin = value as Plugin;
         const namespace = plugin.meta.namespace;
         const previous = this.pluginPaths.get(namespace);
@@ -230,11 +224,9 @@ export function pluginProblem(value: unknown): string | undefined {
             return '"rules" must be an object';
         }
         for (const [name, rule] of Object.entries(rules)) {
-            if (!isObject(rule) || typeof rule['check'] !== 'function' || !isObject(rule['meta'])) {
-                return `rule "${name}" needs "meta" and a "check" function`;
-            }
-            if (typeof rule['meta']['description'] !== 'string' || !isObject(rule['meta']['defaultOptions'])) {
-                return `rule "${name}" needs meta.description and meta.defaultOptions`;
+            const problem = ruleShapeProblem(rule);
+            if (problem !== undefined) {
+                return `rule "${name}" ${problem}`;
             }
         }
     }

@@ -134,6 +134,20 @@ try {
             "if (typeof defineRule !== 'function' || !BUILT_IN_PRESETS.go || r.findings[0]?.key !== 'x') process.exit(1);",
     );
     expect('the API imports and runs', api.status === 0, api.stderr);
+    const engine = node(
+        "import { runEngine, resolveConfig } from 'crowded-folders/engine';" +
+            "const r = runEngine({ files: ['a/x-1.ts','a/x-2.ts','a/x-3.ts','a/x-4.ts','a/y.ts'], ...resolveConfig({ extends: ['recommended'] }) });" +
+            "if (r.findings[0]?.key !== 'x') process.exit(1);",
+    );
+    expect('crowded-folders/engine imports and runs', engine.status === 0, engine.stderr);
+    const testing = node(
+        "import { RuleTester } from 'crowded-folders/testing'; import { BUILT_IN_RULES } from 'crowded-folders';" +
+            "new RuleTester().run('max-files', BUILT_IN_RULES['max-files'], { invalid: [{ files: ['a/1.ts','a/2.ts'], options: { max: 1 }, errors: 1 }] });",
+    );
+    expect('crowded-folders/testing imports and runs', testing.status === 0, testing.stderr);
+    for (const entry of ['dist/engine.d.ts', 'dist/testing.d.ts']) {
+        expect(`the types of ${entry} are in the tarball`, listing.includes(entry));
+    }
     const closed = node("await import('crowded-folders/dist/core/engine.js');");
     expect(
         'exports keeps dist/ internals out',

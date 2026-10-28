@@ -3,6 +3,8 @@
     // The published entry points, and the scripts this repository runs.
     "entry": [
         "src/index.ts",
+        "src/engine.ts",
+        "src/testing.ts",
         "src/cli/main.ts",
         "src/**/*.test.ts",
         "tooling/*.mjs",

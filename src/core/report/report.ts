@@ -88,19 +88,22 @@ export function totalsOf(findings: readonly Finding[]): Totals {
     };
 }
 
+/** What the exit code is worked out from: `lint()` passes these, the command its whole report. */
+export type ExitInputs = Pick<Report, 'findings' | 'hiddenWarnings' | 'maxWarnings' | 'staleSuppressions'>;
+
 /**
  * The exit code of a check: 1 for an error, a stale suppression, or more warnings than
  * `--max-warnings` (hidden ones included); else 0. The text summary is written from the same
  * function, so it can never say "no problems" on a run that fails.
  */
-export function exitCodeOf(report: Report): 0 | 1 {
+export function exitCodeOf(report: ExitInputs): 0 | 1 {
     return totalsOf(report.findings).errors > 0 || report.staleSuppressions.length > 0 || isOverMaxWarnings(report)
         ? 1
         : 0;
 }
 
 /** Whether the warnings, those `--quiet` hid included, are more than `--max-warnings`. */
-export function isOverMaxWarnings(report: Report): boolean {
+export function isOverMaxWarnings(report: ExitInputs): boolean {
     const warnings = totalsOf(report.findings).warnings + (report.hiddenWarnings ?? 0);
     return report.maxWarnings !== undefined && warnings > report.maxWarnings;
 }

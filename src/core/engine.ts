@@ -4,7 +4,8 @@ import { compareText, type Naming, readFolder } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
-import type { FolderView, Move, Note, Problem, Rule, RuleContext } from './rules/rule.ts';
+import { callRule, frozenCopy, ReadOnlySet, reportProblem, RuleError } from './rules/guard.ts';
+import type { FolderView, Move, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
 
 /** One problem in one folder, as every output format receives it. */
 export interface Finding {
@@ -105,6 +106,7 @@ export function runEngine(input: EngineInput): EngineResult {
             folderStats.push(context.statsOf(entry));
         }
     }
+    findings.push(...context.finish());
     // Whether an override matches no folder is a question about the whole tree: a run over some
     // folders cannot answer it.
     if (!only) {
@@ -138,11 +140,13 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
         };
     }
     const notes: RuleNote[] = [];
+    const findings = context.check(entry, notes);
+    findings.push(...context.finish().filter(finding => finding.folder === path));
     return {
         folder: context.viewOf(entry, naming),
         rules: effective,
         overrides,
-        findings: context.check(entry, notes),
+        findings: sortFindings(findings),
         notes,
     };
 }
@@ -167,6 +171,14 @@ class FolderContext {
     private readonly rules: Readonly<Record<string, Rule>>;
     private readonly overrides: CompiledOverride[];
     private readonly namingCache = new Map<string, Naming>();
+    /** The options of each rule for each state it is in, over its defaults and frozen: shared, never changed. */
+    private readonly optionsCache = new Map<string, WeakMap<RuleState, Readonly<Record<string, unknown>>>>();
+    /** What `create` returned, for the rules that have it, made on the first folder where each is on. */
+    private readonly visitors = new Map<string, RuleVisitor>();
+    /** What tree rules reported from `done`, kept until the end of the run. */
+    private readonly treeProblems: { readonly rule: string; readonly problem: TreeProblem }[] = [];
+    /** The folders checked, by path: where a tree rule may report. */
+    private readonly visited = new Map<string, FolderEntry>();
 
     constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
         this.config = config;
@@ -205,10 +217,45 @@ class FolderContext {
         return { naming, rules, overrides: applied };
     }
 
+    /**
+     * The folder as a rule sees it, frozen: every rule of the folder gets the same one, so a rule that
+     * sorted `files` or pushed to `modules` would change what the next rule sees.
+     */
     viewOf(entry: FolderEntry, state: NamingState): FolderView {
         const naming = this.compileNaming(state);
         const { modules, uncounted } = readFolder(entry.files, naming, entry.folders);
-        return { ...entry, naming, modules, uncounted };
+        for (const module of modules) {
+            Object.freeze(module.files);
+            Object.freeze(module.words);
+            Object.freeze(module.subject);
+            Object.freeze(module);
+        }
+        for (const item of uncounted) {
+            Object.freeze(item);
+        }
+        return Object.freeze({
+            ...entry,
+            files: Object.freeze([...entry.files]),
+            folders: Object.freeze([...entry.folders]),
+            naming,
+            modules: Object.freeze(modules),
+            uncounted: Object.freeze(uncounted),
+        });
+    }
+
+    /** The options of a rule in a state, over its defaults: frozen, and shared by every folder in that state. */
+    optionsOf(name: string, rule: Rule, state: RuleState): Readonly<Record<string, unknown>> {
+        let byState = this.optionsCache.get(name);
+        if (!byState) {
+            byState = new WeakMap();
+            this.optionsCache.set(name, byState);
+        }
+        let options = byState.get(state);
+        if (!options) {
+            options = frozenCopy(mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options));
+            byState.set(state, options);
+        }
+        return options;
     }
 
     statsOf(entry: FolderEntry): FolderStat {
@@ -230,6 +277,7 @@ class FolderContext {
 
     /** Runs the rules on one folder; with `notes`, also collects what they chose not to report. */
     check(entry: FolderEntry, notes?: RuleNote[]): Finding[] {
+        this.visited.set(entry.path, entry);
         const { naming, rules } = this.settingsFor(entry);
         const active = Object.entries(rules).filter(([, state]) => state.severity !== 'off');
         if (active.length === 0) {
@@ -242,10 +290,7 @@ class FolderContext {
             if (!state || !rule || state.severity === 'off') {
                 return;
             }
-            return {
-                severity: state.severity,
-                options: mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options),
-            };
+            return { severity: state.severity, options: this.optionsOf(other, rule, state) };
         };
         const findings: Finding[] = [];
         for (const [name, state] of active) {
@@ -253,8 +298,15 @@ class FolderContext {
             if (!rule) {
                 continue;
             }
-            const options = mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options);
+            let isOpen = true;
             const report = (problem: Problem): void => {
+                if (!isOpen) {
+                    throw new RuleError(name, entry.path, LATE_REPORT);
+                }
+                const issue = reportProblem(problem);
+                if (issue !== undefined) {
+                    throw new RuleError(name, entry.path, issue);
+                }
                 findings.push(
                     toFinding(name, state.severity === 'warn' ? 'warn' : 'error', entry.path, problem, rule.meta.url),
                 );
@@ -265,9 +317,75 @@ class FolderContext {
                       notes.push({ rule: name, ...found });
                   }
                 : undefined;
-            rule.check(view, { options, report, settingsOf, ...(note && { note }) });
+            const context = Object.freeze({
+                options: this.optionsOf(name, rule, state),
+                report,
+                settingsOf,
+                ...(note && { note }),
+            });
+            const visitor = rule.create ? this.visitorOf(name, rule) : undefined;
+            callRule(name, entry.path, () =>
+                visitor ? visitor.folder?.call(visitor, view, context) : rule.check?.(view, context),
+            );
+            isOpen = false;
         }
         return findings;
+    }
+
+    /**
+     * Ends the run for the rules made with `create`: calls their `done`, then turns what they
+     * reported into findings, each with the rule's severity in its folder (none where it is off).
+     */
+    finish(): Finding[] {
+        for (const [name, visitor] of this.visitors) {
+            if (visitor.done) {
+                callRule(name, undefined, () => visitor.done?.call(visitor));
+            }
+        }
+        this.visitors.clear();
+        const findings: Finding[] = [];
+        for (const { rule: name, problem } of this.treeProblems.splice(0)) {
+            const entry = this.visited.get(problem.folder);
+            const rule = this.rules[name];
+            const state = entry && this.settingsFor(entry).rules[name];
+            if (!state || !rule || state.severity === 'off') {
+                continue;
+            }
+            const { folder, ...rest } = problem;
+            findings.push(toFinding(name, state.severity === 'warn' ? 'warn' : 'error', folder, rest, rule.meta.url));
+        }
+        return findings;
+    }
+
+    /** What `create` returned for a rule, made the first time the rule is on in a folder. */
+    private visitorOf(name: string, rule: Rule): RuleVisitor {
+        const existing = this.visitors.get(name);
+        if (existing) {
+            return existing;
+        }
+        const report = (problem: TreeProblem): void => {
+            const issue = reportProblem(problem);
+            if (issue !== undefined) {
+                throw new RuleError(name, undefined, issue);
+            }
+            if (!this.visited.has(problem.folder)) {
+                throw new RuleError(
+                    name,
+                    undefined,
+                    `report() named the folder ${JSON.stringify(problem.folder)}, which this run did not look at: a tree rule reports on the folders it was given`,
+                );
+            }
+            this.treeProblems.push({ rule: name, problem });
+        };
+        let visitor: unknown;
+        callRule(name, undefined, () => {
+            visitor = rule.create?.(Object.freeze({ report }));
+        });
+        if (typeof visitor !== 'object' || visitor === null) {
+            throw new RuleError(name, undefined, 'create() must return an object: { folder(view, context), done() }');
+        }
+        this.visitors.set(name, visitor);
+        return visitor;
     }
 
     unusedOverrideFindings(): Finding[] {
@@ -293,17 +411,21 @@ class FolderContext {
         if (cached) {
             return cached;
         }
-        const naming: Naming = {
-            companions: state.companions.map(pattern => new RegExp(pattern, 'u')),
-            ignoreLeadingWords: new Set(state.ignoreLeadingWords),
+        // Frozen: every folder with the same naming shares this object.
+        const naming: Naming = Object.freeze({
+            companions: Object.freeze(state.companions.map(pattern => new RegExp(pattern, 'u'))),
+            ignoreLeadingWords: new ReadOnlySet(state.ignoreLeadingWords),
             groupNumericPrefixes: state.groupNumericPrefixes,
-            folderFiles: state.folderFiles.map(compileGlob),
-            folderCompanions: state.folderCompanions,
-        };
+            folderFiles: Object.freeze(state.folderFiles.map(glob => Object.freeze(compileGlob(glob)))),
+            folderCompanions: Object.freeze([...state.folderCompanions]),
+        });
         this.namingCache.set(id, naming);
         return naming;
     }
 }
+
+const LATE_REPORT =
+    'report() was called after check returned (from a timer or a promise), when the run had already counted its findings. Report before returning.';
 
 /** The file paths, read the way the command reads them (`./a`, `a\b`); a path outside the root is an error. */
 function filesOf(paths: readonly string[]): readonly string[] {
