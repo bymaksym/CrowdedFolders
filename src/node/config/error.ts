@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, extname, isAbsolute, relative } from 'node:path';
 
-import { offsetOfPath, positionOf } from '../core/config/locate.ts';
-import type { ConfigError } from '../core/config/validate.ts';
+import { offsetOfPath, positionOf } from '../../core/config/locate.ts';
+import type { ConfigError } from '../../core/config/validate.ts';
 
 /** The key of a `package.json` that holds the configuration. */
 export const PACKAGE_KEY = 'crowded-folders';

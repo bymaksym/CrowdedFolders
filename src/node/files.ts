@@ -4,7 +4,7 @@ import { basename, dirname, join, relative } from 'node:path';
 
 import { type IgnoreFile, isIgnored, parseGitignore } from '../core/paths/gitignore.ts';
 import { normalisePath } from '../core/paths/tree.ts';
-import { gitRootOf } from './config-file.ts';
+import { gitRootOf } from './config/file.ts';
 
 export interface FileList {
     readonly files: readonly string[];

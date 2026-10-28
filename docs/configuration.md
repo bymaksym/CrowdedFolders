@@ -13,6 +13,7 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | Setting | Type | What it does |
 | --- | --- | --- |
 | `$schema` | string | This schema, for editors. |
+| `root` | boolean | false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true. |
 | `extends` | see below[] | Presets and configurations applied before this one, in order; later ones win. |
 | `plugins` | string[] | Packages or files whose default export is a plugin: more rules and presets. |
 | `include` | string[] | Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git. |
@@ -44,7 +45,11 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | --- | --- | --- |
 | `folders` | string[] | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
 | `withFiles` | string[] | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
-| `reason` | string | Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
+| `extends` | see below[] | Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration. |
+| `reason` | string | Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
+| `expires` | string | A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review. |
+| `owner` | string | Who answers for it (a person or a team, such as @org/team): shown with it. |
+| `ticket` | string | Where the work that removes it is tracked (an issue number or a link): shown with it. |
 | `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
 | `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
 
@@ -67,7 +72,7 @@ A folder holds at most `max` files (or modules): past that it is scrolled, not r
 | `filesPerModule` | integer | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
 | `hint` | string | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
 | `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
-| `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. |
+| `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"]. |
 
 ### `prefix-groups`
 

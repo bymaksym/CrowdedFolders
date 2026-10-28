@@ -4,8 +4,8 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { RENDER_FILES } from './test-support/fixtures.ts';
-import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
+import { RENDER_FILES } from '../test-support/fixtures.ts';
+import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
 
 cleanUpAfterTests();
 

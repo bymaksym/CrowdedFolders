@@ -8,7 +8,7 @@ import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { asciiProse, wrapWords } from '../../core/report/ascii.ts';
 import { BUILT_IN_RULES } from '../../core/rules/index.ts';
 import type { Rule } from '../../core/rules/rule.ts';
-import { locate, realPath } from '../../node/config-file.ts';
+import { locate, realPath } from '../../node/config/file.ts';
 import { loadConfigFile } from '../../node/load-config.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, terminalWidth, wantsSymbols } from '../io.ts';
@@ -72,7 +72,7 @@ async function listed(args: Args, io: Io): Promise<Listed> {
     if (configPath === undefined) {
         return { rules: BUILT_IN_RULES, presets: BUILT_IN_PRESETS, plugins: [], configPath };
     }
-    const loaded = await loadConfigFile(configPath);
+    const loaded = await loadConfigFile(configPath, {}, { code: args.code });
     return { rules: loaded.rules, presets: loaded.presets, plugins: loaded.plugins, configPath };
 }
 

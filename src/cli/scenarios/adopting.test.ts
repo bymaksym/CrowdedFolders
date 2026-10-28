@@ -10,9 +10,9 @@ import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { pathToFileURL } from 'node:url';
 
-import { ciBaseOf } from '../node/git-base.ts';
-import type { Io } from './io.ts';
-import { run } from './main.ts';
+import { ciBaseOf } from '../../node/git-base.ts';
+import type { Io } from '../io.ts';
+import { run } from '../main.ts';
 
 const roots: string[] = [];
 after(() => {

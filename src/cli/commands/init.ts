@@ -4,15 +4,15 @@ import { basename, extname, join, relative, resolve } from 'node:path';
 import { pinnedSchemaUrl } from '../../core/config/schema.ts';
 import { runEngine } from '../../core/engine.ts';
 import { plural } from '../../core/plural.ts';
-import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
+import { configFromDetections, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { asciiProse, wrapWords } from '../../core/report/ascii.ts';
-import { CONFIG_NAMES, findConfig, PACKAGE_KEY, projectDirOf } from '../../node/config-file.ts';
+import { CONFIG_NAMES, findConfig, PACKAGE_KEY, projectDirOf } from '../../node/config/file.ts';
 import { loadConfig } from '../../node/load-config.ts';
-import { dependenciesOf } from '../../node/manifests.ts';
 import { type Args, UsageError } from '../args.ts';
+import { presetsWithoutConfiguration } from '../detection.ts';
 import { commandName, type Io, terminalWidth, wantsSymbols, writeFileAtomic } from '../io.ts';
-import { type Session, warnIfTruncated } from '../session.ts';
+import type { Session } from '../session.ts';
 import { TOOL } from '../tool.ts';
 
 /**
@@ -27,18 +27,13 @@ import { TOOL } from '../tool.ts';
 export async function init(args: Args, io: Io, session: Session): Promise<number> {
     const path = targetOf(args, session);
 
-    let detections: Detection[];
-    if (args.presets.length > 0) {
-        detections = args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }));
-    } else {
-        const manifests = dependenciesOf(session.base, session.files);
-        warnIfTruncated(manifests, io);
-        detections = detectPresets(session.files, manifests.names, BUILT_IN_PRESETS);
-    }
-    const presets = [...new Set(detections.map(detection => detection.preset))];
-    // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
-    // written down so that they can be read and changed.
-    let exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    // --preset adds to what is detected, unless --no-detect.
+    const detections = presetsWithoutConfiguration(args, session.base, session.files, io);
+    // A preset found only in sub-folders (a pom.xml in server/) applies there, in an override; one at
+    // the root, in extends, with its root-anchored excludes read from every folder it was found in.
+    const made = configFromDetections(detections, session.files, BUILT_IN_PRESETS);
+    const presets = made.extends;
+    let exclude = [...made.exclude];
     // Godot's addons/ is left out by the preset, and a plugin of your own lives there too: one line each.
     const addons = godotAddons(detections, session.files);
     for (const { folder, names } of addons) {
@@ -51,6 +46,7 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         $schema: pinnedSchemaUrl(TOOL.version),
         extends: presets,
         ...(exclude.length > 0 && { exclude }),
+        ...(made.overrides.length > 0 && { overrides: made.overrides }),
     };
     writeFileAtomic(path, `${JSON.stringify(config, undefined, 4)}\n`);
 
@@ -60,10 +56,13 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     const warnings = result.findings.length - errors;
 
     const shownPath = relative(io.cwd, path) || path;
-    const lines = [`${replaced ? 'Replaced' : 'Wrote'} ${shownPath} with ${presets.join(', ')}:`];
+    const scoped = made.overrides.flatMap(override => override.extends ?? []);
+    const lines = [`${replaced ? 'Replaced' : 'Wrote'} ${shownPath} with ${[...presets, ...scoped].join(', ')}:`];
     for (const detection of detections) {
         const preset = BUILT_IN_PRESETS[detection.preset];
-        const said = `${detection.evidence}${preset ? ` — ${firstSentence(preset.description)}` : ''}`;
+        const under = made.overrides.find(override => override.extends?.includes(detection.preset));
+        const where = under ? ` (only under ${under.folders.join(', ')})` : '';
+        const said = `${detection.evidence}${where}${preset ? ` — ${firstSentence(preset.description)}` : ''}`;
         const [first = '', ...more] = wrapWords(said, terminalWidth(io), 17, 17);
         lines.push(`  ${detection.preset.padEnd(14)} ${first}`, ...more.map(line => `${' '.repeat(17)}${line}`));
     }

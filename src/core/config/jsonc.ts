@@ -60,6 +60,107 @@ export function stripJsonc(text: string): string {
     return out;
 }
 
+export interface DuplicateKey {
+    /** Where the object is, as a path into the value: `overrides[0].rules`; empty for the top. */
+    readonly at: string;
+    readonly key: string;
+    /** 1-based lines of the first and the repeated key. */
+    readonly lines: readonly [number, number];
+}
+
+/** An object or a list open at some point of the text. */
+interface Frame {
+    readonly isObject: boolean;
+    readonly at: string;
+    readonly keys: Map<string, number>;
+    expectsKey: boolean;
+    index: number;
+    lastKey: string;
+}
+
+/** Reads the key of an object; `false` when it is not a JSON string. */
+function readKey(frame: Frame, text: string, line: number, found: DuplicateKey[]): boolean {
+    let key: string;
+    try {
+        key = JSON.parse(text) as string;
+    } catch {
+        return false;
+    }
+    const first = frame.keys.get(key);
+    if (first === undefined) {
+        frame.keys.set(key, line);
+    } else {
+        found.push({ at: frame.at, key, lines: [first, line] });
+    }
+    frame.lastKey = key;
+    frame.expectsKey = false;
+    return true;
+}
+
+/**
+ * The keys written twice in one object. `JSON.parse` keeps the last in silence, so a second `"rules"`
+ * replaces the first without a word. Read in one pass over the text with its comments blanked out;
+ * a text that is not JSON gives no answer here (the parser says what is wrong with it).
+ */
+export function duplicateKeys(text: string): DuplicateKey[] {
+    const source = stripJsonc(text);
+    const found: DuplicateKey[] = [];
+    const stack: Frame[] = [];
+    let line = 1;
+    const childAt = (frame: Frame | undefined): string => {
+        if (!frame) return '';
+        const step = frame.isObject
+            ? /^[$A-Z_a-z][\w$]*$/u.test(frame.lastKey)
+                ? `.${frame.lastKey}`
+                : `[${JSON.stringify(frame.lastKey)}]`
+            : `[${frame.index}]`;
+        return frame.at === '' && step.startsWith('.') ? step.slice(1) : `${frame.at}${step}`;
+    };
+    for (let index = 0; index < source.length; index++) {
+        const char = source[index];
+        const top = stack.at(-1);
+        switch (char) {
+            case '\n': {
+                line++;
+                break;
+            }
+            case '"': {
+                const end = endOfString(source, index);
+                if (top?.isObject && top.expectsKey && !readKey(top, source.slice(index, end), line, found)) {
+                    return [];
+                }
+                index = end - 1;
+                break;
+            }
+            case '{':
+            case '[': {
+                const isObject = char === '{';
+                stack.push({
+                    isObject,
+                    at: childAt(top),
+                    keys: new Map(),
+                    expectsKey: isObject,
+                    index: 0,
+                    lastKey: '',
+                });
+                break;
+            }
+            case '}':
+            case ']': {
+                stack.pop();
+                break;
+            }
+            case ',': {
+                if (top?.isObject) top.expectsKey = true;
+                else if (top) top.index++;
+                break;
+            }
+            default:
+        }
+    }
+    return found;
+}
+
 /** The index just after the closing quote of the string that opens at `start`. */
 function endOfString(source: string, start: number): number {
     let index = start + 1;

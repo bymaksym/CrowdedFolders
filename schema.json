@@ -9,6 +9,10 @@
             "type": "string",
             "description": "This schema, for editors."
         },
+        "root": {
+            "type": "boolean",
+            "description": "false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true."
+        },
         "extends": {
             "type": "array",
             "items": {
@@ -280,7 +284,7 @@
                                         },
                                         "dotfiles": {
                                             "type": "boolean",
-                                            "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks."
+                                            "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"]."
                                         }
                                     }
                                 }
@@ -581,10 +585,79 @@
                         },
                         "description": "Globs of file names: the override applies only to the folders that hold one of them directly (\"package.json\" is the root of a package). Default: every folder matching \"folders\"."
                     },
+                    "extends": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "enum": [
+                                        "recommended",
+                                        "strict",
+                                        "angular",
+                                        "react",
+                                        "nextjs",
+                                        "react-native",
+                                        "vue",
+                                        "nuxt",
+                                        "svelte",
+                                        "nestjs",
+                                        "python",
+                                        "django",
+                                        "go",
+                                        "rust",
+                                        "java",
+                                        "android",
+                                        "dotnet",
+                                        "swift",
+                                        "flutter",
+                                        "rails",
+                                        "php",
+                                        "elixir",
+                                        "scala",
+                                        "c-cpp",
+                                        "unity",
+                                        "unreal",
+                                        "godot",
+                                        "terraform",
+                                        "bazel",
+                                        "protobuf",
+                                        "docs",
+                                        "data-science",
+                                        "latex"
+                                    ],
+                                    "description": "A built-in preset."
+                                },
+                                {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "A plugin preset (\"namespace/name\")."
+                                }
+                            ]
+                        },
+                        "description": "Presets applied to these folders only, before the settings of the override: [\"java\"] under \"server/**\". Their root-anchored patterns (\"/target\") start at each folder of \"folders\", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration."
+                    },
                     "reason": {
                         "type": "string",
+                        "minLength": 10,
+                        "description": "Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed."
+                    },
+                    "expires": {
+                        "type": "string",
+                        "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                        "description": "A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review.",
+                        "examples": [
+                            "2027-03-31"
+                        ]
+                    },
+                    "owner": {
+                        "type": "string",
                         "minLength": 1,
-                        "description": "Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed."
+                        "description": "Who answers for it (a person or a team, such as @org/team): shown with it."
+                    },
+                    "ticket": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Where the work that removes it is tracked (an issue number or a link): shown with it."
                     },
                     "rules": {
                         "type": "object",
@@ -647,7 +720,7 @@
                                                     },
                                                     "dotfiles": {
                                                         "type": "boolean",
-                                                        "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks."
+                                                        "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"]."
                                                     }
                                                 }
                                             }

@@ -14,6 +14,7 @@ Usage
   crowded-folders presets [name]          list the presets and their sources
   crowded-folders rules [name]            list the rules and their options
   crowded-folders print-config [folder]   print the configuration in effect
+  crowded-folders overrides               list every override and what it covers
   crowded-folders <command> --help        one command's options, and an example
 
 Where it looks (paths given to options start from the current folder)
@@ -102,6 +103,17 @@ Only what a change touched
                            CI_MERGE_REQUEST_TARGET_BRANCH_NAME...); outside a
                            pull request, everything is checked
 
+Configuration and monorepos
+      --project <dir>      check only <dir>, with the root, configuration and
+                           suppressions of its repository (for the per-package
+                           tasks of Nx or Turbo)
+      --no-detect          without a configuration, use only the presets given
+                           with --preset (by default --preset adds to what is
+                           detected)
+      --no-code            read only JSON configurations: no JavaScript
+                           configuration, package or plugin runs (for checking a
+                           repository you do not trust)
+
 Other
       --force              init: overwrite an existing configuration; a report:
                            write over a file git tracks, or over the
@@ -171,4 +183,12 @@ With a folder: the rules, naming and overrides that apply there, each value
 with where it comes from.
   -c, --config <file>  --root <dir>  -p, --preset <name>  --stdin  --no-git
 Example: crowded-folders print-config src/components`,
+    overrides: `crowded-folders overrides [options]
+
+Lists every override in effect: where it comes from, the folders it covers and
+what it changes there. An override that turns a rule off or down over more than
+a quarter of the folders is pointed out: it is the rule of the repository, not
+an exception. It reports and does not fail (exit 0).
+  -c, --config <file>  --root <dir>  --project <dir>  -f, --format text|json
+Example: crowded-folders overrides`,
 } as const;

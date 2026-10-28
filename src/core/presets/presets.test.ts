@@ -670,6 +670,24 @@ describe('game engines, after the review of 21-10-2026', () => {
         assert.deepEqual(check('godot', bare), []);
     });
 
+    it('unreal reads asset prefixes only in Content/: AIController and AITask… group in Source/ (Lucía)', () => {
+        const ai = ['AIController', 'AITaskAttack', 'AITaskPatrol', 'AIPerception', 'AISenseSight'].flatMap(name => [
+            `Source/Game/${name}.h`,
+            `Source/Game/${name}.cpp`,
+        ]);
+        assert.deepEqual(
+            check('unreal', [...ai, 'Source/Game/Player.cpp', 'Source/Game/Weapon.cpp']).map(
+                finding => `${finding.rule} ${finding.key ?? ''}`,
+            ),
+            ['prefix-groups ai'],
+        );
+        // In Content/ the same prefix is still the asset's type: AI_Guard is about the guard.
+        const content = ['AI_Guard', 'AI_Patrol', 'AI_Boss', 'AI_Drone', 'AI_Turret'].map(
+            name => `Content/AI/${name}.uasset`,
+        );
+        assert.deepEqual(check('unreal', [...content, 'Content/AI/Notes.uasset']), []);
+    });
+
     it('unreal leaves out World Partition, takes C++ at the limits of c-cpp, and warns on both limits', () => {
         const partition = series('Content/__ExternalActors__/Maps/L1/3/AB', 60, index => `C${pad(index, 8)}.uasset`);
         assert.deepEqual(check('unreal', partition), []);
@@ -880,14 +898,18 @@ describe('detectPresets', () => {
             ]),
             BUILT_IN_PRESETS,
         );
+        // React stays for apps/web, where no react-native extends it; android takes java's root.
         assert.deepEqual(
-            found.map(detection => detection.preset),
-            ['recommended', 'react-native', 'android'],
+            found.map(detection => [detection.preset, ...detection.folders]),
+            [
+                ['recommended', '.'],
+                ['react', 'apps/web'],
+                ['react-native', 'apps/mobile'],
+                ['android', 'app/src/main', '.'],
+            ],
         );
-        assert.deepEqual(
-            found[1]?.extended?.map(parent => parent.preset),
-            ['react'],
-        );
+        assert.deepEqual(found[2]?.extended, [{ preset: 'react', folders: ['apps/mobile'] }]);
+        assert.deepEqual(found[3]?.extended, [{ preset: 'java', folders: ['.'] }]);
     });
 
     it('writes one glob for sixty apps instead of sixty lines (apps/*/src/environments)', () => {
@@ -917,7 +939,8 @@ describe('detectPresets', () => {
             ]),
             BUILT_IN_PRESETS,
         );
-        assert.deepEqual(found.find(detection => detection.preset === 'react-native')?.folders, ['apps/mobile']);
+        // The root's react is react-native's too: it applies from the root, and its /ios is the app's.
+        assert.deepEqual(found.find(detection => detection.preset === 'react-native')?.folders, ['apps/mobile', '.']);
         assert.deepEqual(excludesFor(found, files, BUILT_IN_PRESETS), ['apps/mobile/ios']);
     });
 });

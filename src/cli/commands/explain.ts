@@ -44,6 +44,14 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
             `  ${override.folders.join(', ')}  (${labelOf(override.origin, session)})`,
             `    ${override.reason}`,
         );
+        const about = [
+            override.owner === undefined ? undefined : `owner ${override.owner}`,
+            override.ticket === undefined ? undefined : `ticket ${override.ticket}`,
+            override.expires === undefined ? undefined : `expires ${override.expires}`,
+        ].filter(part => part !== undefined);
+        if (about.length > 0) {
+            lines.push(`    ${about.join(', ')}`);
+        }
     }
 
     lines.push(

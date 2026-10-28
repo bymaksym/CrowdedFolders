@@ -11,7 +11,7 @@ import {
     projectOf,
     type Suppression,
 } from '../core/suppressions.ts';
-import { projectDirOf } from './config-file.ts';
+import { projectDirOf } from './config/file.ts';
 
 /** A suppressions file that cannot be read: not JSON, not the shape, or a suppression kept twice. */
 export class SuppressionsFileError extends Error {

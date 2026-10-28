@@ -76,7 +76,7 @@ Sources:
 
 ## strict
 
-Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. An opinion, not a measurement: use it when you want the tree tidier than most.
+Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. It tightens the presets it is combined with, wherever it is listed (go then strict and strict then go are the same), and leaves alone what a preset keeps: java and dotnet keep redundant-prefix off, go's main.go and Cargo's lib.rs stay allowed alone in a folder. An opinion, not a measurement: use it when you want the tree tidier than most.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":12,"count":"modules"}`
@@ -273,6 +273,7 @@ Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classe
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
 - **`prefix-groups`:** `error` `{"hint":"A folder is a package: they would be the package of that feature.","hintFor":["*.{java,kt,kts,groovy,scala}"],"dropPrefix":false}`
+- **`redundant-prefix`:** `off`
 - **Companions:** `Impl$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
 - **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
@@ -313,6 +314,7 @@ C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an int
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"]}`
 - **`prefix-groups`:** `error` `{"hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"],"dropPrefix":false}`
+- **`redundant-prefix`:** `off`
 - **Companions:** `^I(?=[A-Z])`
 - **Leading words skipped:** `i`, `fake`, `mock`, `stub`, `spy`, `dummy`
 - **Left out:** `bin`, `obj`, `Migrations`, `wwwroot/lib`, `Properties`, `.vs`
@@ -462,9 +464,9 @@ Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `warn` `{"max":50,"count":"modules"}`
 - **`prefix-groups`:** `warn` `{"min":15,"dropPrefix":false,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\"","hintFor":["*.{uasset,umap}"]}`
-- **Companions:** `_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$`, `_(P|Audio|Lighting|Geo|Gameplay)$`, `_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$`, `_\d+$`
-- **Leading words skipped:** `a`, `abp`, `ac`, `ai`, `aic`, `am`, `ao`, `att`, `bb`, `bp`, `bpfl`, `bpi`, `bpml`, `bs`, `bt`, `ca`, `cue`, `curve`, `dm`, `dt`, `dv`, `dw`, `e`, `eqs`, `f`, `ffe`, `fms`, `font`, `ft`, `lg`, `ll`, `ls`, `m`, `matinee`, `mf`, `mi`, `mp`, `mpc`, `msw`, `mt`, `ne`, `ns`, `ol`, `pfb`, `phys`, `pm`, `pp`, `ps`, `rig`, `rt`, `rtc`, `s`, `sgi`, `sif`, `sk`, `skel`, `sm`, `sp`, `spr`, `sprg`, `ss`, `t`, `tbp`, `tc`, `ti`, `tm`, `ts`, `vf`, `vfa`, `wbp`, `u`, `i`
+- **Leading words skipped:** `u`, `i`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `__ExternalActors__`, `__ExternalObjects__`, `.vs`
+- **In `**/Content`, `**/Content/**`:** . Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).
 - **In `**/Source`, `**/Source/**`:** `max-files` `error` `{"max":20,"count":"modules"}`, `prefix-groups` `warn` `{"min":5,"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.","hintFor":["*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}"]}`. The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).
 
 Sources:

@@ -1,19 +1,20 @@
 import { existsSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
-import type { Config, ResolvedConfig } from '../core/config/types.ts';
+import type { ResolvedConfig, RuleSetting } from '../core/config/types.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
 import { plural } from '../core/plural.ts';
-import type { Detection } from '../core/presets/detect.ts';
-import { gitRootOf, locate, realPath } from '../node/config-file.ts';
+import { configFromDetections, type Detection } from '../core/presets/detect.ts';
+import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
+import { gitRootOf, locate, misnamedConfigs, nestedConfigs, realPath } from '../node/config/file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
-import { detectConfig, type Manifests, MAX_MANIFESTS } from '../node/manifests.ts';
 import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
+import { presetsWithoutConfiguration } from './detection.ts';
 import type { Io } from './io.ts';
 
 /** Deeper than this, a tree is generated, not arranged: its files are left out, and the run says so. */
@@ -58,16 +59,28 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     if (rootArg !== undefined && !statSync(rootArg).isDirectory()) {
         throw new UsageError(`--root ${args.root ?? ''}: ${rootArg} is a file; the root is a folder`);
     }
-    const { configPath, root, base, scope } = locate({
-        cwd,
+    const projectArg = projectOf(args, cwd);
+    // --project reads the repository's configuration: it is looked for from the top of the git repository.
+    const start = projectArg === undefined ? cwd : (gitRootOf(projectArg) ?? projectArg);
+    const { configPath, root, base, scope, project } = locate({
+        cwd: start,
         configPath: writesConfig ? undefined : configArg,
         root: rootArg,
     });
+    const projectFolder = projectArg === undefined ? project : within(base, projectArg);
+    if (projectArg !== undefined && projectFolder === undefined) {
+        throw new UsageError(
+            `--project ${args.project ?? ''}: ${projectArg} is outside ${base}, the folder of the repository's configuration`,
+        );
+    }
     const notices: string[] = [];
 
     let listed: string[];
     let fileSource: string;
     let only: string[] | undefined = scope === '.' ? undefined : [scope];
+    if (projectFolder !== undefined && projectFolder !== '.') {
+        only = [projectFolder];
+    }
     if (args.stdin) {
         const read = await filesFromStdin(io, cwd, root, notices);
         listed = read.files;
@@ -90,26 +103,36 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
 
     let loaded: LoadedConfig;
     let detected: Detection[] | undefined;
+    const nested = nestedConfigs(files, base, configPath);
+    const options = { code: args.code, base, nested };
     if (writesConfig) {
         // `init` writes the configuration: it needs the files, not what an old one says.
         loaded = await loadConfig({}, '(init)', base);
     } else if (configPath === undefined) {
-        let config: Config = { extends: args.presets, exclude: [] };
-        if (args.presets.length === 0) {
-            const detection = detectConfig(base, files);
-            warnIfTruncated(detection.manifests, io);
-            detected = detection.detected;
-            config = detection.config;
+        detected = presetsWithoutConfiguration(args, base, files, io);
+        const made = configFromDetections(detected, files, BUILT_IN_PRESETS);
+        loaded = await loadConfig(
+            { extends: made.extends, exclude: made.exclude, overrides: made.overrides },
+            '(the command line)',
+            base,
+            {},
+            options,
+        );
+        for (const name of new Set([...misnamedConfigs(base), ...misnamedConfigs(cwd)])) {
+            notices.push(
+                `${name} is not a name crowded-folders reads, so it was not used: rename it to crowded-folders.config.json (or .config/crowded-folders.json).`,
+            );
         }
-        loaded = await loadConfig(config, '(the command line)', base);
     } else {
-        loaded = await loadConfigFile(configPath);
+        loaded = await loadConfigFile(configPath, {}, options);
         if (args.presets.length > 0) {
             const own = loaded.own;
             const layered = await loadConfig(
                 { extends: [...args.presets, configPath] },
                 '(the command line)',
                 dirname(configPath),
+                {},
+                options,
             );
             loaded = { ...layered, own };
         }
@@ -120,6 +143,11 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         return { root, base, scope, cwd, configPath, loaded, files, fileSource, detected, only, notices };
     }
     checkSelection({ files, loaded, configPath, scope, base, cwd, notices, args });
+    if (projectArg === undefined && project !== undefined && configPath !== undefined) {
+        notices.push(
+            `the configuration of ${project} says "root": false, so ${shown(cwd, configPath)} is used, from ${shown(cwd, root)}, and only ${project} is checked`,
+        );
+    }
     if (args.root !== undefined || scope !== '.') {
         const from = scope === '.' ? '' : `; its paths start at ${shown(cwd, base)}, so the report's do too`;
         notices.push(
@@ -127,6 +155,18 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         );
     }
     return { root, base, scope, cwd, configPath, loaded, files, fileSource, detected, only, notices };
+}
+
+/** `--project <dir>`, as a real path, after checking that it is a folder. */
+function projectOf(args: Args, cwd: string): string | undefined {
+    if (args.project === undefined) {
+        return undefined;
+    }
+    const path = resolve(cwd, args.project);
+    if (!existsSync(path) || !statSync(path).isDirectory()) {
+        throw new UsageError(`--project ${args.project}: ${path} is not a folder`);
+    }
+    return realPath(path);
 }
 
 /**
@@ -196,15 +236,6 @@ export function suppressionsPathOf(args: Args, session: Session, fallback: strin
 export function noticeIfOutside(io: Io, session: Session, path: string): void {
     if (within(session.root, path) === undefined) {
         io.error(`crowded-folders: wrote ${path}, outside the folder being checked (${session.root}).\n`);
-    }
-}
-
-/** Says on standard error when detection did not read every package.json, so that a missing preset is not a mystery. */
-export function warnIfTruncated(manifests: Manifests, io: Io): void {
-    if (manifests.skipped > 0) {
-        io.error(
-            `crowded-folders: read the ${MAX_MANIFESTS} shallowest package.json files to detect presets and left ${manifests.skipped} unread: a preset only declared in those may be missing (pass --preset to add it).\n`,
-        );
     }
 }
 
@@ -323,9 +354,24 @@ function checkSelection(context: {
             }
         }
     }
+    if (asksForDotfiles(config) && config.exclude.includes('.*')) {
+        notices.push(
+            `max-files counts dot-files (dotfiles: true), but ".*" in exclude (from recommended) leaves every dot-file and dot-folder out before any rule sees them: add "!.*" and ".*/" to exclude to leave out only the dot-folders.`,
+        );
+    }
     if (noRuleIsOn(config)) {
         notices.push(`no rule is on in ${origin}, so nothing is checked: missing "extends": ["recommended"]?`);
     }
+}
+
+/** Whether `max-files` is set to count dot-files, for the whole tree or in an override. */
+function asksForDotfiles(config: ResolvedConfig): boolean {
+    const inOverride = config.overrides.some(override => {
+        const setting: RuleSetting | undefined = override.rules['max-files'];
+        const options = typeof setting === 'string' ? undefined : setting?.[1];
+        return options?.['dotfiles'] === true;
+    });
+    return config.rules['max-files']?.options['dotfiles'] === true || inOverride;
 }
 
 function noRuleIsOn(config: ResolvedConfig): boolean {

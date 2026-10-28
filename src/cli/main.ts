@@ -1,6 +1,6 @@
 import { FileListError } from '../core/paths/input.ts';
 import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
-import { describeConfigError } from '../node/config-error.ts';
+import { describeConfigError } from '../node/config/error.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
@@ -8,6 +8,7 @@ import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
+import { overrides } from './commands/overrides.ts';
 import { COMMAND_HELP, HELP } from './help.ts';
 import { type Io, processIo, WriteError } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
@@ -50,6 +51,9 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             }
             case 'explain': {
                 return await explain(args, io, session);
+            }
+            case 'overrides': {
+                return overrides(args, io, session);
             }
             case 'print-config': {
                 return await printConfig(args, io, session);

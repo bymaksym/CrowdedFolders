@@ -11,7 +11,7 @@ import { referencesKey } from '../../core/report/formats/moves.ts';
 import type { Report, ReportFinding, RunInfo } from '../../core/report/report.ts';
 import { relativeTo, type StaleSuppression } from '../../core/suppressions.ts';
 import { readCodeowners } from '../../node/codeowners.ts';
-import { gitRootOf } from '../../node/config-file.ts';
+import { gitRootOf } from '../../node/config/file.ts';
 import { filesNaming } from '../../node/references.ts';
 import { type Args, type Format, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';

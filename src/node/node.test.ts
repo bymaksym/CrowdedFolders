@@ -7,7 +7,7 @@ import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { runEngine } from '../core/engine.ts';
-import { findConfig, locate, readConfigFile } from './config-file.ts';
+import { findConfig, locate, readConfigFile } from './config/file.ts';
 import { GitError, listFiles, parseFileList } from './files.ts';
 import { ConfigError, loadConfig, loadConfigFile, pluginProblem } from './load-config.ts';
 import { resolveSpecifier } from './modules.ts';
@@ -64,6 +64,27 @@ describe('plugins', () => {
         assert.deepEqual(
             result.findings.map(finding => `${finding.rule} ${finding.folder}`),
             ['example/generic-names src/utils'],
+        );
+    });
+
+    it('takes "!utils" out of the default names of a plugin rule (the API agent: utils was still reported)', async () => {
+        const root = withPlugin({});
+        const loaded = await loadConfig(
+            {
+                plugins: ['crowded-folders-plugin-example'],
+                rules: { 'example/generic-names': ['warn', { names: ['!utils'] }] },
+            },
+            'test.json',
+            root,
+        );
+        const result = runEngine({
+            files: ['src/utils/a.ts', 'src/helpers/b.ts'],
+            config: loaded.config,
+            rules: loaded.rules,
+        });
+        assert.deepEqual(
+            result.findings.filter(finding => finding.rule === 'example/generic-names').map(finding => finding.folder),
+            ['src/helpers'],
         );
     });
 
@@ -137,8 +158,33 @@ describe('extends', () => {
         await rejects(loadConfig({ extends: ['./a.json'] }, join(root, 'mine.json'), root), /extends itself/u);
         await rejects(
             loadConfig({ extends: ['recomended'] }, 'mine.json', root),
-            /is not a preset \(known: recommended/u,
+            /"recomended" is not a preset; did you mean "recommended"\? \(known: recommended/u,
         );
+    });
+
+    it('suggests the preset for a misspelled name and never says to install it (Zaporeak: "recomended")', async () => {
+        const root = folder({});
+        await assert.rejects(loadConfig({ extends: ['recomended'] }, 'mine.json', root), (error: unknown) => {
+            assert.ok(error instanceof ConfigError);
+            assert.doesNotMatch(error.message, /install/u);
+            return true;
+        });
+        // A plain name close to no preset is still looked for as a package, without "install it".
+        await assert.rejects(loadConfig({ extends: ['acme-folders'] }, 'mine.json', root), (error: unknown) => {
+            assert.ok(error instanceof ConfigError);
+            assert.match(error.message, /is not a preset \(known: .*\), nor a package installed where/u);
+            assert.doesNotMatch(error.message, /install it/u);
+            return true;
+        });
+        await rejects(loadConfig({ extends: ['@acme/folders'] }, 'mine.json', root), /install it as a devDependency/u);
+    });
+
+    it('warns when a preset listed later was already applied by one before it ("angular", "recommended")', async () => {
+        const loaded = await loadConfig({ extends: ['angular', 'recommended'] }, 'mine.json', folder({}));
+        assert.equal(loaded.warnings.length, 1);
+        assert.match(loaded.warnings[0] ?? '', /"recommended" in extends was already applied by an entry before it/u);
+        const quiet = await loadConfig({ extends: ['recommended', 'angular', 'react'] }, 'mine.json', folder({}));
+        assert.deepEqual(quiet.warnings, []);
     });
 
     it('reads a configuration written in JavaScript, as an object or a function', async () => {
@@ -169,6 +215,20 @@ describe('extends', () => {
             assert.equal(error.problems[0]?.column, 8);
             return true;
         });
+    });
+
+    it('refuses a key written twice, which JSON would keep the second of in silence (Irina: "rules" twice)', async () => {
+        const root = folder({
+            'crowded-folders.config.json':
+                '{\n  "rules": { "max-files": "error" },\n  "rules": { "max-files": "off" }\n}',
+            'package.json': '{ "name": "a", "name": "b", "crowded-folders": { "extends": ["go"], "extends": [] } }',
+        });
+        await rejects(
+            readConfigFile(join(root, 'crowded-folders.config.json')),
+            /"rules": is written twice \(lines 2 and 3\), and only the second would be read/u,
+        );
+        // In package.json only the configuration's key is ours to judge.
+        await rejects(readConfigFile(join(root, 'package.json')), /\["crowded-folders"\]\.extends: is written twice/u);
     });
 });
 

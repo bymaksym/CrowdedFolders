@@ -14,10 +14,31 @@
  * `.gitignore` reads it; with a `/` it is anchored at the root, and a leading `/` anchors a single
  * name (`/data` is the root's `data`, not `lib/data`).
  */
+
+import { compileMachine } from './glob-machine.ts';
 export interface Glob {
     readonly source: string;
     test(path: string): boolean;
+    /**
+     * The folders a path must be in (or be) to match, as far as the pattern spells them out: `apps/web`
+     * for `apps/web/src/**`, `apps` for `apps/*\/src`, empty for `**\/src` or `*.ts`. With
+     * `segment`, it is how overrides are found for a folder without trying every one.
+     */
+    readonly prefix: string;
+    /** For a pattern that starts with `**\/` and a plain name (`**\/tests/**`): a segment every match holds. */
+    readonly segment: string | undefined;
+    /** For a pattern that is one plain name at any depth (`node_modules`, `**\/locales`): that name. */
+    readonly name: string | undefined;
+    /** Whether only the last segment of a path decides (`*.png`, `node_modules`). */
+    readonly lastSegment: boolean;
+    /**
+     * Written with a final `/` (`.*\/`), as in `.gitignore`: in `exclude` and `include` it matches
+     * the folders above a file, never the file itself. `.*\/` leaves out `.github/`, not `.eslintrc`.
+     */
+    readonly folderOnly: boolean;
 }
+
+const GLOB_CHARS = /[*?[\]{}]/u;
 
 export function compileGlob(pattern: string): Glob {
     return compileGlobWith(pattern, undefined);
@@ -25,22 +46,66 @@ export function compileGlob(pattern: string): Glob {
 
 /**
  * A glob matched by one matcher, for the tests that compare them. Without one (`compileGlob`), a
- * pattern that could backtrack is matched by the machine, and any other by a regular expression.
+ * plain name is compared with the last segment, a pattern that could backtrack is matched by the
+ * machine, and any other by a regular expression.
  */
 export function compileGlobWith(pattern: string, matcher: 'expression' | 'machine' | undefined): Glob {
+    const folderOnly = pattern.length > 1 && pattern.endsWith('/');
     const isRooted = pattern.startsWith('/') || pattern.startsWith('./');
     const trimmed = trimSlashes(pattern.startsWith('./') ? pattern.slice(2) : pattern);
     const anchored = isRooted || trimmed.includes('/') ? trimmed : `**/${trimmed}`;
+    const rest = anchored.startsWith('**/') ? anchored.slice(3) : undefined;
+    const first = rest?.split('/', 1)[0];
+    const segment = first !== undefined && !GLOB_CHARS.test(first) ? first : undefined;
+    const isOneSegment = rest !== undefined && !rest.includes('/') && !rest.includes('**');
+    if (matcher === undefined && isOneSegment && segment !== undefined) {
+        // A plain name at any depth is the last segment of the path: no expression to run.
+        const name = segment;
+        return {
+            source: pattern,
+            test: path => baseNameOf(path) === name,
+            prefix: '',
+            segment,
+            name,
+            lastSegment: true,
+            folderOnly,
+        };
+    }
     // A final `/**` takes the folder itself too, as minimatch and picomatch read it: `src/generated/**`
     // leaves out `src/generated`, not only what is inside it.
     const isFolderAndBelow = anchored.endsWith('/**');
     const body = isFolderAndBelow ? anchored.slice(0, -3) : anchored;
+    const index = {
+        source: pattern,
+        prefix: literalPrefix(anchored),
+        segment,
+        name: undefined,
+        lastSegment: isOneSegment,
+        folderOnly,
+    };
     if (matcher === 'machine' || (matcher === undefined && canBacktrack(body))) {
         const machine = compileMachine(body, isFolderAndBelow);
-        return { source: pattern, test: path => machine(path) };
+        return { ...index, test: path => machine(path) };
     }
     const expression = new RegExp(`^${translate(body)}${isFolderAndBelow ? '(?:/.*)?' : ''}$`, 'u');
-    return { source: pattern, test: path => expression.test(path) };
+    return { ...index, test: path => expression.test(path) };
+}
+
+/** The leading segments of an anchored pattern that are plain names: `apps/web` of `apps/web/*.ts`. */
+function literalPrefix(anchored: string): string {
+    const literal: string[] = [];
+    for (const part of anchored.split('/')) {
+        if (GLOB_CHARS.test(part)) {
+            break;
+        }
+        literal.push(part);
+    }
+    return literal.join('/');
+}
+
+function baseNameOf(path: string): string {
+    const slash = path.lastIndexOf('/');
+    return slash === -1 ? path : path.slice(slash + 1);
 }
 
 /**
@@ -63,6 +128,8 @@ function canBacktrack(body: string): boolean {
  * Whether a path, or any folder above it, matches one of the globs: excluding `fixtures` excludes
  * `fixtures/vite/dist/main.js`. The folders are tried from the top down, so a path inside an
  * excluded folder stops at that folder instead of testing every one below it first.
+ *
+ * For many paths against the same globs, `PathMatcher` remembers each folder's answer.
  */
 export function matchesSelfOrAncestor(path: string, globs: readonly Glob[]): boolean {
     if (globs.length === 0) {
@@ -74,7 +141,88 @@ export function matchesSelfOrAncestor(path: string, globs: readonly Glob[]): boo
             return true;
         }
     }
-    return globs.some(glob => glob.test(path));
+    return globs.some(glob => !glob.folderOnly && glob.test(path));
+}
+
+/**
+ * `matchesSelfOrAncestor` for a whole file list: every folder is tested once, however many files it
+ * holds, and the plain names (`node_modules`, `__pycache__`, most of an `exclude`) are one set lookup
+ * instead of an expression each. On 200 000 paths this is what makes `exclude` cheap.
+ */
+export class PathMatcher {
+    private readonly names: ReadonlySet<string>;
+    /** Patterns that only read the last segment (`*.png`): their answer is remembered by name. */
+    private readonly segmentPatterns: readonly Glob[];
+    private readonly patterns: readonly Glob[];
+    private readonly folders = new Map<string, boolean>();
+    private readonly segments = new Map<string, boolean>();
+    /** The same without the patterns that only match folders: what a file itself is tested with. */
+    private readonly forFiles: PathMatcher;
+    readonly isEmpty: boolean;
+
+    constructor(globs: readonly Glob[]) {
+        this.forFiles = globs.some(glob => glob.folderOnly)
+            ? new PathMatcher(globs.filter(glob => !glob.folderOnly))
+            : this;
+        this.names = new Set(globs.map(glob => glob.name).filter(name => name !== undefined));
+        this.segmentPatterns = globs.filter(glob => glob.name === undefined && glob.lastSegment);
+        this.patterns = globs.filter(glob => glob.name === undefined && !glob.lastSegment);
+        this.isEmpty = globs.length === 0;
+    }
+
+    /** Whether the path itself matches, without looking at the folders above it. */
+    test(path: string): boolean {
+        const name = baseNameOf(path);
+        if (this.names.has(name)) {
+            return true;
+        }
+        if (this.segmentPatterns.length > 0) {
+            let byName = this.segments.get(name);
+            if (byName === undefined) {
+                byName = this.segmentPatterns.some(glob => glob.test(name));
+                this.segments.set(name, byName);
+            }
+            if (byName) {
+                return true;
+            }
+        }
+        return this.patterns.some(glob => glob.test(path));
+    }
+
+    matchesSelfOrAncestor(path: string): boolean {
+        if (this.isEmpty) {
+            return false;
+        }
+        const slash = path.lastIndexOf('/');
+        return (slash !== -1 && this.folderMatches(path.slice(0, slash))) || this.forFiles.test(path);
+    }
+
+    /** Whether a folder or one above it matches, remembered for every folder on the way. */
+    private folderMatches(folder: string): boolean {
+        const known = this.folders.get(folder);
+        if (known !== undefined) {
+            return known;
+        }
+        // Up to the first folder already known, then down again, so a deep tree costs no recursion.
+        const pending: string[] = [];
+        let current: string | undefined = folder;
+        let above = false;
+        while (current !== undefined) {
+            const answer = this.folders.get(current);
+            if (answer !== undefined) {
+                above = answer;
+                break;
+            }
+            pending.push(current);
+            const slash = current.lastIndexOf('/');
+            current = slash === -1 ? undefined : current.slice(0, slash);
+        }
+        for (const path of pending.toReversed()) {
+            above ||= this.test(path);
+            this.folders.set(path, above);
+        }
+        return above;
+    }
 }
 
 /** Whether a pattern is one `compileGlob` can read; the message says why not. */
@@ -172,211 +320,10 @@ function escapeClass(body: string): string {
     return out;
 }
 
-function trimSlashes(pattern: string): string {
+export function trimSlashes(pattern: string): string {
     let start = 0;
     let end = pattern.length;
     while (start < end && pattern[start] === '/') start++;
     while (end > start && pattern[end - 1] === '/') end--;
     return pattern.slice(start, end);
-}
-
-/** One state of the matching machine: it reads one character, or splits in two without reading. */
-interface MachineState {
-    readonly test?: (char: string) => boolean;
-    out: number;
-    readonly other: number;
-}
-
-type GlobNode =
-    | { readonly kind: 'char'; readonly test: (char: string) => boolean }
-    | { readonly kind: 'rest' }
-    | { readonly kind: 'segments' }
-    | { readonly kind: 'star' }
-    | { readonly kind: 'alternatives'; readonly options: readonly GlobNode[][] };
-
-const NOT_SLASH = (char: string): boolean => char !== '/';
-const IS_SLASH = (char: string): boolean => char === '/';
-const ANY = (): boolean => true;
-const MATCH = -1;
-const NONE = -2;
-
-/**
- * The same glob as `translate` reads it, matched by a Thompson machine: every state the pattern
- * could be in is followed at once, so a path of n characters takes at most n times the size of the
- * pattern, however many `*` it has. (A regular expression backtracks instead, and pays for each way
- * of sharing the name between the stars.)
- */
-function compileMachine(body: string, isFolderAndBelow: boolean): (path: string) => boolean {
-    const states: MachineState[] = [];
-    const add = (state: MachineState): number => {
-        states.push(state);
-        return states.length - 1;
-    };
-    const point = (from: number, to: number): void => {
-        const state = states[from];
-        if (state) state.out = to;
-    };
-    const loop = (test: (char: string) => boolean, next: number): number => {
-        const split = add({ out: NONE, other: next });
-        point(split, add({ test, out: split, other: NONE }));
-        return split;
-    };
-    const build = (nodes: readonly GlobNode[], end: number): number => {
-        let next = end;
-        for (const node of nodes.toReversed()) {
-            switch (node.kind) {
-                case 'char': {
-                    next = add({ test: node.test, out: next, other: NONE });
-                    break;
-                }
-                case 'star': {
-                    next = loop(NOT_SLASH, next);
-                    break;
-                }
-                case 'rest': {
-                    next = loop(ANY, next);
-                    break;
-                }
-                case 'segments': {
-                    // Any number of (one or more non-slashes, then a slash).
-                    const split = add({ out: NONE, other: next });
-                    const slash = add({ test: IS_SLASH, out: split, other: NONE });
-                    const again = add({ out: NONE, other: slash });
-                    const first = add({ test: NOT_SLASH, out: again, other: NONE });
-                    point(again, first);
-                    point(split, first);
-                    next = split;
-                    break;
-                }
-                case 'alternatives': {
-                    const after = next;
-                    const starts = node.options.map(option => build(option, after));
-                    next = starts.reduceRight((rest, start) => add({ out: start, other: rest }));
-                    break;
-                }
-            }
-        }
-        return next;
-    };
-    let end = MATCH;
-    if (isFolderAndBelow) {
-        // `(?:/.*)?`: the folder itself, or a slash and anything after it.
-        const rest = loop(ANY, MATCH);
-        end = add({ out: add({ test: IS_SLASH, out: rest, other: NONE }), other: MATCH });
-    }
-    const start = build(parseGlob(body, { index: 0 }, false), end);
-
-    return path => {
-        const seen = new Int32Array(states.length).fill(-1);
-        let generation = 0;
-        /** Adds the reading states reachable from `from` without reading; whether the end is one of them. */
-        const reach = (from: number, into: number[]): boolean => {
-            let isEnd = false;
-            const pending = [from];
-            for (let state = pending.pop(); state !== undefined; state = pending.pop()) {
-                const node = states[state];
-                if (state === MATCH) {
-                    isEnd = true;
-                } else if (node && seen[state] !== generation) {
-                    seen[state] = generation;
-                    if (node.test) {
-                        into.push(state);
-                    } else {
-                        pending.push(node.other, node.out);
-                    }
-                }
-            }
-            return isEnd;
-        };
-        let current: number[] = [];
-        let matched = reach(start, current);
-        for (const char of path) {
-            generation++;
-            matched = false;
-            const next: number[] = [];
-            for (const state of current) {
-                const node = states[state];
-                if (node?.test?.(char) === true && reach(node.out, next)) {
-                    matched = true;
-                }
-            }
-            if (next.length === 0 && !matched) {
-                return false;
-            }
-            current = next;
-        }
-        return matched;
-    };
-}
-
-/** Reads a glob into nodes, each character with the meaning `token` gives it; `{…}` nests. */
-function parseGlob(pattern: string, at: { index: number }, inBraces: boolean): GlobNode[] {
-    const nodes: GlobNode[] = [];
-    while (at.index < pattern.length) {
-        const index = at.index;
-        const char = String.fromCodePoint(pattern.codePointAt(index) ?? 0);
-        if (inBraces && (char === ',' || char === '}')) {
-            return nodes;
-        }
-        if (char === '*') {
-            const isDouble = pattern[index + 1] === '*';
-            const startsSegment = index === 0 || pattern[index - 1] === '/';
-            if (isDouble && startsSegment && pattern[index + 2] === '/') {
-                nodes.push({ kind: 'segments' });
-                at.index += 3;
-            } else if (isDouble && startsSegment && index + 2 === pattern.length) {
-                nodes.push({ kind: 'rest' });
-                at.index += 2;
-            } else {
-                nodes.push({ kind: 'star' });
-                at.index += 1;
-            }
-            continue;
-        }
-        if (char === '{') {
-            at.index++;
-            const options: GlobNode[][] = [];
-            let closing: string | undefined = ',';
-            while (closing === ',') {
-                options.push(parseGlob(pattern, at, true));
-                closing = pattern[at.index];
-                at.index++;
-            }
-            nodes.push({ kind: 'alternatives', options });
-            continue;
-        }
-        const close = char === '[' ? pattern.indexOf(']', index + 1) : -1;
-        if (close !== -1) {
-            nodes.push({ kind: 'char', test: classTest(pattern.slice(index + 1, close)) });
-            at.index = close + 1;
-            continue;
-        }
-        nodes.push({ kind: 'char', test: char === '?' ? NOT_SLASH : candidate => candidate === char });
-        at.index += char.length;
-    }
-    return nodes;
-}
-
-/** `[abc]`, `[a-z]`, and `[!abc]` or `[^abc]` (which never take a slash), as a character class reads them. */
-function classTest(body: string): (char: string) => boolean {
-    const isNegated = body.startsWith('!') || body.startsWith('^');
-    // By code point, as a regular expression with the `u` flag reads a class.
-    const codes = Array.from(isNegated ? body.slice(1) : body, char => char.codePointAt(0) ?? 0);
-    const ranges: (readonly [number, number])[] = [];
-    const dash = 45;
-    for (let index = 0; index < codes.length; index++) {
-        const from = codes[index] ?? 0;
-        const to = codes[index + 2];
-        if (codes[index + 1] === dash && to !== undefined) {
-            ranges.push([from, to]);
-            index += 2;
-        } else {
-            ranges.push([from, from]);
-        }
-    }
-    return char => {
-        const code = char.codePointAt(0) ?? 0;
-        const inside = ranges.some(([from, to]) => code >= from && code <= to);
-        return isNegated ? char !== '/' && !inside : inside;
-    };
 }

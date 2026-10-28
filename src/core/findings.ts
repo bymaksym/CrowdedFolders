@@ -43,6 +43,8 @@ export interface EngineInput {
     readonly only?: readonly string[];
     /** Also return the numbers of every folder reported on. */
     readonly stats?: boolean;
+    /** `YYYY-MM-DD`, what `expires` of an override is compared with. Default: today, in UTC. */
+    readonly today?: string;
 }
 
 export interface EngineResult {
@@ -90,4 +92,12 @@ export function toFinding(
         moves: problem.moves ?? [],
         url,
     };
+}
+
+/** Findings in the order every report shows them: by folder, then rule, then key. */
+export function sortFindings(findings: readonly Finding[]): Finding[] {
+    return findings.toSorted(
+        (a, b) =>
+            compareText(a.folder, b.folder) || compareText(a.rule, b.rule) || compareText(a.key ?? '', b.key ?? ''),
+    );
 }

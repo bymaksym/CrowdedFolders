@@ -13,6 +13,12 @@ export function pinnedSchemaUrl(version: string): string {
     return `https://unpkg.com/crowded-folders@${major === '0' ? `0.${minor}` : major}/schema.json`;
 }
 
+/**
+ * How long a reason has to be once trimmed. An opinion, not a measurement: long enough to say why
+ * ("generated from the OpenAPI spec"), too long for a placeholder ("x", "ok", "legacy").
+ */
+export const MIN_REASON_LENGTH = 10;
+
 const SEVERITY: JsonSchema = {
     enum: ['error', 'warn', 'off'],
     description: '"error" fails the run, "warn" reports without failing, "off" does not run the rule.',
@@ -137,6 +143,11 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
         additionalProperties: false,
         properties: {
             $schema: { type: 'string', description: 'This schema, for editors.' },
+            root: {
+                type: 'boolean',
+                description:
+                    'false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true.',
+            },
             extends: {
                 type: 'array',
                 items: {
@@ -186,11 +197,43 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                             description:
                                 'Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders".',
                         },
+                        extends: {
+                            type: 'array',
+                            items: {
+                                anyOf: [
+                                    { enum: presets, description: 'A built-in preset.' },
+                                    {
+                                        type: 'string',
+                                        minLength: 1,
+                                        description: 'A plugin preset ("namespace/name").',
+                                    },
+                                ],
+                            },
+                            description:
+                                'Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration.',
+                        },
                         reason: {
+                            type: 'string',
+                            minLength: MIN_REASON_LENGTH,
+                            description: `Why these folders are different, in at least ${MIN_REASON_LENGTH} characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed.`,
+                        },
+                        expires: {
+                            type: 'string',
+                            pattern: String.raw`^\d{4}-\d{2}-\d{2}$`,
+                            description:
+                                'A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review.',
+                            examples: ['2027-03-31'],
+                        },
+                        owner: {
+                            type: 'string',
+                            minLength: 1,
+                            description: 'Who answers for it (a person or a team, such as @org/team): shown with it.',
+                        },
+                        ticket: {
                             type: 'string',
                             minLength: 1,
                             description:
-                                'Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed.',
+                                'Where the work that removes it is tracked (an issue number or a link): shown with it.',
                         },
                         rules: rulesProperty,
                         naming: NAMING,

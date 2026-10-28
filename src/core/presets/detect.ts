@@ -1,4 +1,4 @@
-import type { Preset } from '../config/types.ts';
+import type { OverrideConfig, Preset } from '../config/types.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from '../paths/glob.ts';
 import { parentOf } from '../paths/tree.ts';
 import { TEST_DATA } from './general.ts';
@@ -78,8 +78,11 @@ export function detectPresets(
             continue;
         }
         const globs = (detect.files ?? []).map(compileGlob);
-        const matching = candidates.filter(path =>
-            globs.some(glob => (kept.has(path) || namesDotFolder(glob)) && glob.test(path)),
+        const confirming = confirmingFiles(detect.confirmedBy, candidates);
+        const matching = candidates.filter(
+            path =>
+                globs.some(glob => (kept.has(path) || namesDotFolder(glob)) && glob.test(path)) &&
+                (confirming === undefined || confirming.some(file => isUnder(file, parentOf(path)))),
         );
         if (matching.length > 0) {
             found.push({ preset: name, evidence: matching[0] ?? '', files: matching });
@@ -107,9 +110,12 @@ export function detectPresets(
 }
 
 /**
- * Drops the presets another detected preset already extends, `react` next to `react-native` or `java`
- * next to `android`: writing both only repeats the parent. What the parent excludes by anchor stays in
- * `extended`, so it still applies where the parent was found.
+ * Drops the presets another detected preset already extends where that one was found, `react` next
+ * to `react-native` or `java` next to `android`: writing both only repeats the parent. Where the
+ * child was found inside the parent's folder (an AndroidManifest.xml under the build.gradle), the
+ * child applies to the parent's folder too; a parent found elsewhere too stays for those folders (react in
+ * apps/web, react-native in apps/mobile). What the parent excludes by anchor stays in `extended`,
+ * so it still applies where it was found.
  */
 function withoutRedundant(detections: readonly Detection[], presets: Readonly<Record<string, Preset>>): Detection[] {
     const collect = (name: string, seen: Set<string>): Set<string> => {
@@ -123,19 +129,41 @@ function withoutRedundant(detections: readonly Detection[], presets: Readonly<Re
         return seen;
     };
     const ancestorsOf = (name: string): Set<string> => collect(name, new Set());
-    return detections
-        .filter(
-            detection =>
-                detection.preset === 'recommended' ||
-                detections.every(other => other === detection || !ancestorsOf(other.preset).has(detection.preset)),
-        )
-        .map(detection => {
-            const ancestors = ancestorsOf(detection.preset);
-            const extended = detections
-                .filter(other => other !== detection && other.preset !== 'recommended' && ancestors.has(other.preset))
-                .map(other => ({ preset: other.preset, folders: other.folders }));
-            return extended.length === 0 ? detection : { ...detection, extended };
-        });
+    const found = detections.map(detection => ({
+        detection,
+        folders: [...detection.folders],
+        extended: [] as { preset: string; folders: string[] }[],
+    }));
+    for (const parent of found) {
+        if (parent.detection.preset === 'recommended') {
+            continue;
+        }
+        for (const child of found) {
+            if (child === parent || !ancestorsOf(child.detection.preset).has(parent.detection.preset)) {
+                continue;
+            }
+            for (const folder of parent.folders) {
+                const inside = child.folders.filter(own => own === folder || isUnder(own, folder));
+                if (inside.length === 0 && child.folders.every(own => !isUnder(folder, own))) {
+                    continue;
+                }
+                if (inside.length > 0 && !child.folders.includes(folder)) {
+                    child.folders = [...child.folders, folder];
+                }
+                parent.folders = parent.folders.filter(own => own !== folder);
+                const entry = child.extended.find(other => other.preset === parent.detection.preset);
+                if (entry) entry.folders.push(folder);
+                else child.extended.push({ preset: parent.detection.preset, folders: [folder] });
+            }
+        }
+    }
+    return found
+        .filter(({ detection, folders }) => detection.preset === 'recommended' || folders.length > 0)
+        .map(({ detection, folders, extended }) => ({
+            ...detection,
+            folders,
+            ...(extended.length > 0 && { extended }),
+        }));
 }
 
 /**
@@ -245,10 +273,111 @@ function anchoredExcludes(name: string, presets: Readonly<Record<string, Preset>
     );
 }
 
+/** The files that confirm a preset's evidence (`*.py` for a requirements.txt), or `undefined` when it needs none. */
+function confirmingFiles(globs: readonly string[] | undefined, files: readonly string[]): string[] | undefined {
+    if (globs === undefined || globs.length === 0) {
+        return undefined;
+    }
+    const compiled = globs.map(compileGlob);
+    return files.filter(file => compiled.some(glob => glob.test(file)));
+}
+
+function isUnder(path: string, folder: string): boolean {
+    return folder === '.' || path.startsWith(`${folder}/`);
+}
+
 function namesDotFolder(glob: Glob): boolean {
     return glob.source.startsWith('.') || glob.source.includes('/.');
 }
 
 function depthOf(path: string): number {
     return path.split('/').length;
+}
+
+/** What `init` writes, and what a run without a configuration uses, from the presets detected. */
+export interface DetectedConfig {
+    readonly extends: readonly string[];
+    readonly exclude: readonly string[];
+    readonly overrides: readonly OverrideConfig[];
+}
+
+/**
+ * The configuration the detected presets make. A preset found at the root goes in `extends`; one
+ * found only in sub-folders (a pom.xml in server/, an Angular package.json in web/) goes in an
+ * override with `extends`, so that it applies there and not to the rest of the repository. A preset
+ * that puts back what recommended leaves out (`"!…"`, as the game presets do with media) cannot be
+ * applied to some folders only, and stays in `extends` with its excludes read from where it was found.
+ */
+export function configFromDetections(
+    detections: readonly Detection[],
+    files: readonly string[],
+    presets: Readonly<Record<string, Preset>>,
+): DetectedConfig {
+    const isScoped = (detection: Detection): boolean =>
+        detection.preset !== 'recommended' &&
+        !detection.folders.includes('.') &&
+        !negatesExcludes(detection.preset, presets);
+    const top = detections.filter(detection => !isScoped(detection));
+    return {
+        extends: [...new Set(top.map(detection => detection.preset))],
+        exclude: excludesFor(top, files, presets),
+        overrides: detections
+            .filter(detection => isScoped(detection))
+            .map(detection => ({
+                folders: folderGlobs(detection.folders, files),
+                extends: [detection.preset],
+                reason: `Where ${detection.preset} was found (${detection.evidence})`,
+            })),
+    };
+}
+
+/** Whether a preset, or one it extends, takes something out of what is left out (`"!*.png"`). */
+function negatesExcludes(name: string, presets: Readonly<Record<string, Preset>>, seen = new Set<string>()): boolean {
+    const preset = presets[name];
+    if (!preset || seen.has(name)) {
+        return false;
+    }
+    seen.add(name);
+    return (
+        (preset.config.exclude ?? []).some(pattern => pattern.startsWith('!')) ||
+        (preset.config.extends ?? []).some(parent => negatesExcludes(parent, presets, seen))
+    );
+}
+
+/**
+ * The globs of an override for these folders: `server/**` each, or `apps/*\/**` when three or more
+ * siblings are every folder their parent has (sixty Angular apps in apps/).
+ */
+function folderGlobs(folders: readonly string[], files: readonly string[]): string[] {
+    const byParent = new Map<string, string[]>();
+    for (const folder of folders) {
+        const parent = parentOf(folder);
+        byParent.set(parent, [...(byParent.get(parent) ?? []), folder]);
+    }
+    const globs: string[] = [];
+    for (const [parent, siblings] of byParent) {
+        if (siblings.length >= COLLAPSE_FROM && childFolders(parent, files).size === siblings.length) {
+            globs.push(`${parent === '.' ? '' : `${parent}/`}*/**`);
+        } else {
+            globs.push(...siblings.map(folder => `${folder}/**`));
+        }
+    }
+    return globs.toSorted((a, b) => a.localeCompare(b));
+}
+
+/** The folders directly in `parent` that hold a file, at any depth. */
+function childFolders(parent: string, files: readonly string[]): Set<string> {
+    const prefix = parent === '.' ? '' : `${parent}/`;
+    const children = new Set<string>();
+    for (const file of files) {
+        if (!file.startsWith(prefix)) {
+            continue;
+        }
+        const rest = file.slice(prefix.length);
+        const slash = rest.indexOf('/');
+        if (slash !== -1) {
+            children.add(rest.slice(0, slash));
+        }
+    }
+    return children;
 }

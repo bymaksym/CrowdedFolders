@@ -63,6 +63,78 @@ describe('runEngine', () => {
         assert.equal(runEngine({ files: crowded, config: first, rules: BUILT_IN_RULES }).findings[0]?.severity, 'warn');
     });
 
+    it('finds the overrides of a folder by the folders their globs name, in order, with 4 000 of them (37 s before)', () => {
+        const overrides = Array.from({ length: 4000 }, (_, index) => ({
+            folders: [`packages/p${index}/**`],
+            reason: `package ${index} is allowed more`,
+            rules: { 'max-files': ['error', { max: 100 }] } as const,
+        }));
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 2 }] },
+            overrides: [
+                ...overrides,
+                { folders: ['**/legacy'], reason: 'the legacy folders are frozen', rules: { 'max-files': 'off' } },
+                {
+                    folders: ['*/p7/**'],
+                    reason: 'and p7 is strict again',
+                    rules: { 'max-files': ['warn', { max: 2 }] },
+                },
+            ],
+        });
+        const files = ['p1', 'p7', 'p9'].flatMap(name =>
+            ['a', 'b', 'c'].flatMap(file => [`packages/${name}/${file}.ts`, `packages/${name}/legacy/${file}.ts`]),
+        );
+        const findings = runEngine({ files, config, rules: BUILT_IN_RULES }).findings.filter(
+            finding => finding.rule === 'max-files',
+        );
+        assert.deepEqual(
+            findings.map(finding => `${finding.folder} ${finding.severity}`),
+            ['packages/p7 warn', 'packages/p7/legacy warn'],
+        );
+        const explained = explainFolder({ files, config, rules: BUILT_IN_RULES }, 'packages/p7/legacy');
+        assert.deepEqual(
+            explained?.overrides.map(override => override.reason),
+            ['package 7 is allowed more', 'the legacy folders are frozen', 'and p7 is strict again'],
+        );
+    });
+
+    it('reports an override past its expires as config/expired-override, and still applies it (Daniel)', () => {
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 5 }] },
+            overrides: [
+                {
+                    folders: ['src/legacy'],
+                    reason: 'being rewritten in v3',
+                    expires: '2026-06-30',
+                    owner: '@acme/web',
+                    ticket: 'WEB-12',
+                    rules: { 'max-files': 'off' },
+                },
+            ],
+        });
+        const before = runEngine({ files: crowded, config, rules: BUILT_IN_RULES, today: '2026-06-30' });
+        assert.deepEqual(before.findings, []);
+        const after = runEngine({ files: crowded, config, rules: BUILT_IN_RULES, today: '2026-07-01' });
+        assert.deepEqual(
+            after.findings.map(finding => [finding.rule, finding.severity, finding.message]),
+            [
+                [
+                    'config/expired-override',
+                    'warn',
+                    'The override for "src/legacy" in layer 0 expired on 2026-06-30 (owner @acme/web, ticket WEB-12): "being rewritten in v3". It still applies: review it, then renew "expires" or remove it.',
+                ],
+            ],
+        );
+        const elsewhere = runEngine({
+            files: [...crowded, 'lib/a.ts'],
+            config,
+            rules: BUILT_IN_RULES,
+            today: '2027-01-01',
+            only: ['lib'],
+        });
+        assert.deepEqual(elsewhere.findings, []);
+    });
+
     it('reports an override of the own configuration that matches no folder', () => {
         const config = resolve({
             rules: { 'max-files': ['error', { max: 50 }] },

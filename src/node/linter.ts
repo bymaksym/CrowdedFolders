@@ -10,7 +10,7 @@ import { exitCodeOf } from '../core/report/report.ts';
 import { attributeRuleError, RuleError, ruleShapeProblem } from '../core/rules/guard.ts';
 import type { Rule } from '../core/rules/rule.ts';
 import { applySuppressions, PER_PROJECT, type StaleSuppression } from '../core/suppressions.ts';
-import { locate } from './config-file.ts';
+import { locate } from './config/file.ts';
 import { listFiles } from './files.ts';
 import { loadConfig, loadConfigFile, type LoadedConfig } from './load-config.ts';
 import { detectConfig } from './manifests.ts';

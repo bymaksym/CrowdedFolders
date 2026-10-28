@@ -88,6 +88,7 @@ describe('SARIF for GitHub code scanning', () => {
             'max-folders',
             'prefix-groups',
             'config/unused-override',
+            'config/expired-override',
             'config/stale-suppression',
         ]);
         for (const result of run.results) {

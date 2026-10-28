@@ -49,3 +49,19 @@ export function editDistance(a: string, b: string): number {
     }
     return table[a.length]?.[b.length] ?? 0;
 }
+
+/**
+ * `closest`, or else a candidate that starts what was typed or is started by it (three letters or
+ * more): `warning` is three edits from `warn`, and still plainly meant it.
+ */
+export function suggest(typed: string, candidates: readonly string[]): string | undefined {
+    const near = closest(typed, candidates);
+    if (near !== undefined) {
+        return near;
+    }
+    const lower = typed.toLowerCase();
+    return candidates.find(candidate => {
+        const other = candidate.toLowerCase();
+        return Math.min(other.length, lower.length) >= 3 && (lower.startsWith(other) || other.startsWith(lower));
+    });
+}

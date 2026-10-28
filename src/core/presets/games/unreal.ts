@@ -77,10 +77,14 @@ const TYPE_PREFIXES = [
     'vf',
     'vfa',
     'wbp',
-    // The class prefixes of Unreal C++ (AActor, UObject, IInterface), for the code under Source/.
-    'u',
-    'i',
 ];
+
+/**
+ * The class prefixes of Unreal C++ (UObject, IInterface) that some files keep in their name. Only
+ * these two: `ai`, `font`, `curve` and `rig` are asset prefixes, and in Source/ AIController,
+ * AITaskAttack and AIPerception are about AI.
+ */
+const CLASS_PREFIXES = ['u', 'i'];
 
 export const unreal: Preset = {
     description:
@@ -112,15 +116,7 @@ export const unreal: Preset = {
             '__ExternalObjects__',
             '.vs',
         ],
-        naming: {
-            ignoreLeadingWords: TYPE_PREFIXES,
-            companions: [
-                '_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$',
-                '_(P|Audio|Lighting|Geo|Gameplay)$',
-                '_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$',
-                String.raw`_\d+$`,
-            ],
-        },
+        naming: { ignoreLeadingWords: CLASS_PREFIXES },
         rules: {
             'max-files': ['warn', { max: 50, count: 'modules' }],
             // A warning like max-files: both are the guide's "should" (rule 2.7), and a drawer of 200
@@ -137,6 +133,19 @@ export const unreal: Preset = {
             ],
         },
         overrides: [
+            {
+                folders: ['**/Content', '**/Content/**'],
+                reason: "Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).",
+                naming: {
+                    ignoreLeadingWords: TYPE_PREFIXES,
+                    companions: [
+                        '_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$',
+                        '_(P|Audio|Lighting|Geo|Gameplay)$',
+                        '_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$',
+                        String.raw`_\d+$`,
+                    ],
+                },
+            },
             {
                 folders: ['**/Source', '**/Source/**'],
                 reason: "The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).",

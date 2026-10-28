@@ -7,11 +7,19 @@ import {
     type FolderExplanation,
     type FolderStat,
     type RuleNote,
+    sortFindings,
     toFinding,
 } from './findings.ts';
 import { counterpartsOf, foldMirrors } from './mirrors.ts';
-import { compareText, type Naming, readFolder } from './naming/modules.ts';
-import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
+import { type Naming, readFolder } from './naming/modules.ts';
+import {
+    type CompiledOverride,
+    expiredOverrideFindings,
+    OverrideIndex,
+    todayInUtc,
+    unusedOverrideFindings,
+} from './overrides.ts';
+import { compileGlob, PathMatcher } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
 import { parseMirrors } from './paths/mirrors.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
@@ -26,10 +34,10 @@ export type { EngineInput, EngineResult, Finding, FolderExplanation, FolderStat 
  * `include: ["src"]` takes `src/a.ts`, as `exclude: ["src"]` would leave it out.
  */
 export function selectFiles(files: readonly string[], config: Pick<ResolvedConfig, 'exclude' | 'include'>): string[] {
-    const include = config.include.map(compileGlob);
-    const exclude = config.exclude.map(compileGlob);
+    const include = new PathMatcher(config.include.map(compileGlob));
+    const exclude = new PathMatcher(config.exclude.map(compileGlob));
     return files.filter(
-        file => (include.length === 0 || matchesSelfOrAncestor(file, include)) && !matchesSelfOrAncestor(file, exclude),
+        file => (include.isEmpty || include.matchesSelfOrAncestor(file)) && !exclude.matchesSelfOrAncestor(file),
     );
 }
 
@@ -70,14 +78,42 @@ export function runEngine(input: EngineInput): EngineResult {
     // Whether an override matches no folder is a question about the whole tree: a run over some
     // folders cannot answer it.
     if (!only) {
-        findings.push(...context.unusedOverrideFindings());
+        findings.push(...unusedOverrideFindings(context.overrides));
     }
+    // An expired override is due wherever it applies: a run over some folders reports the ones it used.
+    findings.push(...expiredOverrideFindings(context.overrides, input.today ?? todayInUtc(), only === undefined));
     return {
         findings: sortFindings(findings),
         folderCount,
         fileCount: files.length,
         ...(input.stats && { folderStats }),
     };
+}
+
+/** The folders each override applies to, for `crowded-folders overrides`. */
+export interface OverrideCoverage {
+    /** The folders checked (under `only`, when given). */
+    readonly folderCount: number;
+    /** Every override of the configuration, in order, with the folders it applies to. */
+    readonly overrides: readonly { readonly state: OverrideState; readonly folders: readonly string[] }[];
+}
+
+export function overrideCoverage(input: EngineInput): OverrideCoverage {
+    const only = scopeOf(input.only);
+    const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));
+    const context = new FolderContext(input.config, input.rules, tree);
+    const covered = new Map<OverrideState, string[]>(input.config.overrides.map(state => [state, []]));
+    let folderCount = 0;
+    for (const entry of tree) {
+        if (only?.every(path => !isInside(entry.path, path))) {
+            continue;
+        }
+        folderCount++;
+        for (const state of context.settingsFor(entry).overrides) {
+            covered.get(state)?.push(entry.path);
+        }
+    }
+    return { folderCount, overrides: [...covered].map(([state, folders]) => ({ state, folders })) };
 }
 
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
@@ -111,25 +147,13 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
     };
 }
 
-export function sortFindings(findings: readonly Finding[]): Finding[] {
-    return findings.toSorted(
-        (a, b) =>
-            compareText(a.folder, b.folder) || compareText(a.rule, b.rule) || compareText(a.key ?? '', b.key ?? ''),
-    );
-}
-
-interface CompiledOverride {
-    readonly state: OverrideState;
-    readonly globs: readonly Glob[];
-    readonly withFiles: readonly Glob[];
-    used: boolean;
-}
-
 /** The settings of each folder, with the work that repeats between folders done once. */
 class FolderContext {
     private readonly config: ResolvedConfig;
     private readonly rules: Readonly<Record<string, Rule>>;
-    private readonly overrides: CompiledOverride[];
+    /** The configuration's overrides, compiled; `used` is set as folders match them. */
+    readonly overrides: CompiledOverride[];
+    private readonly index: OverrideIndex;
     private readonly namingCache = new Map<string, Naming>();
     /** The options of each rule for each state it is in, over its defaults and frozen: shared, never changed. */
     private readonly optionsCache = new Map<string, WeakMap<RuleState, Readonly<Record<string, unknown>>>>();
@@ -151,8 +175,10 @@ class FolderContext {
             state,
             globs: state.folders.map(compileGlob),
             withFiles: state.withFiles.map(compileGlob),
+            within: state.within.map(compileGlob),
             used: false,
         }));
+        this.index = new OverrideIndex(this.overrides);
     }
 
     settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): {
@@ -163,9 +189,10 @@ class FolderContext {
         let naming = this.config.naming;
         const rules: Record<string, RuleState> = { ...this.config.rules };
         const applied: OverrideState[] = [];
-        for (const override of this.overrides) {
+        for (const override of this.index.candidatesFor(entry.path)) {
             if (
                 override.globs.every(glob => !glob.test(entry.path)) ||
+                (override.within.length > 0 && override.within.every(glob => !glob.test(entry.path))) ||
                 (override.withFiles.length > 0 &&
                     entry.files.every(file => override.withFiles.every(glob => !glob.test(file))))
             ) {
@@ -381,23 +408,6 @@ class FolderContext {
             viewOf: entry => this.viewOf(entry, this.settingsFor(entry).naming),
             existing: this.existing,
         };
-    }
-
-    unusedOverrideFindings(): Finding[] {
-        return this.overrides
-            .filter(override => override.state.own && !override.used)
-            .map(override => ({
-                rule: 'config/unused-override',
-                severity: 'warn' as const,
-                folder: '.',
-                message: `The override for ${override.state.folders.map(glob => `"${glob}"`).join(', ')} in ${override.state.origin} matches no folder ("${override.state.reason}"): remove it, or fix its globs.`,
-                key: override.state.folders.join(','),
-                measured: 1,
-                limit: 0,
-                files: [],
-                moves: [],
-                url: undefined,
-            }));
     }
 
     private compileNaming(state: NamingState): Naming {

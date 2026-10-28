@@ -1,9 +1,10 @@
 import { parseArgs } from 'node:util';
 
 import { closest } from '../core/paths/suggest.ts';
+import { takes } from './command-options.ts';
 import { HELP } from './help.ts';
 
-export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config'] as const;
+export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config', 'overrides'] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export const FORMATS = [
@@ -44,7 +45,13 @@ export interface Args {
     readonly paths: readonly string[];
     readonly config: string | undefined;
     readonly root: string | undefined;
+    /** `--project <dir>`: check only this folder, with the repository's configuration and suppressions. */
+    readonly project: string | undefined;
     readonly presets: readonly string[];
+    /** `--no-detect`: without a configuration, use only the presets given with `--preset`. */
+    readonly detect: boolean;
+    /** `--no-code`: read only JSON configurations; no JavaScript configuration or plugin runs. */
+    readonly code: boolean;
     /** The first of `outputs`: what `--format` and `--output` said when there is one report. */
     readonly format: Format;
     readonly output: string | undefined;
@@ -98,28 +105,6 @@ export class UsageError extends Error {
 }
 
 /** The options every command that reads a repository takes: where it is and how its files are listed. */
-const REPOSITORY_OPTIONS = ['config', 'root', 'preset', 'stdin', 'no-git', 'require-git', 'tracked-only'] as const;
-
-/**
- * The options each command takes besides `--help` and `--version`. Anything else is a usage error:
- * an option a command ignores is a flag that looks like it did something (`explain -f json` answering in
- * text, `rules --suppress-all` doing nothing). `check` takes all of them.
- */
-const COMMAND_OPTIONS: Readonly<Record<Exclude<Command, 'check'>, readonly string[]>> = {
-    init: [...REPOSITORY_OPTIONS, 'force'],
-    explain: REPOSITORY_OPTIONS,
-    'print-config': REPOSITORY_OPTIONS,
-    // The configuration found from --config or --root says which plugins add rules and presets to the lists.
-    presets: ['config', 'root'],
-    rules: ['config', 'root'],
-};
-
-const SHARED_OPTIONS = new Set(['help', 'version']);
-
-function takes(command: Command, option: string): boolean {
-    return command === 'check' || SHARED_OPTIONS.has(option) || COMMAND_OPTIONS[command].includes(option);
-}
-
 /** The long name an option error of Node's names (`-c, --config <value>`, `--stdin`, `-q`). */
 const OPTION_IN_MESSAGE = /[Oo]ption '(?:-\w, )?(-[\w-]+)/u;
 
@@ -135,7 +120,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
             options: {
                 config: { type: 'string', short: 'c' },
                 root: { type: 'string' },
+                project: { type: 'string' },
                 preset: { type: 'string', short: 'p', multiple: true },
+                'no-detect': { type: 'boolean' },
+                'no-code': { type: 'boolean' },
                 format: { type: 'string', short: 'f', multiple: true },
                 output: { type: 'string', short: 'o' },
                 'max-findings': { type: 'string' },
@@ -243,6 +231,20 @@ export function parseCommandLine(argv: readonly string[]): Args {
     if ((command === 'presets' || command === 'rules') && paths.length > 1) {
         throw new UsageError(`${command} takes one name to filter by: crowded-folders ${command} ${paths[0] ?? ''}`);
     }
+    if (command === 'overrides' && paths.length > 0) {
+        throw new UsageError('overrides takes no paths');
+    }
+    if (values.project !== undefined && values.root !== undefined) {
+        throw new UsageError(
+            '--project and --root cannot both be given: --project checks one folder of the repository, from its root',
+        );
+    }
+    if (values.project?.trim() === '') {
+        throw new UsageError('--project needs a folder: --project packages/api');
+    }
+    if (values.project !== undefined && command === 'check' && paths.length > 0) {
+        throw new UsageError('--project and folders cannot both be given: --project is the folder checked');
+    }
 
     return {
         command,
@@ -250,7 +252,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
         paths,
         config: values.config,
         root: values.root,
+        project: values.project,
         presets: values.preset ?? [],
+        detect: !(values['no-detect'] ?? false),
+        code: !(values['no-code'] ?? false),
         format: outputs[0]?.format ?? 'text',
         output: outputs[0]?.target,
         outputs,

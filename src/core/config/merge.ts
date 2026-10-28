@@ -3,6 +3,7 @@ import type {
     Config,
     NamingConfig,
     NamingState,
+    OverrideConfig,
     OverrideState,
     ResolvedConfig,
     RuleSetting,
@@ -25,15 +26,7 @@ export function mergeLayer(base: ResolvedConfig, layer: Config, origin: string, 
     }
     const overrides: OverrideState[] = [
         ...base.overrides,
-        ...(layer.overrides ?? []).map(override => ({
-            folders: override.folders,
-            withFiles: override.withFiles ?? [],
-            reason: override.reason,
-            rules: override.rules ?? {},
-            naming: override.naming ?? {},
-            origin,
-            own,
-        })),
+        ...(layer.overrides ?? []).map(override => overrideState(override, origin, own)),
     ];
     return {
         include: mergeList(base.include, layer.include),
@@ -43,6 +36,33 @@ export function mergeLayer(base: ResolvedConfig, layer: Config, origin: string, 
         overrides,
         layers: [...base.layers, origin],
         suppressions: layer.suppressions ?? base.suppressions,
+    };
+}
+
+/**
+ * An override as the engine reads it. Its `extends` is not here: the loader applies those presets
+ * to its folders before it, as overrides of their own.
+ */
+export function overrideState(
+    override: Pick<
+        OverrideConfig,
+        'expires' | 'folders' | 'naming' | 'owner' | 'reason' | 'rules' | 'ticket' | 'withFiles'
+    >,
+    origin: string,
+    own: boolean,
+): OverrideState {
+    return {
+        folders: override.folders,
+        withFiles: override.withFiles ?? [],
+        reason: override.reason.trim(),
+        expires: override.expires,
+        owner: override.owner,
+        ticket: override.ticket,
+        rules: override.rules ?? {},
+        naming: override.naming ?? {},
+        origin,
+        own,
+        within: [],
     };
 }
 
@@ -74,35 +94,57 @@ export function applySetting(current: RuleState | undefined, setting: RuleSettin
         return { severity: setting, options: previous.options };
     }
     const [severity, options] = setting;
-    return { severity, options: options ? mergeOptions(previous.options, options) : previous.options };
+    return {
+        severity,
+        options: options ? mergeOptions(previous.options, options, { keepNegations: true }) : previous.options,
+    };
 }
 
+/**
+ * Lays options over others, lists accumulating. A rule's state is the options set so far, without
+ * its defaults, which are laid under it last: so a `"!x"` that removes nothing yet is kept there
+ * (`keepNegations`) and still takes `x` out of the rule's defaults — `names: ["!utils"]` used
+ * to leave the default `utils` in.
+ */
 export function mergeOptions(
     base: Readonly<Record<string, unknown>>,
     layer: Readonly<Record<string, unknown>>,
+    { keepNegations = false }: { readonly keepNegations?: boolean } = {},
 ): Record<string, unknown> {
     const merged: Record<string, unknown> = { ...base };
     for (const [key, value] of Object.entries(layer)) {
         const previous = merged[key];
         merged[key] =
             Array.isArray(value) && (Array.isArray(previous) || previous === undefined)
-                ? mergeList((previous as unknown[] | undefined) ?? [], value)
+                ? mergeList((previous as unknown[] | undefined) ?? [], value, { keepNegations })
                 : value;
     }
     return merged;
 }
 
-/** Appends without repeating; `"!x"` removes `x`. */
-export function mergeList<T>(base: readonly T[], layer: readonly T[] | undefined): T[] {
+/**
+ * Appends without repeating; `"!x"` removes `x`. With `keepNegations`, a `"!x"` that finds no
+ * `x` stays in the list, to remove it from what is laid under later; a later `"x"` replaces it.
+ */
+export function mergeList<T>(
+    base: readonly T[],
+    layer: readonly T[] | undefined,
+    { keepNegations = false }: { readonly keepNegations?: boolean } = {},
+): T[] {
     const result = [...base];
     for (const item of layer ?? []) {
         if (typeof item === 'string' && item.startsWith('!')) {
-            const removed = item.slice(1);
-            const index = (result as readonly unknown[]).indexOf(removed);
+            const index = (result as readonly unknown[]).indexOf(item.slice(1));
             if (index !== -1) {
                 result.splice(index, 1);
+            } else if (keepNegations && !result.includes(item)) {
+                result.push(item);
             }
             continue;
+        }
+        const negation = typeof item === 'string' ? (result as readonly unknown[]).indexOf(`!${item}`) : -1;
+        if (negation !== -1) {
+            result.splice(negation, 1);
         }
         if (!result.includes(item)) {
             result.push(item);

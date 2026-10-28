@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { isObject } from '../core/config/json-schema.ts';
 import { parseJsonc } from '../core/config/jsonc.ts';
 import type { Config } from '../core/config/types.ts';
-import { type Detection, detectPresets, excludesFor, isEvidence } from '../core/presets/detect.ts';
+import { configFromDetections, type Detection, detectPresets, isEvidence } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 
 /**
@@ -69,11 +69,10 @@ export interface DetectedConfig {
 export function detectConfig(root: string, files: readonly string[]): DetectedConfig {
     const manifests = dependenciesOf(root, files);
     const detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
+    // A preset found only in sub-folders applies there, in an override: as init writes it.
+    const made = configFromDetections(detected, files, BUILT_IN_PRESETS);
     return {
-        config: {
-            extends: detected.map(detection => detection.preset),
-            exclude: excludesFor(detected, files, BUILT_IN_PRESETS),
-        },
+        config: { extends: [...made.extends], exclude: [...made.exclude], overrides: [...made.overrides] },
         detected,
         manifests,
     };

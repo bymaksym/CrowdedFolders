@@ -42,7 +42,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
                 dotfiles: {
                     type: 'boolean',
                     description:
-                        'Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks.',
+                        'Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"].',
                 },
             },
         },

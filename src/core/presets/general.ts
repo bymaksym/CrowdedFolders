@@ -118,7 +118,8 @@ export const recommended: Preset = {
             'newsfragments',
             // Folders whose name starts with a dot belong to the tool that reads them (.github,
             // .changeset, .vscode), and their layout is that tool's: GitHub, for one, only reads
-            // workflows directly inside .github/workflows.
+            // workflows directly inside .github/workflows. It leaves out dot-files too (.eslintrc,
+            // .env): to count them with max-files dotfiles, replace it with ".*/", the folders only.
             '.*',
             MEDIA,
             // Fastlane reads one folder per language and one file per field, and nothing deeper.
@@ -212,13 +213,14 @@ export const recommended: Preset = {
 /** For a team that wants a tidier tree than the measured median, and to keep it that way. */
 export const strict: Preset = {
     description:
-        "Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. An opinion, not a measurement: use it when you want the tree tidier than most.",
+        "Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. It tightens the presets it is combined with, wherever it is listed (go then strict and strict then go are the same), and leaves alone what a preset keeps: java and dotnet keep redundant-prefix off, go's main.go and Cargo's lib.rs stay allowed alone in a folder. An opinion, not a measurement: use it when you want the tree tidier than most.",
     sources: [
         {
             title: 'Angular style guide (former LIFT "Flat" rule: sub-folders at seven or more files)',
             url: 'https://github.com/kenny-chow-my/AngularStyleGuide',
         },
     ],
+    tightens: true,
     config: {
         extends: ['recommended'],
         rules: {

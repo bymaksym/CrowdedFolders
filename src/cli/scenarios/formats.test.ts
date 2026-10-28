@@ -3,14 +3,14 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { type JsonSchema, validate } from '../core/config/json-schema.ts';
-import { sarifViolations } from '../core/report/test-support/sarif-rules.ts';
-import { RENDER_FILES } from './test-support/fixtures.ts';
-import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
+import { type JsonSchema, validate } from '../../core/config/json-schema.ts';
+import { sarifViolations } from '../../core/report/test-support/sarif-rules.ts';
+import { RENDER_FILES } from '../test-support/fixtures.ts';
+import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
 
 cleanUpAfterTests();
 
-const schema = JSON.parse(readFileSync(new URL('../../report.schema.json', import.meta.url), 'utf8')) as JsonSchema;
+const schema = JSON.parse(readFileSync(new URL('../../../report.schema.json', import.meta.url), 'utf8')) as JsonSchema;
 
 const CONFIG = `{
     "extends": ["recommended"],

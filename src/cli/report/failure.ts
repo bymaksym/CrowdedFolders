@@ -3,7 +3,7 @@ import { isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { CONFIG_RULES } from '../../core/report/describe.ts';
 import type { Report } from '../../core/report/report.ts';
-import { findConfig, gitRootOf } from '../../node/config-file.ts';
+import { findConfig, gitRootOf } from '../../node/config/file.ts';
 import { ConfigError } from '../../node/load-config.ts';
 import type { Args } from '../args.ts';
 import type { Io } from '../io.ts';

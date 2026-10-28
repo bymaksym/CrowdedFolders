@@ -158,7 +158,7 @@ export function check(args: Args, io: Io, session: Session): number {
     if (session.detected && textToStdout && !args.quiet) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');
         io.error(
-            `No configuration file: used the presets detected — ${presets}. \`crowded-folders init\` writes them down.\n`,
+            `No configuration file: used the presets ${args.detect ? 'detected' : 'given (--no-detect)'} — ${presets}. \`crowded-folders init\` writes them down.\n`,
         );
     }
     if (isOverMaxWarnings(report) && !textToStdout) {

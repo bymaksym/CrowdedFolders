@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { type IgnoreFile, isIgnored, parseGitignore } from './gitignore.ts';
-import { compileGlob, globProblem, matchesSelfOrAncestor } from './glob.ts';
+import { compileGlob, globProblem, matchesSelfOrAncestor, PathMatcher } from './glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from './input.ts';
 import { type Mirror, mirrorOf, parseMirror, sourceOf } from './mirrors.ts';
 import { closest, editDistance } from './suggest.ts';
@@ -72,6 +72,69 @@ describe('matchesSelfOrAncestor', () => {
         assert.equal(matchesSelfOrAncestor('src/fixtures.ts', globs), false);
         assert.equal(matchesSelfOrAncestor('src/a.ts', []), false);
         assert.equal(matchesSelfOrAncestor('fixtures', globs), true);
+    });
+});
+
+describe('PathMatcher', () => {
+    it('answers as matchesSelfOrAncestor does, remembering folders and names (200 000 paths spent 60 % of the run in exclude)', () => {
+        const patterns = [
+            'node_modules',
+            '**/locales',
+            '*.png',
+            '/vendor',
+            'src/generated/**',
+            '**/src/gen',
+            '.*',
+            '{a,b/c}',
+        ];
+        const globs = patterns.map(pattern => compileGlob(pattern));
+        const matcher = new PathMatcher(globs);
+        const paths = [
+            'node_modules/x/index.js',
+            'packages/a/node_modules/y.js',
+            'app/locales/en.json',
+            'app/locales.ts',
+            'assets/logo.png',
+            'assets/logo.png.ts',
+            'vendor/a.go',
+            'lib/vendor/a.go',
+            'src/generated',
+            'src/generated/x/y.ts',
+            'lib/src/gen/a.ts',
+            'src/gen/a.ts',
+            '.github/workflows/ci.yml',
+            'src/.env',
+            'a',
+            'b/c/d.ts',
+            'x/b/c',
+            'src/app/main.ts',
+        ];
+        for (const path of [...paths, ...paths]) {
+            assert.equal(matcher.matchesSelfOrAncestor(path), matchesSelfOrAncestor(path, globs), path);
+        }
+        assert.equal(new PathMatcher([]).matchesSelfOrAncestor('a/b'), false);
+        // A final "/" matches the folders above a file, not the file: ".*/" is .github/, not .eslintrc.
+        const folders = [compileGlob('.*/')];
+        const onlyFolders = new PathMatcher(folders);
+        for (const [path, expected] of [
+            ['.github/workflows/ci.yml', true],
+            ['.eslintrc', false],
+            ['src/.env', false],
+            ['src/.cache/x', true],
+        ] as const) {
+            assert.equal(onlyFolders.matchesSelfOrAncestor(path), expected, path);
+            assert.equal(matchesSelfOrAncestor(path, folders), expected, path);
+        }
+    });
+
+    it('files a glob under the folders it spells out, or the name it starts with after **/', () => {
+        assert.equal(compileGlob('packages/a/**').prefix, 'packages/a');
+        assert.equal(compileGlob('apps/*/src').prefix, 'apps');
+        assert.equal(compileGlob('/data').prefix, 'data');
+        assert.equal(compileGlob('**/tests/**').prefix, '');
+        assert.equal(compileGlob('**/tests/**').segment, 'tests');
+        assert.equal(compileGlob('locales').name, 'locales');
+        assert.equal(compileGlob('*.ts').segment, undefined);
     });
 });
 

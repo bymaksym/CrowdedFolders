@@ -18,7 +18,11 @@ export const python: Preset = {
             url: 'https://docs.pytest.org/en/stable/explanation/goodpractices.html',
         },
     ],
-    detect: { files: ['pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt', 'Pipfile'] },
+    // With Python next to it: mkdocs keeps a requirements.txt in docs/ for the site's build.
+    detect: {
+        files: ['pyproject.toml', 'setup.py', 'setup.cfg', 'requirements.txt', 'Pipfile'],
+        confirmedBy: ['*.py', '*.pyi', '*.ipynb'],
+    },
     config: {
         extends: ['recommended'],
         exclude: [
