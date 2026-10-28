@@ -1,9 +1,17 @@
+import { plainMessage } from './describe.ts';
+import { type GroupBy, groupFindings, overview } from './group.ts';
+import { hyperlink, ruleFooter } from './links.ts';
 import { plural, type Report, totalsOf } from './report.ts';
+import { safe } from './sanitize.ts';
 
 export interface TextOptions {
     readonly color: boolean;
     /** Print the suggested moves under each finding. */
     readonly moves: boolean;
+    /** Make the rule names links (OSC 8), for a terminal; without it a footer lists the URLs. */
+    readonly hyperlinks?: boolean;
+    /** How the findings are grouped; default: by folder. */
+    readonly groupBy?: GroupBy;
 }
 
 const CODES = {
@@ -24,20 +32,34 @@ export function formatText(report: Report, options: TextOptions): string {
     const lines: string[] = [];
     const ruleWidth = Math.max(0, ...report.findings.map(finding => finding.rule.length));
 
-    let folder: string | undefined;
-    for (const finding of report.findings) {
-        if (finding.folder !== folder) {
-            if (folder !== undefined) {
-                lines.push('');
-            }
-            folder = finding.folder;
-            lines.push(paint('bold', folder === '.' ? '. (the root)' : `${folder}/`));
+    const grouping = options.groupBy ?? 'folder';
+    const groups = groupFindings(report.findings, grouping);
+    if (grouping !== 'folder') {
+        lines.push(
+            ...overview(groups, grouping === 'project' ? 'projects' : 'owners').map(line => paint('dim', line)),
+            '',
+        );
+    }
+    const urls = new Map(report.findings.map(finding => [finding.rule, finding.url] as const));
+    for (const [index, group] of groups.entries()) {
+        if (index > 0) {
+            lines.push('');
         }
-        const mark = finding.severity === 'error' ? paint('red', '✖ error') : paint('yellow', '⚠ warn ');
-        lines.push(`  ${mark}  ${paint('dim', finding.rule.padEnd(ruleWidth))}  ${finding.message}`);
-        if (options.moves && finding.moves.length > 0) {
-            for (const move of finding.moves) {
-                lines.push(`           ${paint('dim', `git mv ${quote(move.from)} ${quote(move.to)}`)}`);
+        lines.push(paint('bold', safe(group.title)));
+        for (const finding of group.findings) {
+            const mark = finding.severity === 'error' ? paint('red', '✖ error') : paint('yellow', '⚠ warn ');
+            const url = urls.get(finding.rule);
+            const name = finding.rule.padEnd(ruleWidth);
+            const rule = options.hyperlinks && url !== undefined ? hyperlink(name, url) : name;
+            const where =
+                grouping === 'folder' ? '' : `${safe(finding.folder === '.' ? 'the root' : finding.folder)}: `;
+            lines.push(`  ${mark}  ${paint('dim', rule)}  ${where}${safe(plainMessage(report, finding))}`);
+            if (options.moves && finding.moves.length > 0) {
+                for (const move of finding.moves) {
+                    lines.push(
+                        `           ${paint('dim', `git mv ${quote(safe(move.from))} ${quote(safe(move.to))}`)}`,
+                    );
+                }
             }
         }
     }
@@ -49,7 +71,9 @@ export function formatText(report: Report, options: TextOptions): string {
         lines.push(paint('bold', 'Suppressions nothing needs any more'));
         for (const stale of report.staleSuppressions) {
             const now = stale.measured === undefined ? 'fixed' : `now ${stale.measured}`;
-            lines.push(`  ${paint('red', '✖')} ${stale.folder}  ${stale.id}  (suppressed at ${stale.count}, ${now})`);
+            lines.push(
+                `  ${paint('red', '✖')} ${safe(stale.folder)}  ${safe(stale.id)}  (suppressed at ${stale.count}, ${now})`,
+            );
         }
         lines.push(`  Run with ${paint('cyan', '--prune-suppressions')} to lower them: the file only ever shrinks.`);
     }
@@ -73,6 +97,12 @@ export function formatText(report: Report, options: TextOptions): string {
                     '  --moves prints where each file could go; `crowded-folders explain <folder>` shows how a folder was read.',
                 ),
             );
+        }
+    }
+    if (!options.hyperlinks) {
+        const footer = ruleFooter(report.findings);
+        if (footer.length > 0) {
+            lines.push('', ...footer.map((line, index) => paint(index === 0 ? 'bold' : 'dim', line)));
         }
     }
     return `${lines.join('\n')}\n`;

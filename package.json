@@ -36,6 +36,7 @@
         "bin/",
         "dist/",
         "schema.json",
+        "report.schema.json",
         "docs/",
         "README.md",
         "LICENSE"
@@ -46,6 +47,7 @@
             "default": "./dist/index.js"
         },
         "./schema.json": "./schema.json",
+        "./report.schema.json": "./report.schema.json",
         "./package.json": "./package.json"
     },
     "types": "./dist/index.d.ts",

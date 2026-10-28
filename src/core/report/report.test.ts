@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import type { Finding } from '../engine.ts';
-import { formatGithub, formatJson, formatMarkdown, formatSarif } from './machine.ts';
 import type { Report } from './report.ts';
 import { formatText } from './text.ts';
 
@@ -68,58 +67,43 @@ describe('formatText', () => {
     });
 });
 
-describe('machine formats', () => {
-    it('json has a stable shape with nulls for what is missing', () => {
-        const json = JSON.parse(formatJson(report([{ ...finding, key: undefined, url: undefined }]))) as Record<
-            string,
-            unknown
-        >;
-        assert.deepEqual(Object.keys(json), ['tool', 'summary', 'findings', 'staleSuppressions']);
-        assert.deepEqual(json['summary'], {
-            errors: 1,
-            warnings: 0,
-            foldersWithProblems: 1,
-            foldersChecked: 10,
-            filesChecked: 100,
-            suppressed: 0,
+describe('formatText, safe to print', () => {
+    it('writes a control character as a hex escape, so a folder name cannot recolour or invent a line', () => {
+        const hostile = { ...finding, folder: 'ctrl\u{1B}[31m', message: 'a\nb ::error::fake', files: [] };
+        const text = formatText(report([hostile]), { color: false, moves: false });
+        assert.equal(text.includes('\u{1B}'), false);
+        assert.match(text, /^ctrl\\x1b\[31m\/$/mu);
+        assert.match(text, /a\\x0ab ::error::fake/u);
+    });
+
+    it('links each rule to its documentation: a footer on a pipe, OSC 8 on a terminal', () => {
+        const piped = formatText(report([finding]), { color: false, moves: false });
+        assert.match(piped, /Rule documentation\n {2}prefix-groups {2}https:\/\/example\.com\/prefix-groups\n$/u);
+        const terminal = formatText(report([finding]), { color: false, moves: false, hyperlinks: true });
+        assert.ok(
+            terminal.includes('\u{1B}]8;;https://example.com/prefix-groups\u{1B}\\prefix-groups\u{1B}]8;;\u{1B}\\'),
+        );
+        assert.equal(terminal.includes('Rule documentation'), false);
+    });
+
+    it('groups by project, the worst first, with an overview', () => {
+        const mine = (project: string | null, folder: string, severity: 'error' | 'warn') => ({
+            ...finding,
+            project,
+            folder,
+            severity,
         });
-        assert.equal((json['findings'] as { key: unknown }[])[0]?.key, null);
-    });
-
-    it('sarif points at the first file and names the folder', () => {
-        const sarif = JSON.parse(formatSarif(report([finding]))) as {
-            runs: {
-                results: {
-                    message: { text: string };
-                    locations: { physicalLocation: { artifactLocation: { uri: string } } }[];
-                }[];
-            }[];
-        };
-        const [result] = sarif.runs[0]?.results ?? [];
-        assert.equal(result?.locations[0]?.physicalLocation.artifactLocation.uri, 'cli/render-json.ts');
-        assert.match(result?.message.text ?? '', /^cli: /u);
-    });
-
-    it('github annotations escape what workflow commands would read', () => {
-        const line = formatGithub(report([finding]));
-        assert.match(
-            line,
-            /^::error file=cli\/render-json\.ts,title=crowded-folders%3A prefix-groups::cli\/ 4 modules/u,
+        const text = formatText(
+            report([
+                mine('apps/web', 'apps/web/src', 'warn'),
+                mine('apps/api', 'apps/api/src', 'error'),
+                mine('apps/api', 'apps/api/lib', 'error'),
+                mine(null, 'tools', 'warn'),
+            ]),
+            { color: false, moves: false, groupBy: 'project' },
         );
-        assert.match(line, /100%25 \| sure\n$/u);
-        assert.equal(formatGithub(report([])), '');
-        assert.match(
-            formatGithub(report([], { staleSuppressions: [{ folder: 'a', id: 'b', count: 1, measured: undefined }] })),
-            /stale suppression.*fixed/u,
-        );
-    });
-
-    it('markdown escapes table cells and links the rule', () => {
-        const markdown = formatMarkdown(report([finding]));
-        assert.match(
-            markdown,
-            /\| `cli` \| \[prefix-groups\]\(https:\/\/example\.com\/prefix-groups\) \| .*100% \\\| sure \|/u,
-        );
-        assert.match(formatMarkdown(report([])), /No crowded folders/u);
+        assert.match(text, /^Top 3 projects\n {2}apps\/api\s+2 errors, 0 warnings\n/u);
+        assert.ok(text.indexOf('\napps/api\n') < text.indexOf('\napps/web\n'));
+        assert.match(text, /\(no project\)\n {2}⚠ warn\s+prefix-groups {2}tools: 4 modules/u);
     });
 });

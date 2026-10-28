@@ -26,8 +26,19 @@ Where it looks
       --no-git               list files from the disk instead of asking git (.gitignore is not read)
 
 What it prints
-  -f, --format <format>      text (default), json, sarif, github (annotations), markdown
-  -o, --output <file>        write the report to a file instead of standard output
+  -f, --format <format>      text (default), json, sarif, github (annotations), markdown, gitlab (Code
+                             Quality), checkstyle, azure (Azure Pipelines), auto (github, azure or text,
+                             by the CI it runs in). Repeat it to write several reports in one run, each
+                             to its own file: -f github -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY
+  -o, --output <file>        write the report to a file instead of standard output (with one -f)
+      --max-findings <n>     markdown: list n problems (default 200); github: n annotations per kind
+                             (default 9: GitHub shows 10 and drops the rest)
+      --no-files             json: leave the files and moves out of each finding
+      --stats                json: also list every folder with its numbers
+      --group-by <what>      text: group by folder (default), project or owner, worst first
+      --owner <owner>        only the problems of this CODEOWNERS owner (e.g. @org/team); repeatable
+      --base <ref>           annotations: prefer the files this change adds against <ref> (default in
+                             pull requests: origin/$GITHUB_BASE_REF)
   -q, --quiet                report errors only
       --moves                print a git mv for every file a problem suggests moving
       --color, --no-color    force colours on or off (default: on in a terminal; NO_COLOR and

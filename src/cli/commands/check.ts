@@ -3,9 +3,6 @@ import { resolve } from 'node:path';
 
 import { parseJsonc } from '../../core/config/jsonc.ts';
 import { runEngine } from '../../core/engine.ts';
-import { formatGithub, formatJson, formatMarkdown, formatSarif } from '../../core/report/machine.ts';
-import type { Report } from '../../core/report/report.ts';
-import { formatText } from '../../core/report/text.ts';
 import {
     addSuppressions,
     applySuppressions,
@@ -16,9 +13,10 @@ import {
     type SuppressionsFile,
 } from '../../core/suppressions.ts';
 import { type Args, UsageError } from '../args.ts';
-import { type Io, wantsColor, writeFileAtomic } from '../io.ts';
+import { emit } from '../emit.ts';
+import { type Io, writeFileAtomic } from '../io.ts';
+import { buildReport, enrichFindings } from '../report-build.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
-import { TOOL } from '../tool.ts';
 
 export const DEFAULT_SUPPRESSIONS = 'crowded-folders-suppressions.json';
 
@@ -30,6 +28,7 @@ export function check(args: Args, io: Io, session: Session): number {
         config: session.loaded.config,
         rules: session.loaded.rules,
         ...(only && { only }),
+        stats: args.stats,
     });
 
     const suppressionsPath = resolve(
@@ -54,32 +53,26 @@ export function check(args: Args, io: Io, session: Session): number {
         writeFileAtomic(suppressionsPath, serialiseSuppressions(suppressions));
     }
     const outcome = applySuppressions(result.findings, suppressions);
-    const findings = args.quiet ? outcome.kept.filter(finding => finding.severity === 'error') : outcome.kept;
+    let kept = enrichFindings(outcome.kept, session, args);
+    if (args.owners.length > 0) {
+        const wanted = new Set(args.owners.map(owner => owner.toLowerCase()));
+        kept = kept.filter(finding => finding.owners?.some(owner => wanted.has(owner.toLowerCase())));
+    }
+    const findings = args.quiet ? kept.filter(finding => finding.severity === 'error') : kept;
 
-    const report: Report = {
-        tool: TOOL,
+    const report = buildReport({
+        args,
+        io,
+        session,
+        result,
         findings,
         suppressedCount: outcome.suppressed.length,
-        staleSuppressions: args.passOnUnprunedSuppressions ? [] : outcome.stale,
-        folderCount: result.folderCount,
-        fileCount: result.fileCount,
-        rules: Object.entries(session.loaded.config.rules)
-            .filter(([, state]) => state.severity !== 'off')
-            .map(([id]) => ({
-                id,
-                description: session.loaded.rules[id]?.meta.description ?? '',
-                url: session.loaded.rules[id]?.meta.url,
-            })),
-    };
+        stale: args.passOnUnprunedSuppressions ? [] : outcome.stale,
+        suppressionsPath,
+    });
 
-    const isColor = args.output === undefined && wantsColor(args.color, io);
-    const output = render(report, args, isColor);
-    if (args.output === undefined) {
-        io.write(output);
-    } else {
-        writeFileAtomic(resolve(io.cwd, args.output), output);
-    }
-    if (session.detected && args.format === 'text' && args.output === undefined) {
+    const { textToStdout } = emit(report, args, io);
+    if (session.detected && textToStdout) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');
         io.error(
             `No configuration file: used the presets detected — ${presets}. \`crowded-folders init\` writes them down.\n`,
@@ -90,32 +83,12 @@ export function check(args: Args, io: Io, session: Session): number {
     if (errors > 0 || report.staleSuppressions.length > 0) {
         return 1;
     }
-    const warnings = outcome.kept.filter(finding => finding.severity === 'warn').length;
+    const warnings = kept.filter(finding => finding.severity === 'warn').length;
     if (args.maxWarnings !== undefined && warnings > args.maxWarnings) {
         io.error(`${warnings} warnings, over --max-warnings ${args.maxWarnings}.\n`);
         return 1;
     }
     return 0;
-}
-
-function render(report: Report, args: Args, color: boolean): string {
-    switch (args.format) {
-        case 'json': {
-            return formatJson(report);
-        }
-        case 'sarif': {
-            return formatSarif(report);
-        }
-        case 'github': {
-            return formatGithub(report);
-        }
-        case 'markdown': {
-            return formatMarkdown(report);
-        }
-        default: {
-            return formatText(report, { color, moves: args.moves });
-        }
-    }
 }
 
 function readSuppressions(path: string): SuppressionsFile {

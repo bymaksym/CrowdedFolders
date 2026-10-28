@@ -1,0 +1,177 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema#",
+    "$id": "https://unpkg.com/crowded-folders/report.schema.json",
+    "title": "crowded-folders JSON report",
+    "description": "What `crowded-folders --format json` prints. A field is only ever added in a minor version; renaming or removing one is a major version and raises `formatVersion`.",
+    "type": "object",
+    "required": ["formatVersion", "tool", "summary", "findings", "staleSuppressions"],
+    "properties": {
+        "formatVersion": {
+            "const": 1,
+            "description": "The version of this shape. It changes only when a field is renamed or removed."
+        },
+        "tool": {
+            "type": "object",
+            "required": ["name", "version", "url"],
+            "properties": {
+                "name": { "type": "string" },
+                "version": { "type": "string" },
+                "url": { "type": "string" }
+            }
+        },
+        "run": {
+            "type": "object",
+            "description": "How the run read its input: what changes the result without changing the code.",
+            "required": ["presets", "presetsDetected", "configFile", "fileSource", "root"],
+            "properties": {
+                "presets": {
+                    "type": "array",
+                    "items": { "type": "string" },
+                    "description": "The presets in effect, in order."
+                },
+                "presetsDetected": {
+                    "type": "boolean",
+                    "description": "True when there was no configuration file and the presets were detected from the repository."
+                },
+                "configFile": {
+                    "type": ["string", "null"],
+                    "description": "The configuration file, relative to the root; null when there is none."
+                },
+                "fileSource": {
+                    "enum": ["git", "disk", "stdin"],
+                    "description": "Where the list of files came from."
+                },
+                "root": {
+                    "type": "string",
+                    "description": "The checked root, relative to where the command ran. Never an absolute path."
+                }
+            }
+        },
+        "summary": {
+            "type": "object",
+            "required": ["errors", "warnings", "foldersWithProblems", "foldersChecked", "filesChecked", "suppressed"],
+            "properties": {
+                "errors": { "type": "integer", "minimum": 0 },
+                "warnings": { "type": "integer", "minimum": 0 },
+                "foldersWithProblems": { "type": "integer", "minimum": 0 },
+                "foldersChecked": { "type": "integer", "minimum": 0 },
+                "filesChecked": { "type": "integer", "minimum": 0 },
+                "suppressed": { "type": "integer", "minimum": 0 }
+            }
+        },
+        "findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "rule",
+                    "severity",
+                    "folder",
+                    "message",
+                    "key",
+                    "measured",
+                    "limit",
+                    "comparison",
+                    "fileCount",
+                    "url",
+                    "project",
+                    "owners"
+                ],
+                "properties": {
+                    "rule": {
+                        "type": "string",
+                        "description": "`max-files`; `namespace/rule` for a plugin rule; `config/unused-override` for an override that matches no folder."
+                    },
+                    "severity": { "enum": ["error", "warn"] },
+                    "folder": {
+                        "type": "string",
+                        "description": "The folder, relative to the root, with `/`; the root is `.`. Raw, as in the repository: a name may hold control characters, which JSON escapes."
+                    },
+                    "message": { "type": "string" },
+                    "key": {
+                        "type": ["string", "null"],
+                        "description": "Tells apart two problems of one rule in one folder (the prefix, for `prefix-groups`); null when the rule has one."
+                    },
+                    "measured": {
+                        "type": "integer",
+                        "description": "The number that broke the limit. For `config/unused-override` it is 1: one override, not a count of anything."
+                    },
+                    "limit": {
+                        "type": ["integer", "null"],
+                        "description": "The limit as the configuration writes it: `max` for `max-files` and `max-folders`, `min` for `prefix-groups`. For `config/unused-override` it is 0 (there is no limit); null when the rule has none."
+                    },
+                    "comparison": {
+                        "enum": [">", ">=", null],
+                        "description": "How `measured` is compared with `limit`: `>` fails when measured is over the limit (`max` options), `>=` when it reaches it (`min` of `prefix-groups`); null with no limit."
+                    },
+                    "fileCount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "How many files the finding names, present even with --no-files."
+                    },
+                    "files": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "The files in the folder the finding is about, relative to the root. Left out by --no-files."
+                    },
+                    "moves": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "required": ["from", "to"],
+                            "properties": {
+                                "from": { "type": "string" },
+                                "to": { "type": "string" }
+                            }
+                        },
+                        "description": "Where files could go instead; never applied. Left out by --no-files."
+                    },
+                    "url": { "type": ["string", "null"], "description": "Where the rule is documented." },
+                    "project": {
+                        "type": ["string", "null"],
+                        "description": "The nearest folder, from the finding's folder upwards, with a package.json, project.json, go.mod, Cargo.toml, pom.xml or BUILD.bazel; null when none has one. The root is `.`."
+                    },
+                    "owners": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "The CODEOWNERS owners of the folder; empty when none matches or there is no CODEOWNERS."
+                    }
+                }
+            }
+        },
+        "staleSuppressions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["folder", "id", "count", "measured"],
+                "properties": {
+                    "folder": { "type": "string" },
+                    "id": { "type": "string" },
+                    "count": { "type": "integer", "minimum": 0 },
+                    "measured": {
+                        "type": ["integer", "null"],
+                        "description": "What is measured today; null when the problem is gone."
+                    }
+                }
+            }
+        },
+        "folders": {
+            "type": "array",
+            "description": "Every folder with its numbers. Only with --stats.",
+            "items": {
+                "type": "object",
+                "required": ["path", "modules", "files", "subfolders", "limit"],
+                "properties": {
+                    "path": { "type": "string" },
+                    "modules": { "type": "integer", "minimum": 0 },
+                    "files": { "type": "integer", "minimum": 0 },
+                    "subfolders": { "type": "integer", "minimum": 0 },
+                    "limit": {
+                        "type": ["integer", "null"],
+                        "description": "The `max-files` limit in effect for the folder; null when that rule is off there."
+                    }
+                }
+            }
+        }
+    }
+}
