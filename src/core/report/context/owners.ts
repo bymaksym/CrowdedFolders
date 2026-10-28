@@ -1,4 +1,4 @@
-import { compileGlob, type Glob, matchesSelfOrAncestor } from '../paths/glob.ts';
+import { compileGlob, type Glob, matchesSelfOrAncestor } from '../../paths/glob.ts';
 
 /** One line of a CODEOWNERS file: a pattern and who owns what it matches (nobody, for a pattern alone). */
 interface OwnerRule {

@@ -1,6 +1,6 @@
-import { anchors, staleAnchor } from './anchor.ts';
-import { describe, describeStale, fingerprintOf, STALE_SUPPRESSION_RULE, staleFingerprint } from './describe.ts';
-import type { Report } from './report.ts';
+import { anchors, staleAnchor } from '../context/anchor.ts';
+import { describe, describeStale, fingerprintOf, STALE_SUPPRESSION_RULE, staleFingerprint } from '../describe.ts';
+import type { Report } from '../report.ts';
 
 /**
  * GitLab Code Quality (the `artifacts:reports:codequality` JSON): the merge-request widget shows

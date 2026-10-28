@@ -3,10 +3,10 @@ import { homedir } from 'node:os';
 import { isAbsolute, relative, sep } from 'node:path';
 
 import type { EngineResult, Finding } from '../core/engine.ts';
+import { lineOfSequence, quoted } from '../core/report/context/locate.ts';
+import { type Codeowners, ownersOf, parseCodeowners } from '../core/report/context/owners.ts';
+import { projectFolders, projectOf } from '../core/report/context/projects.ts';
 import { CONFIG_RULES } from '../core/report/describe.ts';
-import { lineOfSequence, quoted } from '../core/report/locate.ts';
-import { type Codeowners, ownersOf, parseCodeowners } from '../core/report/owners.ts';
-import { projectFolders, projectOf } from '../core/report/projects.ts';
 import type { Report, ReportFinding, RunInfo } from '../core/report/report.ts';
 import type { StaleSuppression } from '../core/suppressions.ts';
 import { readCodeowners } from '../node/codeowners.ts';

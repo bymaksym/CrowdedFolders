@@ -1,4 +1,4 @@
-import type { ReportFinding } from './report.ts';
+import type { ReportFinding } from '../report.ts';
 
 /** Wraps a text in an OSC 8 hyperlink, which terminals that support it make clickable. */
 export function hyperlink(text: string, url: string): string {

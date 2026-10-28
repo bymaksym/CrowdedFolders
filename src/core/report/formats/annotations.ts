@@ -1,7 +1,7 @@
-import { anchors, staleAnchor } from './anchor.ts';
-import { byWeight, describe, describeStale, failureMessage, STALE_SUPPRESSION_RULE } from './describe.ts';
-import type { Report, ReportFinding } from './report.ts';
-import { safe } from './sanitize.ts';
+import { anchors, staleAnchor } from '../context/anchor.ts';
+import { byWeight, describe, describeStale, failureMessage, STALE_SUPPRESSION_RULE } from '../describe.ts';
+import type { Report, ReportFinding } from '../report.ts';
+import { safe } from '../sanitize.ts';
 
 export interface AnnotationOptions {
     /** How many annotations of each kind to write; the rest become one "and N more". */

@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
-import { type JsonSchema, validate } from '../config/json-schema.ts';
-import type { Finding } from '../engine.ts';
-import { formatAzure, formatCheckstyle, formatGithub, formatGitlab, formatJson, formatMarkdown } from './machine.ts';
-import { prefixGroup, report, tooManyFiles, tooManyFolders, unusedOverride } from './test-support/fixtures.ts';
+import { type JsonSchema, validate } from '../../config/json-schema.ts';
+import type { Finding } from '../../engine.ts';
+import { formatAzure, formatCheckstyle, formatGithub, formatGitlab, formatJson, formatMarkdown } from '../machine.ts';
+import { prefixGroup, report, tooManyFiles, tooManyFolders, unusedOverride } from '../test-support/fixtures.ts';
 
-const schema = JSON.parse(readFileSync(new URL('../../../report.schema.json', import.meta.url), 'utf8')) as JsonSchema;
+const schema = JSON.parse(
+    readFileSync(new URL('../../../../report.schema.json', import.meta.url), 'utf8'),
+) as JsonSchema;
 
 const hide = [{ dir: 'C:\\Users\\ci\\work\\repo', as: '' }];
 

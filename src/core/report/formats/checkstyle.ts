@@ -1,7 +1,7 @@
-import { anchors, staleAnchor } from './anchor.ts';
-import { describe, describeStale, STALE_SUPPRESSION_RULE } from './describe.ts';
-import type { Report } from './report.ts';
-import { safe } from './sanitize.ts';
+import { anchors, staleAnchor } from '../context/anchor.ts';
+import { describe, describeStale, STALE_SUPPRESSION_RULE } from '../describe.ts';
+import type { Report } from '../report.ts';
+import { safe } from '../sanitize.ts';
 
 /**
  * Checkstyle XML, which Jenkins warnings-ng, reviewdog, Danger and SonarQube read: one `<file>` per

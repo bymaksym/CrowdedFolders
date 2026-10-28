@@ -5,7 +5,8 @@ import { describe, it } from 'node:test';
 
 import { type JsonSchema, validate } from '../core/config/json-schema.ts';
 import { sarifViolations } from '../core/report/test-support/sarif-rules.ts';
-import { cleanUpAfterTests, cli, RENDER_FILES, repository } from './test-support/harness.ts';
+import { RENDER_FILES } from './test-support/fixtures.ts';
+import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
 
 cleanUpAfterTests();
 

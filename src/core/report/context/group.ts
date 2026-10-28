@@ -1,5 +1,5 @@
-import { folderLabel } from './describe.ts';
-import type { ReportFinding } from './report.ts';
+import { folderLabel } from '../describe.ts';
+import type { ReportFinding } from '../report.ts';
 
 export type GroupBy = 'folder' | 'owner' | 'project';
 

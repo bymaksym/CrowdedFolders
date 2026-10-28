@@ -1,6 +1,6 @@
+import { type GroupBy, groupFindings, overview } from './context/group.ts';
+import { hyperlink, ruleFooter } from './context/links.ts';
 import { plainMessage } from './describe.ts';
-import { type GroupBy, groupFindings, overview } from './group.ts';
-import { hyperlink, ruleFooter } from './links.ts';
 import { plural, type Report, totalsOf } from './report.ts';
 import { safe } from './sanitize.ts';
 

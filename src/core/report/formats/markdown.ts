@@ -1,6 +1,6 @@
-import { byWeight, describeStale, failureMessage, folderLabel, plainMessage } from './describe.ts';
-import { plural, type Report, type ReportFinding, totalsOf } from './report.ts';
-import { safe } from './sanitize.ts';
+import { byWeight, describeStale, failureMessage, folderLabel, plainMessage } from '../describe.ts';
+import { plural, type Report, type ReportFinding, totalsOf } from '../report.ts';
+import { safe } from '../sanitize.ts';
 
 export interface MarkdownOptions {
     /** How many findings to list; the rest become "and N more". Default: 200. */

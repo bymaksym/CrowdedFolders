@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { hidePaths, safe } from '../sanitize.ts';
 import { lineOfSequence, quoted } from './locate.ts';
 import { ownersOf, parseCodeowners } from './owners.ts';
 import { projectFolders, projectOf } from './projects.ts';
-import { hidePaths, safe } from './sanitize.ts';
 
 describe('projects', () => {
     const files = [

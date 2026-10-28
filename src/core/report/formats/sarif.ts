@@ -1,4 +1,5 @@
-import { anchors, staleAnchor } from './anchor.ts';
+import { anchors, staleAnchor } from '../context/anchor.ts';
+import { WHEN_IT_FIRES } from '../context/rule-help.ts';
 import {
     CONFIG_RULES,
     describe,
@@ -7,9 +8,8 @@ import {
     fingerprintOf,
     STALE_SUPPRESSION_RULE,
     staleFingerprint,
-} from './describe.ts';
-import type { Report, ReportRule } from './report.ts';
-import { WHEN_IT_FIRES } from './rule-help.ts';
+} from '../describe.ts';
+import type { Report, ReportRule } from '../report.ts';
 
 interface Location {
     physicalLocation: {

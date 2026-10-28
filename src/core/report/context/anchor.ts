@@ -1,6 +1,6 @@
-import type { StaleSuppression } from '../suppressions.ts';
-import { digest } from './describe.ts';
-import type { Report, ReportFinding } from './report.ts';
+import type { StaleSuppression } from '../../suppressions.ts';
+import { digest } from '../describe.ts';
+import type { Report, ReportFinding } from '../report.ts';
 
 /** The file and line a finding is shown at, in the formats that need one (SARIF, annotations, Checkstyle). */
 export interface Anchor {

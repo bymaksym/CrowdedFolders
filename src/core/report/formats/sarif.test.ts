@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { BUILT_IN_RULES } from '../rules/index.ts';
-import { formatSarif } from './machine.ts';
-import { WHEN_IT_FIRES } from './rule-help.ts';
-import { prefixGroup, report, rules, tooManyFiles, tooManyFolders, unusedOverride } from './test-support/fixtures.ts';
-import { sarifViolations } from './test-support/sarif-rules.ts';
+import { BUILT_IN_RULES } from '../../rules/index.ts';
+import { WHEN_IT_FIRES } from '../context/rule-help.ts';
+import { formatSarif } from '../machine.ts';
+import { prefixGroup, report, rules, tooManyFiles, tooManyFolders, unusedOverride } from '../test-support/fixtures.ts';
+import { sarifViolations } from '../test-support/sarif-rules.ts';
 
 interface Result {
     ruleId: string;
