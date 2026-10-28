@@ -66,7 +66,7 @@ h1 { margin: 0; font-size: 1.5rem; line-height: 1.2; letter-spacing: -.01em; }
 .cell .t { position: absolute; left: 7px; right: 6px; top: 4px; font-size: .8rem; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; z-index: 1; }
 .cell .n { position: absolute; left: 7px; right: 6px; top: 22px; font-size: .74rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; z-index: 1; }
 .cell.open { box-shadow: inset 0 0 0 1px rgb(0 0 0 / .16); }
-.cell.open > .t { top: 3px; }
+.cell.open > .t { top: 3px; right: auto; max-width: 58%; }
 .cell.open > .n { top: 3px; left: auto; right: 7px; text-align: right; max-width: 40%; }
 .cell.self { border-style: dashed; border-color: rgb(127 127 127 / .5); }
 @keyframes pop { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
