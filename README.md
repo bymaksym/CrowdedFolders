@@ -164,7 +164,8 @@ const { kept, exitCode } = await lint({ cwd: '/path/to/repo', suppressions: true
 `lint()` reads the configuration, detects the presets and applies the suppressions as the command does,
 so `exitCode` is what the command would exit with. `createLinter()` loads it once for an editor or a
 hook, `crowded-folders/engine` runs in a browser, and `crowded-folders/testing` has a `RuleTester` for
-plugins: [docs/api.md](docs/api.md).
+plugins: [docs/api.md](docs/api.md). `crowded-folders/eslint` is an ESLint plugin (flat config) that shows the
+findings wherever ESLint runs: [docs/eslint.md](docs/eslint.md).
 
 ## Documentation
 
@@ -178,6 +179,7 @@ plugins: [docs/api.md](docs/api.md).
 | [ci.md](docs/ci.md)                       | GitHub Actions, GitLab, pre-commit, hooks, output formats.         |
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
+| [eslint.md](docs/eslint.md)               | The ESLint plugin: editors, the ESLint MCP server, oxlint.         |
 | [how-it-works.md](docs/how-it-works.md)   | How names are read, and why.                                       |
 | [field-trial.md](docs/field-trial.md)     | The 36 repositories the limits were measured on.                   |
 | [decisions.md](docs/decisions.md)         | Why it is built the way it is, and what was discarded.             |
