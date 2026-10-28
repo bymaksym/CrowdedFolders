@@ -161,11 +161,60 @@ interface CompiledOverride {
     used: boolean;
 }
 
+/**
+ * The overrides that can match a folder, without trying each: a glob that spells out its folders
+ * (`packages/a/**`) is filed under them, one that starts with `**\/name` under that name, and only
+ * the rest (`*\/src`, `**`) is tried everywhere. A monorepo with an override per package then costs
+ * about the same with 4 000 overrides as with 100. The candidates come back in the configuration's
+ * order, which is the order they apply in.
+ */
+class OverrideIndex {
+    private readonly byPrefix = new Map<string, number[]>();
+    private readonly bySegment = new Map<string, number[]>();
+    private readonly everywhere: number[] = [];
+    private readonly overrides: readonly CompiledOverride[];
+
+    constructor(overrides: readonly CompiledOverride[]) {
+        this.overrides = overrides;
+        const file = (map: Map<string, number[]>, key: string, index: number): void => {
+            const list = map.get(key) ?? [];
+            if (list.at(-1) !== index) {
+                list.push(index);
+            }
+            map.set(key, list);
+        };
+        for (const [index, override] of overrides.entries()) {
+            for (const glob of override.globs) {
+                if (glob.prefix !== '') {
+                    file(this.byPrefix, glob.prefix, index);
+                } else if (glob.segment === undefined) {
+                    if (this.everywhere.at(-1) !== index) this.everywhere.push(index);
+                } else {
+                    file(this.bySegment, glob.segment, index);
+                }
+            }
+        }
+    }
+
+    candidatesFor(path: string): CompiledOverride[] {
+        const found = new Set<number>(this.everywhere);
+        const segments = path.split('/');
+        let prefix = '';
+        for (const segment of segments) {
+            prefix = prefix === '' ? segment : `${prefix}/${segment}`;
+            for (const index of this.byPrefix.get(prefix) ?? []) found.add(index);
+            for (const index of this.bySegment.get(segment) ?? []) found.add(index);
+        }
+        return [...found].toSorted((a, b) => a - b).flatMap(index => this.overrides[index] ?? []);
+    }
+}
+
 /** The settings of each folder, with the work that repeats between folders done once. */
 class FolderContext {
     private readonly config: ResolvedConfig;
     private readonly rules: Readonly<Record<string, Rule>>;
     private readonly overrides: CompiledOverride[];
+    private readonly index: OverrideIndex;
     private readonly namingCache = new Map<string, Naming>();
 
     constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
@@ -177,6 +226,7 @@ class FolderContext {
             withFiles: state.withFiles.map(compileGlob),
             used: false,
         }));
+        this.index = new OverrideIndex(this.overrides);
     }
 
     settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): {
@@ -187,7 +237,7 @@ class FolderContext {
         let naming = this.config.naming;
         const rules: Record<string, RuleState> = { ...this.config.rules };
         const applied: OverrideState[] = [];
-        for (const override of this.overrides) {
+        for (const override of this.index.candidatesFor(entry.path)) {
             if (
                 override.globs.every(glob => !glob.test(entry.path)) ||
                 (override.withFiles.length > 0 &&

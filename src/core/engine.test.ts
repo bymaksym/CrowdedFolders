@@ -63,6 +63,41 @@ describe('runEngine', () => {
         assert.equal(runEngine({ files: crowded, config: first, rules: BUILT_IN_RULES }).findings[0]?.severity, 'warn');
     });
 
+    it('finds the overrides of a folder by the folders their globs name, in order, with 4 000 of them (37 s before)', () => {
+        const overrides = Array.from({ length: 4000 }, (_, index) => ({
+            folders: [`packages/p${index}/**`],
+            reason: `package ${index} is allowed more`,
+            rules: { 'max-files': ['error', { max: 100 }] } as const,
+        }));
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 2 }] },
+            overrides: [
+                ...overrides,
+                { folders: ['**/legacy'], reason: 'the legacy folders are frozen', rules: { 'max-files': 'off' } },
+                {
+                    folders: ['*/p7/**'],
+                    reason: 'and p7 is strict again',
+                    rules: { 'max-files': ['warn', { max: 2 }] },
+                },
+            ],
+        });
+        const files = ['p1', 'p7', 'p9'].flatMap(name =>
+            ['a', 'b', 'c'].flatMap(file => [`packages/${name}/${file}.ts`, `packages/${name}/legacy/${file}.ts`]),
+        );
+        const findings = runEngine({ files, config, rules: BUILT_IN_RULES }).findings.filter(
+            finding => finding.rule === 'max-files',
+        );
+        assert.deepEqual(
+            findings.map(finding => `${finding.folder} ${finding.severity}`),
+            ['packages/p7 warn', 'packages/p7/legacy warn'],
+        );
+        const explained = explainFolder({ files, config, rules: BUILT_IN_RULES }, 'packages/p7/legacy');
+        assert.deepEqual(
+            explained?.overrides.map(override => override.reason),
+            ['package 7 is allowed more', 'the legacy folders are frozen', 'and p7 is strict again'],
+        );
+    });
+
     it('reports an override of the own configuration that matches no folder', () => {
         const config = resolve({
             rules: { 'max-files': ['error', { max: 50 }] },
