@@ -88,7 +88,7 @@ const CLASS_PREFIXES = ['u', 'i'];
 
 export const unreal: Preset = {
     description:
-        'Unreal Engine, after Allar\'s style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp.',
+        'Unreal Engine, after Allar\'s style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp. In Content/ a folder named Assets, Meshes, Textures or Materials is a warning (type-folders, guide rule 2.6); Animations, Audio and MaterialLibrary are folders the guide itself names (2.7, 2.8).',
     sources: [
         { title: 'Google C++ style guide: file names', url: 'https://google.github.io/styleguide/cppguide.html' },
         {
@@ -136,6 +136,16 @@ export const unreal: Preset = {
             {
                 folders: ['**/Content', '**/Content/**'],
                 reason: "Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).",
+                rules: {
+                    // A warning, like the limits: Allar's own 2.7 lets very large sets (animations,
+                    // audio) have their folders, and a type folder costs tidying, not a build.
+                    'type-folders': [
+                        'warn',
+                        {
+                            hint: 'Allar 2.6.2: "Creating a folder named Meshes, Textures, or Materials is redundant."',
+                        },
+                    ],
+                },
                 naming: {
                     ignoreLeadingWords: TYPE_PREFIXES,
                     companions: [

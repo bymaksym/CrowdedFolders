@@ -43,14 +43,17 @@ crowded-folders counts, and reads names the way people write them.
 
 ## What it checks
 
-| Rule                                                       | On in `recommended`    | Finds                                                                                                                      |
-| ---------------------------------------------------------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [`max-files`](docs/rules/max-files.md)                     | error, 20 modules      | A folder with too many modules. A module is a file with its companions: `foo.ts`, `foo.spec.ts` and `foo.html` count once. |
-| [`prefix-groups`](docs/rules/prefix-groups.md)             | error, 4 modules       | Modules whose names start with the same word: `render-json`, `render-text`, `render-pr`, `render-sarif` → `render/`.       |
-| [`redundant-prefix`](docs/rules/redundant-prefix.md)       | off (on in `strict`)   | Modules that repeat their folder's name: `render/render-json.ts` → `render/json.ts`.                                       |
-| [`max-folders`](docs/rules/max-folders.md)                 | off (on in `strict`)   | A folder with too many sub-folders.                                                                                        |
-| [`single-file-folders`](docs/rules/single-file-folders.md) | off (warn in `strict`) | A folder that holds a single file and nothing else.                                                                        |
-| [`case-collision`](docs/rules/case-collision.md)           | off (on in `strict`)   | Names that differ only in case (`Components/`, `components/`): one name on Windows and macOS.                              |
+| Rule                                                       | On in `recommended`             | Finds                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [`max-files`](docs/rules/max-files.md)                     | error, 20 modules               | A folder with too many modules. A module is a file with its companions: `foo.ts`, `foo.spec.ts` and `foo.html` count once.    |
+| [`prefix-groups`](docs/rules/prefix-groups.md)             | error, 4 modules                | Modules whose names start with the same word: `render-json`, `render-text`, `render-pr`, `render-sarif` → `render/`.          |
+| [`redundant-prefix`](docs/rules/redundant-prefix.md)       | off (on in `strict`)            | Modules that repeat their folder's name: `render/render-json.ts` → `render/json.ts`.                                          |
+| [`max-folders`](docs/rules/max-folders.md)                 | off (on in `strict`)            | A folder with too many sub-folders.                                                                                           |
+| [`single-file-folders`](docs/rules/single-file-folders.md) | off (warn in `strict`)          | A folder that holds a single file and nothing else.                                                                           |
+| [`case-collision`](docs/rules/case-collision.md)           | off (on in `strict`)            | Names that differ only in case (`Components/`, `components/`): one name on Windows and macOS.                                 |
+| [`scattered-feature`](docs/rules/scattered-feature.md)     | off                             | One word in every layer folder (`controller/RegistroController`, `service/RegistroService`, `dto/RegistroDto`) → `registro/`. |
+| [`orphan-companions`](docs/rules/orphan-companions.md)     | off (error in `unity`, `godot`) | A Unity `.meta` or a Godot `.import` / `.uid` without its asset: every reference to it is broken.                             |
+| [`type-folders`](docs/rules/type-folders.md)               | off (warn in `unreal`, `godot`) | A game folder named after an asset type: `Textures/`, `Materials/`, `Meshes/`.                                                |
 
 Names are read in every convention — `user-service`, `user_service`, `userService`, `UserService`,
 `HTTPServer` — so `UserService.java`, `user_service.py` and `user-service.ts` all start with `user`.

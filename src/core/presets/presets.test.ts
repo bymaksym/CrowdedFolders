@@ -688,6 +688,48 @@ describe('game engines, after the review of 21-10-2026', () => {
         assert.deepEqual(check('unreal', [...content, 'Content/AI/Notes.uasset']), []);
     });
 
+    it('unity and godot fail on a companion without its asset; Plugins.meta with Plugins/ left out is not one', () => {
+        const unity = check('unity', [
+            'Assets/Scripts/Player.cs.meta',
+            'Assets/Scripts/Enemy.cs',
+            'Assets/Scripts/Enemy.cs.meta',
+            // Assets/Plugins is excluded by the preset; its .meta is still next to it in the repository.
+            'Assets/Plugins.meta',
+            'Assets/Plugins/Vendor.dll',
+            // open-project-1: the .meta of an empty folder, which git cannot store.
+            'Assets/AddressableAssetsData/OSX.meta',
+            'Assets/AddressableAssetsData/Default.asset',
+            'Assets/AddressableAssetsData/Default.asset.meta',
+        ]);
+        assert.deepEqual(
+            unity.map(finding => `${finding.rule} ${finding.severity} ${finding.folder}`),
+            ['orphan-companions error Assets/Scripts'],
+        );
+        const godot = check('godot', ['art/icon.png.import', 'art/hero.png', 'art/hero.png.import', 'project.godot']);
+        assert.deepEqual(
+            godot.map(finding => `${finding.rule} ${finding.severity} ${finding.folder}`),
+            ['orphan-companions error art'],
+        );
+    });
+
+    it('unreal warns on type folders only in Content/, godot on textures/ but not assets/', () => {
+        const unreal = check('unreal', [
+            'Content/ActionRoguelike/Materials/MI_RageBar.uasset',
+            'Content/Characters/Common/Animations/A_Run.uasset',
+            'Source/Materials/MaterialHelpers.cpp',
+        ]);
+        assert.deepEqual(
+            unreal.map(finding => `${finding.rule} ${finding.severity} ${finding.folder}`),
+            ['type-folders warn Content/ActionRoguelike/Materials'],
+        );
+        assert.match(unreal[0]?.message ?? '', /Allar 2\.6\.2/u);
+        const godot = check('godot', ['3d/csg/textures/grid.png', 'assets/player/idle.png', 'project.godot']);
+        assert.deepEqual(
+            godot.map(finding => `${finding.rule} ${finding.severity} ${finding.folder}`),
+            ['type-folders warn 3d/csg/textures'],
+        );
+    });
+
     it('unreal leaves out World Partition, takes C++ at the limits of c-cpp, and warns on both limits', () => {
         const partition = series('Content/__ExternalActors__/Maps/L1/3/AB', 60, index => `C${pad(index, 8)}.uasset`);
         assert.deepEqual(check('unreal', partition), []);
