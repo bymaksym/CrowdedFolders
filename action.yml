@@ -30,6 +30,12 @@ inputs:
   working-directory:
     description: Where to run it (the configuration is looked for from here).
     default: '.'
+  comment:
+    description: 'On a pull request, also keep one comment on it up to date with what is new, what grew and what improved against its base (needs `pull-requests - write` permission, and the base fetched - fetch-depth 0). Edited in place on every push, never posted twice.'
+    default: 'false'
+  token:
+    description: The token the comment is written with.
+    default: ${{ github.token }}
 
 outputs:
   exit-code:
@@ -77,6 +83,9 @@ runs:
         reports=(-f github -f "json=$json")
         if [ "$SUMMARY" = "true" ]; then reports+=(-f "markdown=$GITHUB_STEP_SUMMARY"); fi
         if [ "$SARIF" = "true" ]; then reports+=(-f "sarif=$SARIF_FILE"); echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"; fi
+        comment="$RUNNER_TEMP/crowded-folders-comment.md"
+        rm -f "$comment"
+        if [ "$COMMENT" = "true" ]; then reports+=(-f "markdown=$comment"); fi
         extra=()
         if [ "$FAIL_ON" = "warning" ]; then
           case " $ARGS " in *" --max-warnings"*) ;; *) extra+=(--max-warnings 0) ;; esac
@@ -102,12 +111,37 @@ runs:
         SARIF: ${{ inputs.sarif }}
         SARIF_FILE: ${{ inputs.sarif-file }}
         FAIL_ON: ${{ inputs.fail-on }}
+        COMMENT: ${{ inputs.comment }}
     - name: Upload the SARIF report
       if: always() && inputs.sarif == 'true'
       uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-file }}
         category: ${{ inputs.category }}
+    # One comment per pull request, found by the marker its body starts with and edited in place:
+    # a comment per push buries the conversation. Through gh, which every GitHub-hosted runner has,
+    # so the Action stays a composite with nothing to install. A token that cannot write (a pull
+    # request from a fork) is a warning, not a failure: the check itself already ran.
+    - name: Comment on the pull request
+      if: always() && inputs.comment == 'true' && (github.event_name == 'pull_request' || github.event_name == 'pull_request_target')
+      shell: bash
+      run: |
+        comment="$RUNNER_TEMP/crowded-folders-comment.md"
+        if [ ! -f "$comment" ]; then echo "::notice::crowded-folders wrote no report to comment with."; exit 0; fi
+        pr=$(node -p "String(require(process.env.GITHUB_EVENT_PATH).pull_request?.number ?? '')")
+        if [ -z "$pr" ]; then exit 0; fi
+        marker='<!-- crowded-folders: pull request comment -->'
+        body="$RUNNER_TEMP/crowded-folders-comment-body.md"
+        # GitHub takes 65 536 characters in a comment.
+        node -e "const fs=require('fs');const n=String.fromCharCode(10);let t=fs.readFileSync(process.argv[1],'utf8');if(t.length>65000)t=t.slice(0,65000)+n+n+'_… cut at 65 000 characters: the job summary has it all._'+n;fs.writeFileSync(process.argv[2],process.argv[3]+n+t)" "$comment" "$body" "$marker"
+        id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$pr/comments" --jq ".[] | select(.body | startswith(\"$marker\")) | .id" | head -n 1) || id=""
+        if [ -n "$id" ]; then
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -F "body=@$body" > /dev/null || echo "::warning::crowded-folders could not edit its comment (does the job have pull-requests: write?)"
+        else
+          gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$pr/comments" -F "body=@$body" > /dev/null || echo "::warning::crowded-folders could not comment (does the job have pull-requests: write?)"
+        fi
+      env:
+        GH_TOKEN: ${{ inputs.token }}
     # The step above never fails by itself, so that the upload always runs; this one decides.
     - name: Pass or fail
       shell: bash

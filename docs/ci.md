@@ -164,9 +164,68 @@ was released with, so pinning the action pins the tool (`version` runs another):
       sarif: true # upload to code scanning (needs security-events: write)
       category: crowded-folders # the code scanning category
       fail-on: error # error, warning (also any warning) or none (only a wrong configuration fails)
+      comment: false # one comment on the pull request, kept up to date (needs pull-requests: write)
 ```
 
 <!-- x-release-please-end -->
+
+### One comment on the pull request
+
+With `comment: true`, the action keeps **one** comment on the pull request up to date: what the change
+adds, what grew and what improved, against the pull request's base. It finds its own comment by a
+marker at the start of the body (`<!-- crowded-folders: pull request comment -->`) and edits it on every
+push instead of posting another. It needs the base's commits (`fetch-depth: 0`, or a fetch of the base
+branch) and permission to write comments:
+
+<!-- x-release-please-start-version -->
+
+```yaml
+on: pull_request
+permissions: { contents: read, pull-requests: write }
+jobs:
+    crowded-folders:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+              with: { fetch-depth: 0 }
+            - uses: actions/setup-node@v7
+              with: { node-version: 24 }
+            - uses: bymaksym/CrowdedFolders@v1.0.0
+              with:
+                  comment: true
+                  args: --new-since origin/${{ github.base_ref }} # fail only on what the change adds
+```
+
+<!-- x-release-please-end -->
+
+The comment is the Markdown report against a base (`--new-since`, `--since`, `--base`, or the pull
+request's own when none is given):
+
+```markdown
+Against `origin/main`: **1 new**, **1 grew**, 2 improved, 14 as they were.
+
+### New (1)
+
+| Folder         | Rule      | Problem                                       |
+| -------------- | --------- | --------------------------------------------- |
+| `src/checkout` | max-files | 21 modules, over the limit of 20: split it... |
+
+### Grew (1)
+
+| Folder    | Rule      | Before | Now | Problem                                       |
+| --------- | --------- | -----: | --: | --------------------------------------------- |
+| `src/api` | max-files |     22 |  25 | 25 modules, over the limit of 20: split it... |
+
+### Improved (2)
+
+- `src/legacy` max-files: gone
+- `src/ui` prefix-groups `button`: 6 → 4
+```
+
+followed by what was already there, folded in a `<details>`. It is posted with `gh api` and the job's
+`GITHUB_TOKEN` (`token` takes another), so the action installs nothing. The token of a pull request from a
+fork cannot write: the step then warns and the check still passes or fails on its own. GitHub takes 65 536
+characters in a comment; a longer report is cut, and the job summary has it whole.
 
 Outputs: `exit-code`, `errors`, `warnings` and `sarif-file`. The action is composite, not `node24`: a
 JavaScript action runs a bundle committed to the tag, and this repository has no bundler or dependencies to
@@ -263,6 +322,40 @@ jobs:
 
 On GitLab, `CI_MERGE_REQUEST_DIFF_BASE_SHA` is tried first; the clone has `GIT_DEPTH` commits (20 by
 default). If it does not reach that commit, raise `GIT_DEPTH` or fetch the target branch the same way.
+
+### What a change to the configuration does
+
+A pull request that raises a limit or adds an override changes what every later run reports, and its
+diff shows JSON, not that. `--compare-config <ref>` loads the configuration file as it was at `<ref>`
+(`git show <ref>:<file>`), runs both over the same files and says it in one sentence, on standard error,
+in the text and Markdown reports and as `configChange` in the JSON:
+
+```text
+--compare-config: Since origin/main, the configuration raises max-files max from 20 to 40, adds 1
+override and silences 37 problems in 12 folders.
+```
+
+Only JSON configurations (`.json`, `.jsonc`, the `"crowded-folders"` key of `package.json`): `git show`
+gives the text of a file, and a JavaScript configuration from another commit would have to run, with its
+imports, as it was. For one of those, `git diff <ref> -- crowded-folders.config.mjs` is the comparison.
+What the file extends (presets, a shared file, plugins) is read as it is today, so the sentence is about
+the file the pull request changed.
+
+## How a folder grew
+
+`crowded-folders history <folder>` measures the folder at a few commits along the first parents of
+`HEAD` (`git log --first-parent`), each from its file names (`git ls-tree`: no checkout, a second or two
+on a large repository), with today's configuration:
+
+```text
+12 commits sampled along the first parents, 2026-04-28 (90af1cf) → 2026-10-28 (c9829f2).
+
+src/cli  ▁▁▂▂▃▄▅▆▇█  went from 8 to 31 modules in six months, limit 12
+```
+
+Without a folder it lists the ten that grew most. `--samples <n>` measures more or fewer commits (12
+by default), and `-f json` prints every sample (`commit`, `date`, `modules`, `files`) for a chart. A
+shallow clone has only the commits it fetched.
 
 ## Git hooks
 
