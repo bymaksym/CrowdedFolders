@@ -1,6 +1,7 @@
 import { appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { formatMovesJson, formatMovesScript } from '../../core/report/formats/moves.ts';
 import {
     formatAzure,
     formatCheckstyle,
@@ -62,6 +63,9 @@ export function emit(report: Report, args: Args, io: Io): Emitted {
         } else {
             writeFileAtomic(resolve(io.cwd, spec.target), text);
         }
+    }
+    if (args.movesScript !== undefined) {
+        io.write(args.movesScript === 'json' ? formatMovesJson(report) : formatMovesScript(report, args.movesScript));
     }
     return { textToStdout };
 }

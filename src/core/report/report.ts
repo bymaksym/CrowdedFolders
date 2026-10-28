@@ -70,6 +70,11 @@ export interface Report {
     readonly hiddenWarnings?: number;
     /** `--max-warnings`, when given. */
     readonly maxWarnings?: number;
+    /**
+     * With `--moves`: for each finding that moves files (`referencesKey`), the tracked files whose
+     * text names one of the paths it moves, which the move would break. Found outside the core.
+     */
+    readonly references?: Readonly<Record<string, readonly string[]>>;
     /** With `--new-since`: the base, and how many problems it already had (they do not fail). */
     readonly knownOnBase?: { readonly label: string; readonly count: number };
 }

@@ -7,10 +7,12 @@ import { lineOfSequence, quoted } from '../../core/report/context/locate.ts';
 import { type Codeowners, ownersOf, parseCodeowners } from '../../core/report/context/owners.ts';
 import { projectFolders, projectOf } from '../../core/report/context/projects.ts';
 import { CONFIG_RULES } from '../../core/report/describe.ts';
+import { referencesKey } from '../../core/report/formats/moves.ts';
 import type { Report, ReportFinding, RunInfo } from '../../core/report/report.ts';
 import { relativeTo, type StaleSuppression } from '../../core/suppressions.ts';
 import { readCodeowners } from '../../node/codeowners.ts';
 import { gitRootOf } from '../../node/config-file.ts';
+import { filesNaming } from '../../node/references.ts';
 import { type Args, type Format, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
 import type { Session } from '../session.ts';
@@ -112,7 +114,23 @@ export function buildReport(input: BuildInput): Report {
         hiddenWarnings: input.hiddenWarnings,
         ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
         ...(input.knownOnBase && { knownOnBase: input.knownOnBase }),
+        ...((args.moves || args.movesScript !== undefined) && {
+            references: referencesOf(input.findings, session),
+        }),
     };
+}
+
+/**
+ * For each finding that moves files, the files that name what it moves (`--moves`): read here, in
+ * the command, because the core never reads a file's contents.
+ */
+function referencesOf(findings: readonly Finding[], session: Session): Record<string, readonly string[]> {
+    const groups = new Map(
+        findings
+            .filter(finding => finding.moves.length > 0)
+            .map(finding => [referencesKey(finding), finding.moves.map(move => move.from)] as const),
+    );
+    return Object.fromEntries(filesNaming(session.base, session.files, groups));
 }
 
 /** The folders that must not appear in a report: the repository, where it ran, the home folder. */

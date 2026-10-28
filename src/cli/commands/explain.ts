@@ -1,6 +1,6 @@
-import { explainFolder } from '../../core/engine.ts';
+import { explainFolder, type Finding } from '../../core/engine.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
-import { type Module, sameTopics, shownName } from '../../core/naming/modules.ts';
+import { type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
@@ -43,6 +43,9 @@ export function explain(args: Args, io: Io, session: Session): number {
         `  groupNumericPrefixes: ${String(view.naming.groupNumericPrefixes)}`,
         `  folderFiles:          ${(view.naming.folderFiles ?? []).map(glob => glob.source).join(', ') || 'none'}`,
         `  folderCompanions:     ${(view.naming.folderCompanions ?? []).join(', ') || 'none'}`,
+        `  folderCase:           ${view.naming.folderCase ?? 'kebab'}${view.naming.routes ? ' (routes: a group goes into a route group)' : ''}`,
+        `  keepInPlace:          ${(view.naming.keepInPlace ?? []).map(glob => glob.source).join(', ') || 'none'}`,
+        `  mirrors:              ${(view.naming.mirrors ?? []).map(mirror => mirror.text).join(', ') || 'none'}`,
     );
 
     const prefixOptions = rules['prefix-groups']?.effectiveOptions;
@@ -94,6 +97,7 @@ export function explain(args: Args, io: Io, session: Session): number {
     for (const finding of findings) {
         lines.push(`  ${finding.severity.padEnd(5)} ${finding.rule}  ${finding.message}`);
     }
+    lines.push(...closeGroups(view.path, findings, view.modules, view.naming, words, min));
     if (notes.length > 0) {
         lines.push('', 'Not reported, and why');
         for (const note of notes) {
@@ -102,4 +106,33 @@ export function explain(args: Args, io: Io, session: Session): number {
     }
     io.write(`${lines.join('\n')}\n`);
     return 0;
+}
+
+/**
+ * For a folder over max-files with nothing to move out, the groups that come closest to the
+ * minimum of prefix-groups: `core/enums (14/10): page-* ×3, ws-* ×2` says where a cut could start.
+ */
+function closeGroups(
+    path: string,
+    findings: readonly Finding[],
+    modules: readonly Module[],
+    naming: Naming,
+    words: GroupWords,
+    min: number,
+): string[] {
+    const crowded = findings.find(finding => finding.rule === 'max-files');
+    if (!crowded || findings.some(finding => finding.moves.length > 0)) {
+        return [];
+    }
+    const close = [...groupModules(modules, words, min, naming)]
+        .filter(([, members]) => members.length >= 2 && members.length < min)
+        .toSorted(([a, left], [b, right]) => right.length - left.length || (a < b ? -1 : 1))
+        .slice(0, 8)
+        .map(([key, members]) => `${key}-* ×${members.length}`);
+    const limit = crowded.limit === undefined ? String(crowded.measured) : `${crowded.measured}/${crowded.limit}`;
+    return [
+        '',
+        `Groups that come close (prefix-groups needs ${min})`,
+        `  ${path} (${limit}): ${close.length > 0 ? close.join(', ') : 'none: no two modules start with the same word'}`,
+    ];
 }
