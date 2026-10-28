@@ -1,16 +1,16 @@
 import { existsSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
-import { CONFIG_RULES } from '../core/report/describe.ts';
-import type { Report } from '../core/report/report.ts';
-import { findConfig, gitRootOf } from '../node/config-file.ts';
-import { ConfigError } from '../node/load-config.ts';
-import type { Args } from './args.ts';
+import { CONFIG_RULES } from '../../core/report/describe.ts';
+import type { Report } from '../../core/report/report.ts';
+import { findConfig, gitRootOf } from '../../node/config-file.ts';
+import { ConfigError } from '../../node/load-config.ts';
+import type { Args } from '../args.ts';
+import type { Io } from '../io.ts';
+import { TOOL } from '../tool.ts';
+import { hiddenFolders } from './build.ts';
 import { emit, resolveFormat } from './emit.ts';
-import type { Io } from './io.ts';
 import { reportRefusal } from './output-paths.ts';
-import { hiddenFolders } from './report-build.ts';
-import { TOOL } from './tool.ts';
 
 /** The formats that tell a CI step what went wrong, not only a person reading the log. */
 const FAILURE_FORMATS = new Set(['azure', 'github', 'markdown', 'sarif']);

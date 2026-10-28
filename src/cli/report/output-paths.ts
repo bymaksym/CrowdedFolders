@@ -1,10 +1,10 @@
 import { existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
-import { realPath } from '../node/config-file.ts';
-import { isTrackedByGit } from '../node/files.ts';
-import { type Args, UsageError } from './args.ts';
-import type { Session } from './session.ts';
+import { realPath } from '../../node/config-file.ts';
+import { isTrackedByGit } from '../../node/files.ts';
+import { type Args, UsageError } from '../args.ts';
+import type { Session } from '../session.ts';
 
 /**
  * Where each report is written (`-o`, `-f format=file`), checked before anything runs: a folder is a

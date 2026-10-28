@@ -2,19 +2,19 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, relative, sep } from 'node:path';
 
-import type { EngineResult, Finding } from '../core/engine.ts';
-import { lineOfSequence, quoted } from '../core/report/context/locate.ts';
-import { type Codeowners, ownersOf, parseCodeowners } from '../core/report/context/owners.ts';
-import { projectFolders, projectOf } from '../core/report/context/projects.ts';
-import { CONFIG_RULES } from '../core/report/describe.ts';
-import type { Report, ReportFinding, RunInfo } from '../core/report/report.ts';
-import { relativeTo, type StaleSuppression } from '../core/suppressions.ts';
-import { readCodeowners } from '../node/codeowners.ts';
-import { gitRootOf } from '../node/config-file.ts';
-import { type Args, type Format, UsageError } from './args.ts';
-import type { Io } from './io.ts';
-import type { Session } from './session.ts';
-import { TOOL } from './tool.ts';
+import type { EngineResult, Finding } from '../../core/engine.ts';
+import { lineOfSequence, quoted } from '../../core/report/context/locate.ts';
+import { type Codeowners, ownersOf, parseCodeowners } from '../../core/report/context/owners.ts';
+import { projectFolders, projectOf } from '../../core/report/context/projects.ts';
+import { CONFIG_RULES } from '../../core/report/describe.ts';
+import type { Report, ReportFinding, RunInfo } from '../../core/report/report.ts';
+import { relativeTo, type StaleSuppression } from '../../core/suppressions.ts';
+import { readCodeowners } from '../../node/codeowners.ts';
+import { gitRootOf } from '../../node/config-file.ts';
+import { type Args, type Format, UsageError } from '../args.ts';
+import type { Io } from '../io.ts';
+import type { Session } from '../session.ts';
+import { TOOL } from '../tool.ts';
 
 /** Adds the project and the owners to each finding. */
 export function enrichFindings(findings: readonly Finding[], session: Session, args: Args): ReportFinding[] {

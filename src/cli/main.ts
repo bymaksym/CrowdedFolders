@@ -6,9 +6,9 @@ import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
-import { writeFailureReports } from './failure.ts';
 import { HELP } from './help.ts';
 import { type Io, processIo } from './io.ts';
+import { writeFailureReports } from './report/failure.ts';
 import { openSession } from './session.ts';
 import { TOOL } from './tool.ts';
 

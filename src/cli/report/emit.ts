@@ -9,11 +9,11 @@ import {
     formatJson,
     formatMarkdown,
     formatSarif,
-} from '../core/report/machine.ts';
-import type { Report } from '../core/report/report.ts';
-import { formatText } from '../core/report/text.ts';
-import type { Args, Format } from './args.ts';
-import { type Io, wantsColor, writeFileAtomic } from './io.ts';
+} from '../../core/report/machine.ts';
+import type { Report } from '../../core/report/report.ts';
+import { formatText } from '../../core/report/text.ts';
+import type { Args, Format } from '../args.ts';
+import { type Io, wantsColor, writeFileAtomic } from '../io.ts';
 
 /** The format `auto` stands for: what the CI the command runs in reads. */
 export function resolveFormat(
