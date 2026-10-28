@@ -11,6 +11,11 @@
             "folders": ["hooks", "skills/*"],
             "reason": "Claude Code plugins fix these paths: hooks/hooks.json and skills/<name>/SKILL.md, one file each.",
             "rules": { "single-file-folders": "off" }
+        },
+        {
+            "folders": ["docs"],
+            "reason": "Each guide is linked by its path from the README, the help, error messages and released versions: moving one breaks links already out. 15 is an opinion, two over the 13 guides there are today.",
+            "rules": { "max-files": ["error", { "max": 15 }] }
         }
     ]
 }
