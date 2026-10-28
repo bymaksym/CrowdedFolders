@@ -6,7 +6,13 @@ import { pathToFileURL } from 'node:url';
 import { isObject } from '../core/config/json-schema.ts';
 import { satisfies } from '../core/config/version-range.ts';
 
-/** The version of this package, from its package.json (two folders up from both src/node and dist/node). */
+/** Defined by the build of the single-file binary (tooling/build-binary.mjs), nowhere else. */
+declare const CROWDED_FOLDERS_BUNDLED_VERSION: string | undefined;
+
+/**
+ * The version of this package, from its package.json (two folders up from both src/node and dist/node).
+ * The single-file binary has no package.json beside it: its build writes the version in, as a constant.
+ */
 export const OWN_VERSION = readOwnVersion();
 
 /**
@@ -146,6 +152,9 @@ function pnpApi(fromDir: string): PnpApi | undefined {
 }
 
 function readOwnVersion(): string {
+    if (typeof CROWDED_FOLDERS_BUNDLED_VERSION === 'string') {
+        return CROWDED_FOLDERS_BUNDLED_VERSION;
+    }
     try {
         const manifest = JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')) as unknown;
         return isObject(manifest) && typeof manifest['version'] === 'string' ? manifest['version'] : '0.0.0';
