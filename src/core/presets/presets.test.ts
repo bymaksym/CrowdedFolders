@@ -670,6 +670,24 @@ describe('game engines, after the review of 21-10-2026', () => {
         assert.deepEqual(check('godot', bare), []);
     });
 
+    it('unreal reads asset prefixes only in Content/: AIController and AITask… group in Source/ (Lucía)', () => {
+        const ai = ['AIController', 'AITaskAttack', 'AITaskPatrol', 'AIPerception', 'AISenseSight'].flatMap(name => [
+            `Source/Game/${name}.h`,
+            `Source/Game/${name}.cpp`,
+        ]);
+        assert.deepEqual(
+            check('unreal', [...ai, 'Source/Game/Player.cpp', 'Source/Game/Weapon.cpp']).map(
+                finding => `${finding.rule} ${finding.key ?? ''}`,
+            ),
+            ['prefix-groups ai'],
+        );
+        // In Content/ the same prefix is still the asset's type: AI_Guard is about the guard.
+        const content = ['AI_Guard', 'AI_Patrol', 'AI_Boss', 'AI_Drone', 'AI_Turret'].map(
+            name => `Content/AI/${name}.uasset`,
+        );
+        assert.deepEqual(check('unreal', [...content, 'Content/AI/Notes.uasset']), []);
+    });
+
     it('unreal leaves out World Partition, takes C++ at the limits of c-cpp, and warns on both limits', () => {
         const partition = series('Content/__ExternalActors__/Maps/L1/3/AB', 60, index => `C${pad(index, 8)}.uasset`);
         assert.deepEqual(check('unreal', partition), []);
