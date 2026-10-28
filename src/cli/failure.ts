@@ -8,6 +8,7 @@ import { ConfigError } from '../node/load-config.ts';
 import type { Args } from './args.ts';
 import { emit, resolveFormat } from './emit.ts';
 import type { Io } from './io.ts';
+import { reportRefusal } from './output-paths.ts';
 import { hiddenFolders } from './report-build.ts';
 import { TOOL } from './tool.ts';
 
@@ -25,7 +26,17 @@ export function writeFailureReports(args: Args, io: Io, error: unknown): void {
         if (args.command !== 'check') {
             return;
         }
-        const outputs = args.outputs.filter(spec => FAILURE_FORMATS.has(resolveFormat(spec.format, io.env)));
+        const configs = configPathsOf(args, io);
+        // Never over a file the run refused to write (the configuration, a tracked file): the failure
+        // may be that refusal.
+        const outputs = args.outputs.filter(
+            spec =>
+                FAILURE_FORMATS.has(resolveFormat(spec.format, io.env)) &&
+                (spec.target === undefined ||
+                    configs.every(
+                        config => reportRefusal(resolve(io.cwd, spec.target ?? ''), args.force, config) === undefined,
+                    )),
+        );
         if (outputs.length === 0) {
             return;
         }
@@ -50,6 +61,17 @@ export function writeFailureReports(args: Args, io: Io, error: unknown): void {
     } catch {
         // The original error is what the user needs to see; this is an extra.
     }
+}
+
+/** The configuration files the run could have read: the one given, and the one found from here. */
+function configPathsOf(args: Args, io: Io): (string | undefined)[] {
+    const paths: (string | undefined)[] = [args.config === undefined ? undefined : resolve(io.cwd, args.config)];
+    try {
+        paths.push(findConfig(io.cwd)?.path);
+    } catch {
+        // Two configurations in one folder: the given one is enough to compare with.
+    }
+    return paths;
 }
 
 /** The configuration file the failure is about, relative to the repository, when there is one. */

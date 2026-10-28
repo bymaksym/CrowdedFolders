@@ -583,6 +583,11 @@ describe('--output and the files it writes', () => {
         assert.match(several.err, /--format json=src\/other\.ts: git tracks .*other\.ts/u);
         assert.equal(readFileSync(join(root, 'src/other.ts'), 'utf8'), 'code');
         assert.equal((await cli(root, ['-f', 'sarif=out/'])).code, 2);
+        // A refused SARIF is not written on the way out either, as a failed run's SARIF would be.
+        assert.equal((await cli(root, ['-f', 'sarif', '-o', 'src/other.ts'])).code, 2);
+        assert.equal(readFileSync(join(root, 'src/other.ts'), 'utf8'), 'code');
+        assert.equal((await cli(root, ['-f', 'sarif', '-o', 'crowded-folders.config.json'])).code, 2);
+        assert.match(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8'), /"extends"/u);
     });
 
     it('reads every path option from the current folder, and says when it writes outside the root', async () => {

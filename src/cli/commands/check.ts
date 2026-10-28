@@ -15,16 +15,9 @@ import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
 import { emit } from '../emit.ts';
 import type { Io } from '../io.ts';
+import { outputPathsOf } from '../output-paths.ts';
 import { buildReport, enrichFindings, wantsAnchors } from '../report-build.ts';
-import {
-    foldersFromPaths,
-    isCi,
-    noticeIfOutside,
-    outputPathsOf,
-    type Session,
-    suppressionsPathOf,
-    within,
-} from '../session.ts';
+import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
 
 /** The default command: checks the repository and prints the report. Returns the exit code. */
