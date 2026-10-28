@@ -1,3 +1,4 @@
+import { shownOf } from '../plural.ts';
 import { normalisePath } from './tree.ts';
 
 /** A path of a file list that is not a file of the root, and why. */
@@ -11,7 +12,9 @@ export class FileListError extends Error {
     readonly problems: readonly PathProblem[];
 
     constructor(problems: readonly PathProblem[]) {
-        const shown = problems.slice(0, 10).map(({ path, problem }) => `  ${path}: ${problem}`);
+        const shown = problems
+            .slice(0, shownOf(problems.length, 10))
+            .map(({ path, problem }) => `  ${path}: ${problem}`);
         const more = problems.length > shown.length ? [`  and ${problems.length - shown.length} more`] : [];
         super(
             `${problems.length === 1 ? 'a path' : `${problems.length} paths`} of the file list cannot be read as files of the root:\n${[...shown, ...more].join('\n')}`,

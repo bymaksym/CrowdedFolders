@@ -6,6 +6,7 @@ import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
+import { plural } from '../core/plural.ts';
 import { type Detection, detectPresets, excludesFor } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 import { gitRootOf, locate, projectDirOf, realPath } from '../node/config-file.ts';
@@ -225,7 +226,7 @@ async function filesFromStdin(
             lines = lines.map(line => (isAbsolutePath(line) ? line : `${here}/${line}`));
         } else if (fromRoot * 2 < sample.length) {
             notices.push(
-                `${sample.length - fromRoot} of the ${sample.length} paths looked at from standard input do not exist under the root (${root}): they are read from the root, not from the current folder (${here}).`,
+                `${sample.length - fromRoot} of the ${plural(sample.length, 'path')} looked at from standard input do not exist under the root (${root}): they are read from the root, not from the current folder (${here}).`,
             );
         }
     }
@@ -261,7 +262,7 @@ function leaveOutDeep(files: string[], notices: string[]): string[] {
     const first = deep[0] ?? '';
     const shownPath = `${first.split('/').slice(0, 3).join('/')}/…`;
     notices.push(
-        `${deep.length === 1 ? '1 file' : `${deep.length} files`} deeper than ${MAX_DEPTH} folders left out (the first in ${shownPath}): a tree that deep is generated, not arranged by hand.`,
+        `${plural(deep.length, 'file')} deeper than ${MAX_DEPTH} folders left out (the first in ${shownPath}): a tree that deep is generated, not arranged by hand.`,
     );
     const kept = new Set(deep);
     return files.filter(path => !kept.has(path));
@@ -299,7 +300,7 @@ function checkSelection(context: {
             throw new ConfigError(origin, [
                 {
                     at: 'include',
-                    message: `${config.include.map(pattern => `"${pattern}"`).join(', ')} takes none of the ${files.length} files listed, so nothing would be checked. Paths start at ${shown(cwd, base)}; a name takes the folder and everything in it ("src"), and a pattern with "/" is anchored there.`,
+                    message: `${config.include.map(pattern => `"${pattern}"`).join(', ')} takes none of the ${plural(files.length, 'file')} listed, so nothing would be checked. Paths start at ${shown(cwd, base)}; a name takes the folder and everything in it ("src"), and a pattern with "/" is anchored there.`,
                 },
             ]);
         }

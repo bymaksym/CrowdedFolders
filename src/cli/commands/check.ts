@@ -1,6 +1,7 @@
 import { changeBetween, compareWithBase, foldersOf, type TreeChange } from '../../core/changes.ts';
 import { type Finding, runEngine, selectFiles } from '../../core/engine.ts';
 import { joinPath } from '../../core/paths/tree.ts';
+import { plural } from '../../core/plural.ts';
 import { exitCodeOf, isOverMaxWarnings, type Report, totalsOf } from '../../core/report/report.ts';
 import {
     addSuppressions,
@@ -15,7 +16,7 @@ import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
 import { buildReport, enrichFindings, wantsAnchors } from '../report/build.ts';
-import { emit } from '../report/emit.ts';
+import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
 import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
@@ -56,7 +57,7 @@ export function check(args: Args, io: Io, session: Session): number {
         config,
         rules: session.loaded.rules,
         ...(only && { only }),
-        stats: args.stats,
+        stats: args.stats || wantsClosest(args, io),
     });
 
     // The folders this run judges: those asked for (or the root's, when it sits inside the
@@ -151,7 +152,7 @@ export function check(args: Args, io: Io, session: Session): number {
             noticeIfOutside(io, session, path);
         }
     }
-    if (session.detected && textToStdout) {
+    if (session.detected && textToStdout && !args.quiet) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');
         io.error(
             `No configuration file: used the presets detected — ${presets}. \`crowded-folders init\` writes them down.\n`,
@@ -159,9 +160,21 @@ export function check(args: Args, io: Io, session: Session): number {
     }
     if (isOverMaxWarnings(report) && !textToStdout) {
         const warnings = totalsOf(report.findings).warnings + hiddenWarnings;
-        io.error(`${warnings} warnings, over --max-warnings ${args.maxWarnings ?? 0}.\n`);
+        io.error(`${plural(warnings, 'warning')}, over --max-warnings ${args.maxWarnings ?? 0}.\n`);
     }
     return exitCodeOf(report);
+}
+
+/**
+ * Whether a clean run has somewhere to say how near the folders are to their limit: the text report on
+ * a terminal. The numbers cost a second look at every folder, so nothing else asks for them.
+ */
+function wantsClosest(args: Args, io: Io): boolean {
+    return (
+        !args.quiet &&
+        io.stdoutIsTTY &&
+        args.outputs.some(spec => spec.target === undefined && resolveFormat(spec.format, io.env) === 'text')
+    );
 }
 
 /**

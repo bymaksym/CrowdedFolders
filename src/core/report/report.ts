@@ -72,6 +72,13 @@ export interface Report {
     readonly maxWarnings?: number;
     /** With `--new-since`: the base, and how many problems it already had (they do not fail). */
     readonly knownOnBase?: { readonly label: string; readonly count: number };
+    /** The folders nearest to their `max-files` limit, nearest first, for a clean run to show. */
+    readonly closest?: readonly { readonly folder: string; readonly count: number; readonly limit: number }[];
+    /**
+     * With a base known (`--base`, `--since`, `--new-since`, the pull request's): per folder with
+     * findings, how many modules the change adds and how many there were, for "this PR adds 1 (14 -> 15)".
+     */
+    readonly addedByFolder?: Readonly<Record<string, { readonly before: number; readonly after: number }>>;
 }
 
 export interface Totals {
@@ -105,6 +112,4 @@ export function isOverMaxWarnings(report: Report): boolean {
     return report.maxWarnings !== undefined && warnings > report.maxWarnings;
 }
 
-export function plural(count: number, singular: string, pluralForm = `${singular}s`): string {
-    return `${count.toLocaleString('en-US')} ${count === 1 ? singular : pluralForm}`;
-}
+export { plural } from '../plural.ts';

@@ -2,6 +2,7 @@ import { sameWord } from '../naming/inflect.ts';
 import { gluedWords, shownName } from '../naming/modules.ts';
 import { readName, splitWords } from '../naming/words.ts';
 import { joinPath } from '../paths/tree.ts';
+import { plural } from '../plural.ts';
 import { defineRule, listNames, type Move } from './rule.ts';
 
 export interface RedundantPrefixOptions {
@@ -45,7 +46,7 @@ export const redundantPrefix = defineRule<RedundantPrefixOptions>({
             }
         }
         report({
-            message: `${repeating.length} modules repeat the folder's name "${folder.name}" (${listNames(repeating.map(shownName))}): the folder already says it.`,
+            message: `${plural(repeating.length, 'module')} repeat the folder's name "${folder.name}" (${listNames(repeating.map(shownName))}): the folder already says it.`,
             measured: repeating.length,
             limit: options.min - 1,
             files: repeating.flatMap(module => module.files),

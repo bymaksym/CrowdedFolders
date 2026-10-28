@@ -2,6 +2,7 @@ import { explainFolder } from '../../core/engine.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
 import { type Module, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
+import { plural } from '../../core/plural.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
@@ -23,7 +24,7 @@ export function explain(args: Args, io: Io, session: Session): number {
     }
     const { folder: view, rules, overrides, findings, notes } = explanation;
     const lines: string[] = [
-        `${view.path === '.' ? '. (the root)' : `${view.path}/`}  ${view.files.length} files, ${view.modules.length} modules, ${view.folders.length} subfolders`,
+        `${view.path === '.' ? '. (the root)' : `${view.path}/`}  ${plural(view.files.length, 'file')}, ${plural(view.modules.length, 'module')}, ${plural(view.folders.length, 'subfolder')}`,
         '',
         'Overrides that apply',
     ];

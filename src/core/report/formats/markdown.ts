@@ -1,3 +1,4 @@
+import { shownOf } from '../../plural.ts';
 import { byWeight, describeStale, failureMessage, folderLabel, plainMessage } from '../describe.ts';
 import { plural, type Report, type ReportFinding, totalsOf } from '../report.ts';
 import { safe } from '../sanitize.ts';
@@ -25,7 +26,9 @@ export function formatMarkdown(report: Report, options: MarkdownOptions = {}): s
         return `${lines.join('\n')}\n`;
     }
     if (report.findings.length === 0 && report.staleSuppressions.length === 0) {
-        lines.push(`No crowded folders: ${report.folderCount} folders and ${report.fileCount} files checked.`);
+        lines.push(
+            `No crowded folders: ${plural(report.folderCount, 'folder')} and ${plural(report.fileCount, 'file')} checked.`,
+        );
         return `${lines.join('\n')}\n`;
     }
     lines.push(
@@ -42,7 +45,7 @@ export function formatMarkdown(report: Report, options: MarkdownOptions = {}): s
     for (const finding of sorted) {
         const rule = finding.url ? `[${escapeText(finding.rule)}](${finding.url})` : escapeText(finding.rule);
         const row = `| ${codeSpan(folderLabel(finding.folder))} | ${rule} | ${escapeText(plainMessage(report, finding))} |`;
-        if (shown >= maxFindings || size + row.length + 1 > BUDGET) {
+        if (shown >= shownOf(sorted.length, maxFindings) || size + row.length + 1 > BUDGET) {
             break;
         }
         lines.push(row);
@@ -57,11 +60,12 @@ export function formatMarkdown(report: Report, options: MarkdownOptions = {}): s
     }
     if (report.staleSuppressions.length > 0) {
         lines.push('', 'Suppressions nothing needs any more (run with `--prune-suppressions`):', '');
-        for (const stale of report.staleSuppressions.slice(0, maxFindings)) {
+        const staleShown = shownOf(report.staleSuppressions.length, maxFindings);
+        for (const stale of report.staleSuppressions.slice(0, staleShown)) {
             lines.push(`- ${escapeText(describeStale(stale))}`);
         }
-        if (report.staleSuppressions.length > maxFindings) {
-            lines.push(`- _… and ${report.staleSuppressions.length - maxFindings} more._`);
+        if (report.staleSuppressions.length > staleShown) {
+            lines.push(`- _… and ${report.staleSuppressions.length - staleShown} more._`);
         }
     }
     return `${lines.join('\n')}\n`;

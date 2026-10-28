@@ -108,11 +108,32 @@ export function buildReport(input: BuildInput): Report {
         ...suppressionLinesOf(input.stale, input.suppressionFile),
         ...(input.addedFiles && { addedFiles: input.addedFiles }),
         hide: hiddenFolders([session.root, session.base], io),
-        ...(result.folderStats && { folderStats: result.folderStats }),
+        ...(result.folderStats && args.stats && { folderStats: result.folderStats }),
+        ...(input.findings.length === 0 && { closest: closestToLimit(result.folderStats) }),
         hiddenWarnings: input.hiddenWarnings,
         ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
         ...(input.knownOnBase && { knownOnBase: input.knownOnBase }),
     };
+}
+
+/** How many folders a clean run names as the nearest to their limit, and how near is worth naming. */
+const CLOSEST_SHOWN = 3;
+const CLOSEST_FROM = 0.6;
+
+/** The folders using most of their `max-files` limit, nearest first: what a clean run can still teach. */
+function closestToLimit(stats: EngineResult['folderStats']): NonNullable<Report['closest']> {
+    const items: { folder: string; count: number; limit: number }[] = [];
+    for (const stat of stats ?? []) {
+        if (stat.limit !== null && stat.limit > 0) {
+            items.push({ folder: stat.path, count: stat.modules, limit: stat.limit });
+        }
+    }
+    return items
+        .filter(item => item.count / item.limit >= CLOSEST_FROM)
+        .toSorted(
+            (a, b) => b.count / b.limit - a.count / a.limit || b.count - a.count || (a.folder < b.folder ? -1 : 1),
+        )
+        .slice(0, CLOSEST_SHOWN);
 }
 
 /** The folders that must not appear in a report: the repository, where it ran, the home folder. */

@@ -2,6 +2,7 @@ import { basename, join, relative } from 'node:path';
 
 import { SCHEMA_URL } from '../../core/config/schema.ts';
 import { runEngine } from '../../core/engine.ts';
+import { plural } from '../../core/plural.ts';
 import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { CONFIG_NAMES, findConfig } from '../../node/config-file.ts';
@@ -66,11 +67,11 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     lines.push('');
     if (errors === 0) {
         lines.push(
-            `No crowded folders today (${result.folderCount} folders checked). Add \`crowded-folders\` to CI to keep it that way.`,
+            `No crowded folders today (${plural(result.folderCount, 'folder')} checked). Add \`crowded-folders\` to CI to keep it that way.`,
         );
     } else {
         lines.push(
-            `${errors} problem${errors === 1 ? '' : 's'} today. To see them: crowded-folders`,
+            `${plural(errors, 'problem')} today. To see them: crowded-folders`,
             'To adopt it without fixing them first: crowded-folders --suppress-all',
             '  (records them in crowded-folders-suppressions.json; they may not grow, and new ones fail)',
         );

@@ -72,7 +72,7 @@ describe('the command', () => {
         const root = repository(render);
         const ran = await cli(root, []);
         assert.equal(ran.code, 1);
-        assert.match(ran.out, /cli\/\n {2}✖ error {2}prefix-groups {2}4 modules start with "render"/u);
+        assert.match(ran.out, /cli\/\n {2}error {2}prefix-groups {2}4 modules start with "render"/u);
         assert.match(ran.err, /No configuration file: used the presets detected — recommended/u);
     });
 
@@ -175,7 +175,7 @@ describe('the command', () => {
         });
         assert.equal((await cli(root, [])).code, 0);
         assert.equal((await cli(root, ['--max-warnings', '0'])).code, 1);
-        assert.match((await cli(root, ['--quiet'])).out, /✔ No errors \(.*; 1 warning hidden by --quiet\)/u);
+        assert.match((await cli(root, ['--quiet'])).out, /OK No errors \(.*; 1 warning hidden by --quiet\)/u);
     });
 
     it('writes the report to a file with --output', async () => {
