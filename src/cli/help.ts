@@ -46,7 +46,10 @@ What it prints
       --base <ref>           annotations: prefer the files this change adds against <ref> (default:
                              the --since or --new-since ref, else the pull request's base, as --changed)
   -q, --quiet                report errors only
-      --moves                print a git mv for every file a problem suggests moving
+      --moves                print under each problem the mkdir and git mv it suggests, and the
+                             files that name those paths (nothing is ever moved)
+      --moves=<sh|pwsh|json> print only the moves, instead of the report: commands for sh or
+                             PowerShell, to review and run from the root, or JSON
       --color, --no-color    force colours on or off (default: on in a terminal; NO_COLOR and
                              FORCE_COLOR are honoured)
 

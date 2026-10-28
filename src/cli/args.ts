@@ -16,6 +16,10 @@ export const FORMATS = [
 ] as const;
 export type Format = (typeof FORMATS)[number];
 
+/** What `--moves=<what>` writes to standard output instead of the report: the moves alone. */
+export const MOVE_SCRIPTS = ['sh', 'pwsh', 'json'] as const;
+export type MoveScript = (typeof MOVE_SCRIPTS)[number];
+
 export const GROUPINGS = ['folder', 'project', 'owner'] as const;
 export type Grouping = (typeof GROUPINGS)[number];
 
@@ -53,7 +57,10 @@ export interface Args {
     readonly requireGit: boolean | undefined;
     readonly maxWarnings: number | undefined;
     readonly quiet: boolean;
+    /** `--moves`: the text report prints the moves under each problem. */
     readonly moves: boolean;
+    /** `--moves=sh|pwsh|json`: standard output gets only the moves, as commands for that shell or as JSON. */
+    readonly movesScript: MoveScript | undefined;
     readonly color: boolean | undefined;
     readonly suppressAll: boolean;
     readonly suppressRules: readonly string[];
@@ -80,7 +87,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
     let parsed;
     try {
         parsed = parseArgs({
-            args: [...argv],
+            args: withMovesValue(argv),
             allowPositionals: true,
             strict: true,
             options: {
@@ -100,7 +107,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 'require-git': { type: 'boolean' },
                 'max-warnings': { type: 'string' },
                 quiet: { type: 'boolean', short: 'q' },
-                moves: { type: 'boolean' },
+                moves: { type: 'string' },
                 color: { type: 'boolean' },
                 'no-color': { type: 'boolean' },
                 'suppress-all': { type: 'boolean' },
@@ -126,7 +133,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
     const command: Command = isCommand ? (first as Command) : 'check';
     const paths = isCommand ? rest : positionals;
 
-    const outputs = outputsOf(values.format ?? [], values.output);
+    const movesScript = moveScriptOf(values.moves);
+    const outputs = outputsOf(values.format ?? [], values.output, movesScript !== undefined);
     const groupBy = values['group-by'] ?? 'folder';
     if (!(GROUPINGS as readonly string[]).includes(groupBy)) {
         throw new UsageError(`--group-by must be one of ${GROUPINGS.join(', ')}, not "${groupBy}"`);
@@ -206,7 +214,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
         requireGit: values['require-git'],
         maxWarnings,
         quiet: values.quiet ?? false,
-        moves: values.moves ?? false,
+        moves: values.moves !== undefined,
+        movesScript,
         color: values['no-color'] ? false : values.color,
         suppressAll: values['suppress-all'] ?? false,
         suppressRules: values['suppress-rule'] ?? [],
@@ -226,7 +235,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
  * Reads `-f` and `-o`. `-f github -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY` writes three
  * reports in one run; `-f sarif -o out.sarif` still works. Only one report can go to standard output.
  */
-function outputsOf(formats: readonly string[], output: string | undefined): OutputSpec[] {
+function outputsOf(formats: readonly string[], output: string | undefined, movesToStdout: boolean): OutputSpec[] {
     const specs: OutputSpec[] = formats.map(value => {
         const equals = value.indexOf('=');
         const format = equals === -1 ? value : value.slice(0, equals);
@@ -242,7 +251,7 @@ function outputsOf(formats: readonly string[], output: string | undefined): Outp
         }
         return { format: format as Format, target: target === '-' ? undefined : target };
     });
-    if (specs.length === 0) {
+    if (specs.length === 0 && !(movesToStdout && output === undefined)) {
         specs.push({ format: 'text', target: undefined });
     }
     if (output !== undefined) {
@@ -255,12 +264,37 @@ function outputsOf(formats: readonly string[], output: string | undefined): Outp
         }
         specs[0] = { format: only.format, target: output };
     }
+    if (movesToStdout && specs.some(spec => spec.target === undefined)) {
+        throw new UsageError(
+            '--moves=<shell> writes the moves to standard output, and so would this --format: give the report a file, as in -f json=report.json',
+        );
+    }
     if (specs.filter(spec => spec.target === undefined).length > 1) {
         throw new UsageError(
             'only one report can go to standard output: give the others a file, as in -f github -f sarif=out.sarif',
         );
     }
     return specs;
+}
+
+/**
+ * `--moves` alone prints the moves in the report, and `--moves=sh` only the moves: the parser has no
+ * option that may go without its value, so a bare `--moves` is read as `--moves=`. Arguments after
+ * `--` are left alone.
+ */
+function withMovesValue(argv: readonly string[]): string[] {
+    const end = argv.indexOf('--');
+    return argv.map((arg, index) => (arg === '--moves' && (end === -1 || index < end) ? '--moves=' : arg));
+}
+
+function moveScriptOf(value: string | undefined): MoveScript | undefined {
+    if (value === undefined || value === '') {
+        return undefined;
+    }
+    if (!(MOVE_SCRIPTS as readonly string[]).includes(value)) {
+        throw new UsageError(`--moves takes no value, or one of ${MOVE_SCRIPTS.join(', ')}, not "${value}"`);
+    }
+    return value as MoveScript;
 }
 
 /** A report goes to a file: blank or ending in a separator, it names a folder. */

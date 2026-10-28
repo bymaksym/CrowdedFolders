@@ -132,6 +132,18 @@ other rejects.
 **Decided:** `--moves` prints `git mv` commands and never moves anything.
 **Why:** moving a file breaks every import of it; whether that is worth it is the author's call.
 
+## Moves that build, or none
+
+**Decided:** a move follows the ecosystem (case, keywords, route groups, Rust's `render.rs`, the files
+a tool reads in place, mirrored test trees), drops the prefix the new folder says unless the file is
+named after its type, and never lands on a path that exists, even in other case. Each group's commands
+make its folder first, and `--moves=sh|pwsh|json` prints only them.
+**Why:** a command that fails, or a move that stops the project from building, is copied by people and
+by agents exactly as printed; one wrong suggestion and the rest are not trusted.
+**Discarded:** offering both names (`render/render-json.ts` and `render/json.ts`): a script runs one,
+and the presets know which their ecosystem wants. Searching the references in the core: it reads no
+file's contents, so the command does it and hands the core the list.
+
 ## What a version promises
 
 **Decided:** a change that makes the default configuration find more is a breaking change, released

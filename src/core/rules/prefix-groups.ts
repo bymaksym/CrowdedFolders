@@ -3,15 +3,8 @@ import { isLanguageTag } from '../naming/languages.ts';
 import { keyRestatesPath, type Module, shownName } from '../naming/modules.ts';
 import { isNumericWord, splitWords } from '../naming/words.ts';
 import { joinPath } from '../paths/tree.ts';
-import {
-    defineRule,
-    HINT_FOR_SCHEMA,
-    hintText,
-    listNames,
-    type Move,
-    type OptionProblem,
-    type RuleContext,
-} from './rule.ts';
+import { existingFolder, folderNameFor, planMoves, staysInPlace, withoutPrefix } from './moves.ts';
+import { defineRule, HINT_FOR_SCHEMA, hintText, listNames, type OptionProblem, type RuleContext } from './rule.ts';
 
 export interface PrefixGroupsOptions {
     readonly min: number;
@@ -19,6 +12,7 @@ export interface PrefixGroupsOptions {
     readonly ignore: readonly string[];
     readonly hint: string;
     readonly hintFor: readonly string[];
+    readonly dropPrefix: boolean;
 }
 
 /**
@@ -33,7 +27,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
         description:
             'At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.',
         url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/prefix-groups.md',
-        defaultOptions: { min: 4, words: 1, ignore: [], hint: '', hintFor: [] },
+        defaultOptions: { min: 4, words: 1, ignore: [], hint: '', hintFor: [], dropPrefix: true },
         options: {
             type: 'object',
             additionalProperties: false,
@@ -55,6 +49,11 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
                         'Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`.',
                 },
                 hintFor: HINT_FOR_SCHEMA,
+                dropPrefix: {
+                    type: 'boolean',
+                    description:
+                        'Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.',
+                },
                 hint: {
                     type: 'string',
                     description:
@@ -83,31 +82,79 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
             return problems;
         },
     },
-    check(folder, { options, report, note, settingsOf }) {
+    check(folder, { options, report, note, settingsOf, existing }) {
         const groups = groupModules(folder.modules, options.words, options.min, folder.naming);
         const crowded = crowdedLimit(settingsOf);
-        for (const [key, modules] of groups) {
-            const reason = whyNotReported(key, modules, folder, options, crowded);
+        for (const [key, grouped] of groups) {
+            // What a tool reads by name and place cannot move, so it is not part of a group to move.
+            const kept = grouped.filter(module => staysInPlace(module, folder.path, folder.naming));
+            const modules = grouped.filter(module => !kept.includes(module));
+            const reason =
+                kept.length > 0 && modules.length < options.min
+                    ? `${listNames(kept.map(shownName))} must stay where ${kept.length === 1 ? 'it is' : 'they are'} (naming.keepInPlace: a tool reads them by name and place), and the other ${modules.length} are fewer than the ${options.min} that make a group (min)`
+                    : whyNotReported(key, modules, folder, options, crowded);
             if (reason !== undefined) {
                 // A module alone is not a group anyone asks about.
-                if (note && modules.length >= 2) {
-                    note({ key, message: `"${key}" (${listNames(modules.map(shownName))}): ${reason}` });
+                if (note && grouped.length >= 2) {
+                    note({ key, message: `"${key}" (${listNames(grouped.map(shownName))}): ${reason}` });
                 }
                 continue;
             }
-            const target = joinPath(folder.path, key);
-            const moves: Move[] = modules.flatMap(module =>
-                module.files.map(file => ({ from: joinPath(folder.path, file), to: joinPath(target, file) })),
-            );
             const files = modules.flatMap(module => module.files);
             const hint = hintText(options.hint, options.hintFor, files);
+            const opening = `${modules.length} modules start with "${key}" (${listNames(modules.map(shownName))})`;
+            const words = key.split('-');
+            const folderName = folderNameFor(words, folder.naming);
+            if (folderName.name === undefined) {
+                report({
+                    message: `${opening}: they are a folder that was never made, but "${folderName.reserved ?? key}" and its plural are reserved words in this language — name the folder yourself.${hint}`,
+                    key,
+                    measured: modules.length,
+                    limit: options.min - 1,
+                    files,
+                    moves: [],
+                });
+                continue;
+            }
+            const routes = folder.naming.routes === true;
+            const there = existingFolder(folderName.name, folder.folders, routes);
+            const target = joinPath(folder.path, there ?? folderName.name);
+            // Rust: render.rs declares the module whose files go in render/, so it stays beside it.
+            const staying = folder.naming.groupFileStays
+                ? modules.filter(module => module.subject.length === words.length)
+                : [];
+            // Under routes a name is an address: shortening it would change it.
+            const shorten = options.dropPrefix && !routes;
+            const plan = planMoves(
+                modules.filter(module => !staying.includes(module)),
+                folder.path,
+                target,
+                (file, module) => (shorten ? withoutPrefix(file, module, words) : undefined),
+                existing,
+            );
+            const where =
+                there === undefined
+                    ? `they are a folder that was never made — ${target}/`
+                    : `move them into the ${target}/ that already exists`;
+            const reserved = folderName.reserved === undefined ? '' : ` ("${folderName.reserved}" is a reserved word)`;
+            const after = [
+                ...(staying.length > 0
+                    ? [
+                          `${listNames(staying.flatMap(module => module.files))} stays beside it and declares what is in it.`,
+                      ]
+                    : []),
+                ...(kept.length > 0
+                    ? [`${listNames(kept.map(shownName))} stay where they are (naming.keepInPlace).`]
+                    : []),
+                ...plan.notes,
+            ];
             report({
-                message: `${modules.length} modules start with "${key}" (${listNames(modules.map(shownName))}): they are a folder that was never made — ${target}/.${hint}`,
+                message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}`,
                 key,
                 measured: modules.length,
                 limit: options.min - 1,
                 files,
-                moves,
+                moves: plan.moves,
             });
         }
     },

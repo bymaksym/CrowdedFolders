@@ -1,5 +1,6 @@
 import { splitWords } from '../naming/words.ts';
 import { globProblem } from '../paths/glob.ts';
+import { parseMirror } from '../paths/mirrors.ts';
 import type { Rule } from '../rules/rule.ts';
 import { isObject, validate } from './json-schema.ts';
 import { configSchema } from './schema.ts';
@@ -82,6 +83,13 @@ function checkNaming(naming: NamingConfig | undefined, at: string, problems: Con
         });
     }
     checkGlobs(naming?.folderFiles, `${at}.folderFiles`, problems);
+    checkGlobs(naming?.keepInPlace, `${at}.keepInPlace`, problems);
+    for (const [index, entry] of (naming?.mirrors ?? []).entries()) {
+        const mirror = entry.startsWith('!') ? undefined : parseMirror(entry);
+        if (typeof mirror === 'string') {
+            problems.push({ at: `${at}.mirrors[${index}]`, message: `"${entry}" ${mirror}` });
+        }
+    }
 }
 
 function checkRules(

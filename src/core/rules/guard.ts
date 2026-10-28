@@ -268,3 +268,7 @@ export class ReadOnlySet<T> extends Set<T> {
 
 const READ_ONLY =
     'this set is read-only: it is shared by every folder, so a rule that changed it would change what the others see';
+
+/** Why a report() that came after `check` returned is refused. */
+export const LATE_REPORT =
+    'report() was called after check returned (from a timer or a promise), when the run had already counted its findings. Report before returning.';

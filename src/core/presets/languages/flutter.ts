@@ -2,9 +2,13 @@ import type { Preset } from '../../config/types.ts';
 
 export const flutter: Preset = {
     description:
-        "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room.",
+        "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.",
     sources: [
         { title: 'Effective Dart: style (file names)', url: 'https://dart.dev/effective-dart/style' },
+        {
+            title: 'Flutter: flavors, run with flutter run --flavor dev -t lib/main_dev.dart',
+            url: 'https://docs.flutter.dev/deployment/flavors',
+        },
         {
             title: 'Flutter: app architecture case study (ui by feature, data by type)',
             url: 'https://docs.flutter.dev/app-architecture/case-study',
@@ -54,7 +58,15 @@ export const flutter: Preset = {
             // gen-l10n reads one .arb per language, in any folder.
             '*.arb',
         ],
-        naming: { companions: ['_test$'] },
+        naming: {
+            companions: ['_test$'],
+            folderCase: 'snake',
+            keepInPlace: ['**/lib/main.dart', '**/lib/main_*.dart'],
+        },
+        rules: {
+            // The architecture guide names files after their feature inside its folder: auth/auth_repository.dart.
+            'prefix-groups': ['error', { dropPrefix: false }],
+        },
         overrides: [
             {
                 folders: ['lib/data/**'],

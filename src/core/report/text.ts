@@ -2,6 +2,7 @@ import type { StaleSuppression } from '../suppressions.ts';
 import { type GroupBy, groupFindings, overview } from './context/group.ts';
 import { hyperlink, ruleFooter } from './context/links.ts';
 import { plainMessage, staleReason } from './describe.ts';
+import { moveLines } from './formats/moves.ts';
 import { exitCodeOf, isOverMaxWarnings, plural, type Report, totalsOf } from './report.ts';
 import { safe } from './sanitize.ts';
 
@@ -55,12 +56,8 @@ export function formatText(report: Report, options: TextOptions): string {
             const where =
                 grouping === 'folder' ? '' : `${safe(finding.folder === '.' ? 'the root' : finding.folder)}: `;
             lines.push(`  ${mark}  ${paint('dim', rule)}  ${where}${safe(plainMessage(report, finding))}`);
-            if (options.moves && finding.moves.length > 0) {
-                for (const move of finding.moves) {
-                    lines.push(
-                        `           ${paint('dim', `git mv ${quote(safe(move.from))} ${quote(safe(move.to))}`)}`,
-                    );
-                }
+            if (options.moves) {
+                lines.push(...moveLines(report, finding).map(line => `           ${paint('dim', safe(line))}`));
             }
         }
     }
@@ -167,8 +164,4 @@ function pushSummary(lines: string[], report: Report, options: TextOptions, pain
             ),
         );
     }
-}
-
-function quote(path: string): string {
-    return /^[\w./@+-]+$/u.test(path) ? path : `'${path.replaceAll("'", String.raw`'\''`)}'`;
 }

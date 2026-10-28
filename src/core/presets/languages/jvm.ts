@@ -6,12 +6,25 @@ import type { Preset } from '../../config/types.ts';
  */
 const TEST_SOURCES = ['**/src/test', '**/src/test/**', '**/src/*Test', '**/src/*Test/**'];
 
+/**
+ * Words a package cannot be called: Java's keywords and literals, and Kotlin's hard keywords (a
+ * Kotlin package called `object` needs backticks in every import).
+ */
+const JVM_KEYWORDS = [
+    'abstract assert boolean break byte case catch char class const continue',
+    'default do double else enum extends final finally float for goto if',
+    'implements import instanceof int interface long native new package private',
+    'protected public return short static strictfp super switch synchronized this',
+    'throw throws transient try void volatile while true false null',
+    'as fun in is object typealias typeof val var when',
+].flatMap(line => line.split(' '));
+
 /** The files whose folder is a package: not the SQL, templates or changelogs of a Java project. */
 const JVM_FILES = ['*.{java,kt,kts,groovy,scala}'];
 
 export const java: Preset = {
     description:
-        'Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.',
+        'Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). A move proposes a package as Java writes them (registrohorario/, never a keyword such as abstract/), keeps the class names, takes src/test along with src/main, and leaves the application-{profile}.yml of Spring where Spring looks for them. One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.',
     sources: [
         {
             title: 'Maven: standard directory layout',
@@ -29,6 +42,15 @@ export const java: Preset = {
         {
             title: 'Martin Fowler, Test Double: the kinds Gerard Meszaros lists (dummy, fake, stub, spy, mock)',
             url: 'https://martinfowler.com/bliki/TestDouble.html',
+        },
+        {
+            title: 'Java language specification: keywords "cannot be used as identifiers"; package names are lowercase',
+            url: 'https://docs.oracle.com/javase/specs/jls/se21/html/jls-3.html#jls-3.9',
+        },
+        { title: 'Kotlin: hard keywords', url: 'https://kotlinlang.org/docs/keyword-reference.html#hard-keywords' },
+        {
+            title: 'Spring Boot: profile-specific files are application-{profile}.properties, looked for next to application.properties',
+            url: 'https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.files.profile-specific',
         },
         {
             title: 'Gradle: buildSrc "is a separate build located in the root of your Gradle project"',
@@ -52,6 +74,11 @@ export const java: Preset = {
             // What a class is called before what it is about: test doubles (Fowler's dummy, fake, stub,
             // spy and mock) and the base classes of the JDK and Spring (AbstractList, DefaultListableBeanFactory).
             ignoreLeadingWords: ['fake', 'mock', 'stub', 'spy', 'dummy', 'abstract', 'base', 'default', 'simple'],
+            folderCase: 'lower',
+            reservedWords: JVM_KEYWORDS,
+            // Spring loads the profiles by these names, next to each other.
+            keepInPlace: ['application.{yml,yaml,properties}', 'application-*.{yml,yaml,properties}'],
+            mirrors: ['**/src/main/java/** => **/src/test/java/**', '**/src/main/kotlin/** => **/src/test/kotlin/**'],
         },
         overrides: [
             {
@@ -77,7 +104,12 @@ export const java: Preset = {
             ],
             'prefix-groups': [
                 'error',
-                { hint: 'A folder is a package: they would be the package of that feature.', hintFor: JVM_FILES },
+                {
+                    hint: 'A folder is a package: they would be the package of that feature.',
+                    hintFor: JVM_FILES,
+                    // A public class is named like its file: UserService stays UserService in user/.
+                    dropPrefix: false,
+                },
             ],
         },
     },

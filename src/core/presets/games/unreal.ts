@@ -129,6 +129,8 @@ export const unreal: Preset = {
                 'warn',
                 {
                     min: 15,
+                    // An asset is named with its type prefix wherever it is (BP_Door): a move keeps it.
+                    dropPrefix: false,
                     hint: 'Allar 2.7: "If you find yourself having 15+ of these assets that belong together, they should be together."',
                     hintFor: ['*.{uasset,umap}'],
                 },

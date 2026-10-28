@@ -50,13 +50,14 @@ that was left out and which of these cases it is.
 
 ## Options
 
-| Option    | Default                                                                         |                                                                                                                                                          |
-| --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `min`     | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).                                              |
-| `words`   | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups; `"auto"` takes the longest that keeps the group.         |
-| `ignore`  | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`. An entry that can never match (`render_json`) stops the configuration, with the form meant. |
-| `hint`    | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                                                             |
-| `hintFor` | `[]`                                                                            | Globs of file names: the hint is added only when the files of the group include one (`*.java`). Default: always.                                         |
+| Option       | Default                                                                         |                                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `min`        | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).                                              |
+| `words`      | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups; `"auto"` takes the longest that keeps the group.         |
+| `ignore`     | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`. An entry that can never match (`render_json`) stops the configuration, with the form meant. |
+| `hint`       | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                                                             |
+| `hintFor`    | `[]`                                                                            | Globs of file names: the hint is added only when the files of the group include one (`*.java`). Default: always.                                         |
+| `dropPrefix` | `true` (`false` in java, dotnet, php, swift, angular, nestjs, flutter, unreal)  | Whether a move drops the prefix the new folder says: `render-json.ts` → `render/json.ts`. Off where a file is named after the type it holds.             |
 
 ## Where a folder is not free
 
@@ -67,5 +68,30 @@ use a private folder (`_name`) or a route group (`(name)`), which group files wi
 
 ## Moves
 
-`--moves` prints a `git mv` for every file of a group. They are suggestions only: moving files breaks
-imports, and that is the author's call.
+`--moves` prints, under each group, the `mkdir -p` of its folder and a `git mv` for every file of it,
+and the tracked files whose text names one of those paths: they are what the move breaks besides the
+imports. They are suggestions only: nothing is ever moved, and whether it is worth it is the author's
+call. `--moves=sh`, `--moves=pwsh` and `--moves=json` print only the moves, to review and run from
+the root:
+
+```sh
+$ npx crowded-folders --moves=sh
+# src: prefix-groups "render" — 2 files name these paths: package.json, tooling/check.mjs
+mkdir -p src/render
+git mv src/render-json.ts src/render/json.ts
+git mv src/render-text.ts src/render/text.ts
+```
+
+Where a file goes is read from the ecosystem, because a move that does not build is worse than none:
+
+| Case                                                     | What the move does                                                                                      | Set by                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| The folder repeats the prefix                            | `render-json.ts` → `render/json.ts`, `test_render_json.py` → `render/test_json.py`                      | `dropPrefix` (off where the file is named after its type)   |
+| How the folder is written                                | `UserRole/` in C# and PHP, `userrole/` in Java and Go, `user_role/` in Python, Rust, Dart, Ruby, Elixir | `naming.folderCase`                                         |
+| The name is a keyword                                    | `core/abstracts/`, not `core/abstract/` (`package com.a.core.abstract` does not compile)                | `naming.reservedWords`, per language                        |
+| A tool reads the file by name and place                  | Spring's `application-dev.yml`, Flutter's `main_dev.dart`, patch-package's `patches/*.patch` stay       | `naming.keepInPlace`                                        |
+| The path is the address (Expo Router, Next.js `app/`)    | `app/sign-in.tsx` → `app/(sign)/sign-in.tsx`: a route group keeps `/sign-in`                            | `naming.routes`                                             |
+| Rust                                                     | `render.rs` stays beside `render/`, which it declares; `render_json.rs` → `render/json.rs`              | `naming.groupFileStays`                                     |
+| The tests mirror the code (`src/test/java`, `__tests__`) | one problem, in the code, and the tests move with it                                                    | `naming.mirrors`                                            |
+| The folder exists                                        | "move them into the src/render/ that already exists"                                                    | always                                                      |
+| The new name is taken, or differs only in case           | the module keeps its name, or stays, and the message says why                                           | always: `text.ts` overwrites `Text.ts` on Windows and macOS |

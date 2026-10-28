@@ -20,7 +20,10 @@ render/
   `children/child-row.ts` repeat it; `news/new-a.ts` does not.
 - A folder that glues its words is repeated too: `dayplan/DayPlanList.kt` → `dayplan/List.kt`.
 - `--moves` suggests the shorter name in the file's own convention: `render-json.ts` → `json.ts`,
-  `RenderText.cs` → `Text.cs`, `render_json_test.go` → `json_test.go`.
+  `RenderText.cs` → `Text.cs`, `render_json_test.go` → `json_test.go`, `test_render_json.py` →
+  `test_json.py`; never onto a name that exists, even in other case (`json.ts`, `Text.ts`).
+- A name a tool reads (`naming.keepInPlace`) is not reported, and nor is any under `naming.routes`
+  (Expo Router's `app/(sign)/sign-in.tsx` is the address `/sign-in`).
 
 It is off by default because some conventions repeat the name on purpose: NestJS (`cats/cats.service.ts`
 is one module, so it is not reported, but `cats/cats-admin.service.ts` would be), Flutter

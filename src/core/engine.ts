@@ -1,78 +1,25 @@
 import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
+import {
+    type EngineInput,
+    type EngineResult,
+    type Finding,
+    type FolderExplanation,
+    type FolderStat,
+    type RuleNote,
+    toFinding,
+} from './findings.ts';
+import { counterpartsOf, foldMirrors } from './mirrors.ts';
 import { compareText, type Naming, readFolder } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
+import { parseMirrors } from './paths/mirrors.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
-import { callRule, frozenCopy, ReadOnlySet, reportProblem, RuleError } from './rules/guard.ts';
-import type { FolderView, Move, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
+import { callRule, frozenCopy, LATE_REPORT, ReadOnlySet, reportProblem, RuleError } from './rules/guard.ts';
+import { caseless } from './rules/moves.ts';
+import type { FolderView, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
 
-/** One problem in one folder, as every output format receives it. */
-export interface Finding {
-    /** `max-files`, or `namespace/rule` for a plugin rule; `config/unused-override` for a stale override. */
-    readonly rule: string;
-    readonly severity: 'error' | 'warn';
-    /** The folder, relative to the root; the root is `.`. */
-    readonly folder: string;
-    readonly message: string;
-    readonly key: string | undefined;
-    readonly measured: number;
-    readonly limit: number | undefined;
-    /** Paths relative to the root, sorted. */
-    readonly files: readonly string[];
-    readonly moves: readonly Move[];
-    readonly url: string | undefined;
-}
-
-/** The numbers of one folder, for `--stats`. */
-export interface FolderStat {
-    readonly path: string;
-    readonly modules: number;
-    readonly files: number;
-    readonly subfolders: number;
-    /** The `max-files` limit in effect for the folder; `null` when that rule is off there. */
-    readonly limit: number | null;
-}
-
-export interface EngineInput {
-    /** File paths relative to the root, `/`-separated. */
-    readonly files: readonly string[];
-    readonly config: ResolvedConfig;
-    /** Every rule that can be named: built-in and from plugins. */
-    readonly rules: Readonly<Record<string, Rule>>;
-    /**
-     * When given, only folders equal to or under these are checked and counted; the files elsewhere are
-     * left out before the tree is built, so one folder of a large repository is quick to check.
-     */
-    readonly only?: readonly string[];
-    /** Also return the numbers of every folder reported on. */
-    readonly stats?: boolean;
-}
-
-export interface EngineResult {
-    readonly findings: readonly Finding[];
-    readonly folderCount: number;
-    readonly fileCount: number;
-    /** Every folder reported on, when `stats` was asked for. */
-    readonly folderStats?: readonly FolderStat[];
-}
-
-/** What `explain` shows about one folder: everything a rule would see, and why. */
-export interface FolderExplanation {
-    readonly folder: FolderView;
-    readonly rules: Readonly<
-        Record<string, RuleState & { readonly effectiveOptions: Readonly<Record<string, unknown>> }>
-    >;
-    readonly overrides: readonly OverrideState[];
-    readonly findings: readonly Finding[];
-    /** What the rules looked at and chose not to report, with why. */
-    readonly notes: readonly RuleNote[];
-}
-
-/** A note of one rule, for `explain`. */
-export interface RuleNote extends Note {
-    readonly rule: string;
-}
+export type { EngineInput, EngineResult, Finding, FolderExplanation, FolderStat, RuleNote } from './findings.ts';
 
 /**
  * Filters the files by `include` and `exclude`. Both match a path or any folder above it:
@@ -89,24 +36,37 @@ export function selectFiles(files: readonly string[], config: Pick<ResolvedConfi
 /** Runs every rule that is on over every folder (or every folder under `only`). */
 export function runEngine(input: EngineInput): EngineResult {
     const only = scopeOf(input.only);
-    const files = selectFiles(inScope(filesOf(input.files), only), input.config);
-    const tree = buildTree(files);
-    const context = new FolderContext(input.config, input.rules);
+    // A run over some folders also reads the trees that mirror them (naming.mirrors), so that a
+    // problem folded into its mirror is folded the same way as in a run over everything.
+    const mirrors = parseMirrors(input.config.naming.mirrors);
+    const reach = only && [...only, ...only.flatMap(path => counterpartsOf(path, mirrors))];
+    const all = selectFiles(inScope(filesOf(input.files), reach), input.config);
+    const files = only ? inScope(all, only) : all;
+    const tree = buildTree(all);
+    const context = new FolderContext(input.config, input.rules, tree);
 
-    const findings: Finding[] = [];
+    let findings: Finding[] = [];
     let folderCount = 0;
     const folderStats: FolderStat[] = [];
     for (const entry of tree) {
-        if (only?.every(path => !isInside(entry.path, path))) {
+        if (reach?.every(path => !isInside(entry.path, path))) {
+            continue;
+        }
+        const counted = !only || only.some(path => isInside(entry.path, path));
+        findings.push(...context.check(entry));
+        if (!counted) {
             continue;
         }
         folderCount++;
-        findings.push(...context.check(entry));
         if (input.stats) {
             folderStats.push(context.statsOf(entry));
         }
     }
     findings.push(...context.finish());
+    findings = foldMirrors(findings, context.mirrorTree());
+    if (only) {
+        findings = findings.filter(finding => only.some(path => isInside(finding.folder, path)));
+    }
     // Whether an override matches no folder is a question about the whole tree: a run over some
     // folders cannot answer it.
     if (!only) {
@@ -127,7 +87,7 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
     if (!entry) {
         return undefined;
     }
-    const context = new FolderContext(input.config, input.rules);
+    const context = new FolderContext(input.config, input.rules, tree);
     const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
@@ -179,10 +139,14 @@ class FolderContext {
     private readonly treeProblems: { readonly rule: string; readonly problem: TreeProblem }[] = [];
     /** The folders checked, by path: where a tree rule may report. */
     private readonly visited = new Map<string, FolderEntry>();
+    private readonly tree: readonly FolderEntry[];
+    private folders: Map<string, FolderEntry> | undefined;
+    private paths: Map<string, string> | undefined;
 
-    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
+    constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>, tree: readonly FolderEntry[]) {
         this.config = config;
         this.rules = rules;
+        this.tree = tree;
         this.overrides = config.overrides.map(state => ({
             state,
             globs: state.folders.map(compileGlob),
@@ -321,6 +285,7 @@ class FolderContext {
                 options: this.optionsOf(name, rule, state),
                 report,
                 settingsOf,
+                existing: this.existing,
                 ...(note && { note }),
             });
             const visitor = rule.create ? this.visitorOf(name, rule) : undefined;
@@ -388,6 +353,36 @@ class FolderContext {
         return visitor;
     }
 
+    /**
+     * The file or folder at a path as the tree writes it, compared without case: built the first
+     * time a rule asks, which is when a move is planned.
+     */
+    readonly existing = (path: string): string | undefined => {
+        if (!this.paths) {
+            this.paths = new Map();
+            for (const entry of this.tree) {
+                this.paths.set(caseless(entry.path), entry.path);
+                for (const file of entry.files) {
+                    const full = joinPath(entry.path, file);
+                    this.paths.set(caseless(full), full);
+                }
+            }
+        }
+        return this.paths.get(caseless(path));
+    };
+
+    /** The tree as folding the mirrors reads it. */
+    mirrorTree(): Parameters<typeof foldMirrors>[1] {
+        return {
+            folder: path => {
+                this.folders ??= new Map(this.tree.map(entry => [entry.path, entry]));
+                return this.folders.get(path);
+            },
+            viewOf: entry => this.viewOf(entry, this.settingsFor(entry).naming),
+            existing: this.existing,
+        };
+    }
+
     unusedOverrideFindings(): Finding[] {
         return this.overrides
             .filter(override => override.state.own && !override.used)
@@ -418,14 +413,17 @@ class FolderContext {
             groupNumericPrefixes: state.groupNumericPrefixes,
             folderFiles: Object.freeze(state.folderFiles.map(glob => Object.freeze(compileGlob(glob)))),
             folderCompanions: Object.freeze([...state.folderCompanions]),
+            folderCase: state.folderCase,
+            reservedWords: new ReadOnlySet(state.reservedWords),
+            keepInPlace: Object.freeze(state.keepInPlace.map(glob => Object.freeze(compileGlob(glob)))),
+            routes: state.routes,
+            groupFileStays: state.groupFileStays,
+            mirrors: Object.freeze(parseMirrors(state.mirrors)),
         });
         this.namingCache.set(id, naming);
         return naming;
     }
 }
-
-const LATE_REPORT =
-    'report() was called after check returned (from a timer or a promise), when the run had already counted its findings. Report before returning.';
 
 /** The file paths, read the way the command reads them (`./a`, `a\b`); a path outside the root is an error. */
 function filesOf(paths: readonly string[]): readonly string[] {
@@ -448,25 +446,4 @@ function inScope(files: readonly string[], only: readonly string[] | undefined):
 
 function isInside(folder: string, path: string): boolean {
     return folder === path || folder.startsWith(`${path}/`);
-}
-
-function toFinding(
-    rule: string,
-    severity: 'error' | 'warn',
-    folder: string,
-    problem: Problem,
-    url: string | undefined,
-): Finding {
-    return {
-        rule,
-        severity,
-        folder,
-        message: problem.message,
-        key: problem.key,
-        measured: problem.measured ?? 1,
-        limit: problem.limit,
-        files: (problem.files ?? []).map(name => joinPath(folder, name)).toSorted(compareText),
-        moves: problem.moves ?? [],
-        url,
-    };
 }

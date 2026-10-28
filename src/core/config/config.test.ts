@@ -83,6 +83,12 @@ describe('mergeLayer', () => {
             groupNumericPrefixes: true,
             folderFiles: [],
             folderCompanions: [],
+            folderCase: 'kebab',
+            reservedWords: [],
+            keepInPlace: [],
+            routes: false,
+            groupFileStays: false,
+            mirrors: [],
         });
         assert.equal(merged.suppressions, 'a.json');
         assert.deepEqual(merged.layers, ['preset "x"', 'mine.json']);

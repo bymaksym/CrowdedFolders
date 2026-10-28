@@ -6,6 +6,7 @@ import { type JsonSchema, validate } from '../../config/json-schema.ts';
 import type { Finding } from '../../engine.ts';
 import { formatAzure, formatCheckstyle, formatGithub, formatGitlab, formatJson, formatMarkdown } from '../machine.ts';
 import { prefixGroup, report, tooManyFiles, tooManyFolders, unusedOverride } from '../test-support/fixtures.ts';
+import { commandsOf, formatMovesScript, quotePwsh, quoteSh } from './moves.ts';
 
 const schema = JSON.parse(
     readFileSync(new URL('../../../../report.schema.json', import.meta.url), 'utf8'),
@@ -376,5 +377,32 @@ describe('json', () => {
                 ['.', []],
             ],
         );
+    });
+});
+
+describe('the moves as commands', () => {
+    it('quotes each path for its shell, a quote and a leading "-" included', () => {
+        assert.equal(quoteSh('src/render/json.ts'), 'src/render/json.ts');
+        assert.equal(quoteSh("it's/a b.ts"), String.raw`'it'\''s/a b.ts'`);
+        assert.equal(quoteSh('-x.ts'), './-x.ts');
+        assert.equal(quoteSh('app/(sign)/sign-in.tsx'), "'app/(sign)/sign-in.tsx'");
+        assert.equal(quotePwsh("it's ‘x’.ts"), "'it''s ‘‘x’’.ts'");
+        assert.equal(quotePwsh('a/$HOME/@b.ts'), "'a/$HOME/@b.ts'");
+        assert.equal(quotePwsh('-x.ts'), './-x.ts');
+    });
+
+    it('makes each new folder once, before the moves into it; a rename in place needs none', () => {
+        const moves = [
+            { from: 'cli/render-json.ts', to: 'cli/render/json.ts' },
+            { from: 'cli/__tests__/render-json.test.ts', to: 'cli/render/__tests__/json.test.ts' },
+            { from: 'cli/render-text.ts', to: 'cli/render/text.ts' },
+        ];
+        assert.deepEqual(commandsOf({ directories: ['cli/render', 'cli/render/__tests__'], moves }, 'sh').slice(0, 2), [
+            'mkdir -p cli/render',
+            'mkdir -p cli/render/__tests__',
+        ]);
+        const renames = { ...prefixGroup, moves: [{ from: 'render/render-json.ts', to: 'render/json.ts' }] };
+        assert.equal(formatMovesScript({ findings: [renames] }, 'sh').includes('mkdir'), false);
+        assert.equal(formatMovesScript({ findings: [tooManyFiles] }, 'sh'), '');
     });
 });

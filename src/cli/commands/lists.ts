@@ -115,6 +115,12 @@ export function printConfig(args: Args, io: Io, session: Session): number {
               groupNumericPrefixes: explanation.folder.naming.groupNumericPrefixes,
               folderFiles: explanation.folder.naming.folderFiles?.map(glob => glob.source) ?? [],
               folderCompanions: explanation.folder.naming.folderCompanions ?? [],
+              folderCase: explanation.folder.naming.folderCase ?? 'kebab',
+              reservedWords: [...(explanation.folder.naming.reservedWords ?? [])],
+              keepInPlace: explanation.folder.naming.keepInPlace?.map(glob => glob.source) ?? [],
+              routes: explanation.folder.naming.routes ?? false,
+              groupFileStays: explanation.folder.naming.groupFileStays ?? false,
+              mirrors: explanation.folder.naming.mirrors?.map(mirror => mirror.text) ?? [],
           }
         : config.naming;
     io.write(`${JSON.stringify({ folder, naming, rules, overrides: explanation?.overrides ?? [] }, undefined, 2)}\n`);

@@ -80,6 +80,11 @@ What `report()` gets is checked before it reaches a report, SARIF or an annotati
 text, `measured` and `limit` of at least 0, and `files` and `moves` that are relative paths without
 `..` (`files: ['../../etc/passwd']` stops the run).
 
+A rule that proposes moves can ask `existing(path)` (in the second argument, next to `report`) for
+the file or folder at a path as the tree writes it, compared without case: a move must not land on
+`Text.ts` with `text.ts`, which Windows and macOS take for the same file. `folder.naming` also
+carries what decides a destination: `folderCase`, `reservedWords`, `keepInPlace`, `routes`.
+
 Helpers exported for rules: `splitWords`, `stemOf`, `groupKeyOf`, `modulesOf`.
 
 **A rule must be pure:** no file reads, no network, no state between calls. It sees paths only, the

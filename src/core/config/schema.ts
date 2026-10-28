@@ -51,6 +51,42 @@ const NAMING: JsonSchema = {
                 'Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/.',
             examples: [['.meta']],
         },
+        folderCase: {
+            enum: ['kebab', 'snake', 'camel', 'pascal', 'lower'],
+            description:
+                'How the folder a move proposes is written from the words of its group: "kebab" user-list (default), "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages).',
+        },
+        reservedWords: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description:
+                'Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it.',
+            examples: [['abstract', 'import', 'package']],
+        },
+        keepInPlace: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description:
+                "Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames.",
+            examples: [['application-*.{yml,yaml,properties}'], ['patches']],
+        },
+        routes: {
+            type: 'boolean',
+            description:
+                "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them. Default: false.",
+        },
+        groupFileStays: {
+            type: 'boolean',
+            description:
+                'Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). Default: false: render.ts goes into render/.',
+        },
+        mirrors: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description:
+                'Trees that mirror another one, as "source => mirror", where "**" stands for the part both share: "**/src/main/java/** => **/src/test/java/**". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along.',
+            examples: [['**/src/main/java/** => **/src/test/java/**'], ['lib/** => test/**']],
+        },
     },
 };
 

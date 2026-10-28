@@ -35,6 +35,11 @@ export const angular: Preset = {
     config: {
         extends: ['recommended'],
         exclude: ['.angular', 'src/environments'],
+        rules: {
+            // "Match file names to the TypeScript identifier within": user-profile-avatar.ts holds
+            // UserProfileAvatar, so a move keeps the name.
+            'prefix-groups': ['error', { dropPrefix: false }],
+        },
         overrides: [
             {
                 // Scripts and tooling next to the app are not the app: the guide is about src/.

@@ -18,7 +18,22 @@ export interface NamingConfig {
     readonly folderFiles?: readonly string[];
     /** Endings that make a file go with the sibling folder of that name, uncounted: Unity's `.meta`. */
     readonly folderCompanions?: readonly string[];
+    /** How a folder that a move proposes is written: `user-list` (kebab, the default), `user_list`, `userList`, `UserList`, `userlist`. */
+    readonly folderCase?: FolderCase;
+    /** Words a folder cannot be called in this language (`abstract` in Java, `async` in Python): a move proposes the plural, or no folder. */
+    readonly reservedWords?: readonly string[];
+    /** Globs of paths a move never touches, because a tool reads them by name and place: `application-*.yml`, `patches`. */
+    readonly keepInPlace?: readonly string[];
+    /** Whether a file's path is its address (Expo Router's `app/`): a group moves into a route group, `(sign)/`, keeping its names. */
+    readonly routes?: boolean;
+    /** Whether the module named like a group stays beside its new folder (Rust: `render.rs` next to `render/json.rs`). */
+    readonly groupFileStays?: boolean;
+    /** Trees that mirror another one, as `"source => mirror"`, `**` standing for the part they share: `"src/main/java/** => src/test/java/**"`. */
+    readonly mirrors?: readonly string[];
 }
+
+/** How a folder name is written from its words. */
+export type FolderCase = 'camel' | 'kebab' | 'lower' | 'pascal' | 'snake';
 
 /** Settings for some folders only. Every override says why: it is a silence, and silences carry their reason. */
 export interface OverrideConfig {
@@ -107,6 +122,12 @@ export interface NamingState {
     readonly groupNumericPrefixes: boolean;
     readonly folderFiles: readonly string[];
     readonly folderCompanions: readonly string[];
+    readonly folderCase: FolderCase;
+    readonly reservedWords: readonly string[];
+    readonly keepInPlace: readonly string[];
+    readonly routes: boolean;
+    readonly groupFileStays: boolean;
+    readonly mirrors: readonly string[];
 }
 
 export interface OverrideState {
@@ -141,6 +162,12 @@ export const EMPTY_CONFIG: ResolvedConfig = {
         groupNumericPrefixes: false,
         folderFiles: [],
         folderCompanions: [],
+        folderCase: 'kebab',
+        reservedWords: [],
+        keepInPlace: [],
+        routes: false,
+        groupFileStays: false,
+        mirrors: [],
     },
     rules: {},
     overrides: [],
