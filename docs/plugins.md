@@ -34,7 +34,7 @@ export const noGenericNames = defineRule({
         description: 'Folders are not named after nothing in particular: utils, helpers, common.',
         url: 'https://github.com/acme/crowded-folders-plugin-acme#no-generic-names',
         defaultOptions: { names: ['utils', 'helpers', 'common'] },
-        // JSON Schema of the options: checked when the configuration loads.
+        // JSON Schema of the options: checked when the configuration loads (see "Options" below).
         options: {
             type: 'object',
             additionalProperties: false,
@@ -62,6 +62,10 @@ export const noGenericNames = defineRule({
 `options` are your `defaultOptions`, then what presets and the configuration set, then overrides for
 this folder. Lists accumulate and `"!x"` removes, as everywhere.
 
+`folder` and `options` are frozen, and shared by every rule and every folder in the same state: a rule
+that sorts `folder.files`, pushes to `options.seen` or adds to `naming.ignoreLeadingWords` throws
+instead of changing what the next rule or folder sees.
+
 `report({ … })` takes:
 
 | Field               |                                                                                                                            |
@@ -72,10 +76,71 @@ this folder. Lists accumulate and `"!x"` removes, as everywhere.
 | `files`             | File names in the folder the problem is about; the first is where annotations and SARIF point.                             |
 | `moves`             | `{ from, to }` paths relative to the root, printed by `--moves`. Never applied.                                            |
 
+What `report()` gets is checked before it reaches a report, SARIF or an annotation: a `message` that is
+text, `measured` and `limit` of at least 0, and `files` and `moves` that are relative paths without
+`..` (`files: ['../../etc/passwd']` stops the run).
+
 Helpers exported for rules: `splitWords`, `stemOf`, `groupKeyOf`, `modulesOf`.
 
 **A rule must be pure:** no file reads, no network, no state between calls. It sees paths only, the
 same as the built-in rules, and that is what keeps the tool fast and safe to run on any repository.
+
+**And synchronous:** an `async check` is refused when the plugin loads, and a `check` that returns a
+promise stops the run ("check must be synchronous"): what it reported after the promise settled would
+be lost without a word.
+
+When a rule throws, the run stops with exit code 2 and says whose it is, not that crowded-folders
+broke:
+
+```text
+crowded-folders: acme/no-generic-names failed in src/utils: Cannot read properties of undefined (report it to crowded-folders-plugin-acme)
+```
+
+### Options
+
+`meta.options` is JSON Schema, and the validator checks exactly these keywords: `type`, `enum`,
+`const`, `properties`, `required`, `additionalProperties`, `propertyNames`, `items`,
+`additionalItems`, `minItems`, `maxItems`, `uniqueItems`, `minimum`, `maximum`, `minLength`,
+`pattern`, `anyOf` (plus `title`, `description`, `markdownDescription`, `default`, `examples`,
+`definitions`, `$schema`, `$id`, which describe). A schema with any other — `oneOf`,
+`exclusiveMinimum`, `$ref` — is refused when the plugin loads: the validator would skip it, and any
+value would pass. Your `defaultOptions` must fit your schema too.
+
+### A rule about the tree
+
+`check` sees one folder. A rule that needs the whole tree — how deep it goes, `render.ts` next to a
+`render/` folder — uses `create` instead, as in ESLint: it is called once per run, keeps what it sees
+in its closure, and reports from `done` naming the folder.
+
+```js
+export const maxDepth = defineRule({
+    meta: { description: 'The tree is at most 6 folders deep.', defaultOptions: { max: 6 } },
+    create({ report }) {
+        let deepest;
+        let max = 6;
+        return {
+            folder(folder, { options }) {
+                max = options.max;
+                if (!deepest || folder.depth > deepest.depth) deepest = folder;
+            },
+            done() {
+                if (deepest && deepest.depth > max) {
+                    report({
+                        folder: deepest.path,
+                        message: `${deepest.depth} folders deep.`,
+                        measured: deepest.depth,
+                        limit: max,
+                    });
+                }
+            },
+        };
+    },
+});
+```
+
+`folder(view, context)` gets what `check` gets. A problem from `done` takes the severity the rule has
+in that folder, and nothing where it is off; a folder the run did not look at is an error. A rule has
+one of `check` and `create`, not both. Each run calls `create` again, so nothing is kept between runs.
 
 ## A preset
 
@@ -97,6 +162,37 @@ export const recommended = definePreset({
 in the description — the built-in `strict` does.
 
 ## Testing it
+
+`crowded-folders/testing` has a `RuleTester`, as ESLint does:
+
+```js
+import { describe, it } from 'node:test';
+import { RuleTester } from 'crowded-folders/testing';
+import plugin from './index.js';
+
+RuleTester.describe = describe;
+RuleTester.it = it;
+
+new RuleTester().run('acme/no-generic-names', plugin.rules['no-generic-names'], {
+    valid: [['src/user/a.ts'], { files: ['src/legacy/a.ts'], options: { names: ['misc'] } }],
+    invalid: [
+        {
+            name: 'a utils folder',
+            files: ['src/utils/a.ts', 'src/user/b.ts'],
+            errors: [{ folder: 'src/utils', message: /says nothing/u }],
+        },
+    ],
+});
+```
+
+Each case is a repository as a list of paths, the rule's `options` (checked against its schema), and
+for `invalid` the problems it expects — or how many. Besides what each case expects, it checks what
+every rule must be: a valid rule (meta, one of `check` and `create`, a schema whose every keyword is
+checked), synchronous, and pure — the same case run twice reports the same, and a `check` rule reports
+in a folder what it reports when that folder is checked alone. Without `describe` and `it` set, `run`
+runs every case and throws a `RuleTestError` on the first that fails, in any test runner.
+
+`lint()` works for a test too, when the configuration around the rule matters:
 
 ```js
 import { test } from 'node:test';
@@ -124,8 +220,12 @@ test('reports a utils folder', async () => {
 - **Name:** `crowded-folders-plugin-<name>` or `@scope/crowded-folders-plugin[-<name>]`, with the keyword
   `crowded-folders-plugin` so it can be found.
 - **`peerDependencies`:** `"crowded-folders": "^1.0.0"`, not a dependency: the plugin uses the user's copy.
-- **`exports`:** a `"."` entry with an `import` or `default` condition. The package is resolved from the
-  folder of the configuration that names it, so users install it as a devDependency next to it.
+  It is read when the plugin loads: a plugin whose range does not take the running version is refused
+  with both versions, instead of failing halfway through a run.
+- **`exports`:** a `"."` entry with an `import` or `default` condition; subpath patterns (`"./*"`) work.
+  The package is resolved from the folder of the configuration that names it — its `node_modules`, else
+  Yarn Plug'n'Play, else Node's own resolution from there — so users install it as a devDependency next
+  to it.
 - **Namespace:** lowercase letters, digits and `-`. Two plugins with the same namespace is an error.
 
 ## Security

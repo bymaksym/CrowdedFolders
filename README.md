@@ -14,8 +14,10 @@ Installed in a project (`npm install --save-dev crowded-folders`), the command i
 `crowded-folders`, as in the rest of this page.
 
 No configuration needed to start, no runtime dependencies, any language: TypeScript, Python, Go,
-Rust, Java, C#, Swift, C++, Unity, Unreal, Terraform, documentation sites, notebooks… Node 20.19 or
-later.
+Rust, Java, C#, Swift, C++, Unity, Unreal, Terraform, documentation sites, notebooks… Node
+`^20.19 || ^22.13 || >=24` — ESLint 10's range, and the one CI tests from its floor (20.19) up. Node
+21, 23 and 22.0 to 22.12 are outside it on purpose, so "Node 20 or later" is not quite it
+([decisions.md](docs/decisions.md#node-2019-and-later)).
 
 ```text
 cli/
@@ -153,10 +155,13 @@ export const genericNames = defineRule({
 ```js
 import { lint } from 'crowded-folders';
 
-const { findings } = await lint({ cwd: '/path/to/repo' });
+const { kept, exitCode } = await lint({ cwd: '/path/to/repo', suppressions: true });
 ```
 
-The API, its types and what is stable: [docs/api.md](docs/api.md).
+`lint()` reads the configuration, detects the presets and applies the suppressions as the command does,
+so `exitCode` is what the command would exit with. `createLinter()` loads it once for an editor or a
+hook, `crowded-folders/engine` runs in a browser, and `crowded-folders/testing` has a `RuleTester` for
+plugins: [docs/api.md](docs/api.md).
 
 ## Documentation
 
