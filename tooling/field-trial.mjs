@@ -26,6 +26,7 @@ export const TRIALS = [
     { repo: 'excalidraw/excalidraw', presets: ['react'], kind: 'React app' },
     { repo: 'shadcn-ui/taxonomy', presets: ['nextjs'], kind: 'Next.js app' },
     { repo: 'elk-zone/elk', presets: ['vue'], kind: 'Nuxt app' },
+    { repo: 'gothinkster/angular-realworld-example-app', presets: ['angular'], kind: 'Angular app by feature' },
     { repo: 'sveltejs/kit', presets: ['svelte'], kind: 'SvelteKit' },
     { repo: 'brocoders/nestjs-boilerplate', presets: ['nestjs'], kind: 'NestJS app' },
     // Languages
@@ -36,6 +37,11 @@ export const TRIALS = [
     { repo: 'BurntSushi/ripgrep', presets: ['rust'], kind: 'Rust CLI' },
     { repo: 'tokio-rs/axum', presets: ['rust'], kind: 'Rust library' },
     { repo: 'spring-projects/spring-petclinic', presets: ['java'], kind: 'Spring app' },
+    { repo: 'keycloak/keycloak', presets: ['java'], kind: 'Java server' },
+    { repo: 'spring-projects/spring-boot', presets: ['java'], kind: 'Java framework' },
+    { repo: 'apache/kafka', presets: ['java'], kind: 'Java and Scala platform' },
+    { repo: 'ktorio/ktor', presets: ['java'], kind: 'Kotlin framework' },
+    { repo: 'plausible/analytics', presets: ['elixir'], kind: 'Phoenix app' },
     { repo: 'android/nowinandroid', presets: ['android'], kind: 'Android app' },
     { repo: 'dotnet/eShop', presets: ['dotnet'], kind: '.NET app' },
     { repo: 'jellyfin/jellyfin', presets: ['dotnet'], kind: '.NET server' },
@@ -222,6 +228,24 @@ if (values.docs) {
 }
 
 /**
+ * The paragraph on Java, measured over every trial that uses the java preset: the single repository the
+ * 20 was first measured on (spring-petclinic) was small.
+ *
+ * @param {typeof results} rows
+ */
+function javaParagraph(rows) {
+    const java = rows.filter(row => row.presets.includes('java'));
+    if (java.length < 2) return [];
+    const p95 = java.map(row => row.sizes.modules.p95).toSorted((a, b) => a - b);
+    return [
+        `**Java.** The limit of 20 modules was first measured on one small repository. Over the ${java.length} Java and Kotlin`,
+        `repositories below (${java.map(row => row.repo.split('/', 2)[1]).join(', ')}) the 95th percentile is ${p95[0]} to ${p95.at(-1)} modules`,
+        `per folder, median ${percentile(p95, 50)}: it stays at 20, and the large ones (keycloak, kafka) are the case for suppressions.`,
+        '',
+    ];
+}
+
+/**
  * The page that says where the numbers of the presets come from.
  *
  * @param {typeof results} rows
@@ -249,6 +273,7 @@ function fieldTrialPage(rows) {
         '(ripgrep, httpx, axum). Projects that keep large flat folders on purpose (git, redis, the Godot engine)',
         'show up as many problems, which is what suppressions are for.',
         '',
+        ...javaParagraph(rows),
         '| Repository | Kind | Presets | Folders | Modules p50/p90/p95/p99 | Largest | recommended | With its presets |',
         '| --- | --- | --- | ---: | --- | ---: | --- | --- |',
     ];
@@ -276,6 +301,15 @@ function fieldTrialPage(rows) {
         '- **Accessor and predicate words do not make groups**: `GetAlbumController`, `IsPlayedComparer` and',
         '  `HasSeries` are not about "get", "is" or "has".',
         '- **Limits count modules, not files**, so an Angular component (four files) weighs what a Go file does.',
+        '- **What a build writes is left out next to the manifest that owns it, not at any depth.** `build`,',
+        '  `target`, `vendor`, `generated` and `migrate` are also names of Java packages and Go commands',
+        '  (`com/acme/build`, `cmd/migrate`), which were never checked.',
+        '- **Migrations are recognised by the shape of their name** (Flyway `V1_2__init.sql` and `R__views.sql`,',
+        '  golang-migrate `000001_x.up.sql`, TypeORM `1612345678901-CreateUsers.ts`), wherever they are kept.',
+        '- **The root of a package is a root**: a folder with a package.json, project.json, go.mod, Cargo.toml',
+        '  or BUILD.bazel has the 40 of the root of the repository for its tool configuration.',
+        "- **Angular has recommended's 20**, and the 10 of the former guide only under `features/`: with 10 the",
+        '  Angular library angular/components had 59 errors, with 20 it has 11.',
         '',
         'To repeat it: `pnpm run build && node tooling/field-trial.mjs --docs`.',
     );

@@ -134,8 +134,8 @@ export const recommended: Preset = {
             groupNumericPrefixes: false,
         },
         rules: {
-            // 20 modules is about the 95th percentile of folder sizes measured over 30 repositories of
-            // every ecosystem (docs/presets.md): it flags the biggest folder in twenty.
+            // 20 modules is about the median 95th percentile of folder sizes (19) measured over 36 repositories
+            // of every ecosystem (docs/field-trial.md): it flags the biggest folder in twenty.
             'max-files': ['error', { max: 20, count: 'modules', dotfiles: false }],
             // Words that say nothing about what a file is about are not groups: test markers, and
             // the accessors and predicates of every language (GetAlbum, IsPlayed, HasSeries).

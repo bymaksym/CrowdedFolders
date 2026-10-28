@@ -53,8 +53,8 @@ Names are read in every convention — `user-service`, `user_service`, `userServ
 `HTTPServer` — so `UserService.java`, `user_service.py` and `user-service.ts` all start with `user`.
 How, and why each choice: [docs/how-it-works.md](docs/how-it-works.md).
 
-The limits are not guesses: 20 modules is the median 95th percentile of folder sizes measured over 30
-real repositories of every ecosystem ([docs/field-trial.md](docs/field-trial.md)). It flags about the
+The limits are not guesses: 20 modules is about the median 95th percentile of folder sizes (19) measured
+over 36 real repositories of every ecosystem ([docs/field-trial.md](docs/field-trial.md)). It flags about the
 biggest folder in twenty, and nothing at all in small, tidy projects.
 
 ## Presets: the standard of each ecosystem
@@ -170,7 +170,7 @@ The API, its types and what is stable: [docs/api.md](docs/api.md).
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
 | [how-it-works.md](docs/how-it-works.md)   | How names are read, and why.                                       |
-| [field-trial.md](docs/field-trial.md)     | The 30 repositories the limits were measured on.                   |
+| [field-trial.md](docs/field-trial.md)     | The 36 repositories the limits were measured on.                   |
 | [decisions.md](docs/decisions.md)         | Why it is built the way it is, and what was discarded.             |
 
 ## Community

@@ -7,8 +7,8 @@ win, and each is applied once. `crowded-folders init` proposes the ones that fit
 `crowded-folders presets` lists them in the terminal.
 
 Where a guide gives a number, the preset uses it and quotes it. Where none does — most of them — the
-limits are the ones measured over 30 real repositories ([field-trial.md](field-trial.md)): 20 modules is
-about the 95th percentile of folder sizes, the biggest folder in twenty.
+limits are the ones measured over 36 real repositories ([field-trial.md](field-trial.md)): 20 modules is
+about the median 95th percentile of folder sizes (19), the biggest folder in twenty.
 
 | Preset | Proposed by `init` |
 | --- | --- |
