@@ -18,13 +18,19 @@ What `.gitattributes` marks `linguist-generated` or `linguist-vendored` is left 
 **Why:** `.gitignore` and `.gitattributes` already say what is generated; a second implementation would
 be a second answer.
 `--stdin` lets the field trial check thirty repositories without downloading their contents.
-**Discarded:** reimplementing `.gitignore`.
+A git that fails inside a repository is an error, never a quiet fall back to the disk.
+**Discarded:** reimplementing `.gitignore` as the source of the list. Without git (`--no-git`, or no
+repository), a small matcher reads the `.gitignore` files, because walking the disk without them
+counts `build/` and is a worse answer than an approximate one; with git, git answers.
 
 ## The root is never the current folder
 
-**Decided:** the root is the configuration's folder, else the top of the git repository.
+**Decided:** the root is the configuration's folder, else the top of the git repository. With
+`--root`, the configuration is looked for from the root, and its patterns keep starting at its own
+folder. Paths on the command line start from the current folder, as in most commands.
 **Why:** the same command typed from a sub-folder must check the same thing. A tool whose answer
-depends on where it was typed gives two answers.
+depends on where it was typed gives two answers; a pattern that means another folder depending on
+`--root` gives two answers too.
 
 ## Modules, not files
 

@@ -1,3 +1,5 @@
+import { FileListError } from '../core/paths/input.ts';
+import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { parseCommandLine, UsageError } from './args.ts';
 import { check } from './commands/check.ts';
@@ -28,6 +30,10 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             return listRules(io);
         }
         const session = await openSession(args, io);
+        for (const notice of session.notices) {
+            io.error(`crowded-folders: ${notice}
+`);
+        }
         switch (args.command) {
             case 'init': {
                 return await init(args, io, session);
@@ -47,7 +53,7 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             io.error(`crowded-folders: ${error.message}\nRun crowded-folders --help for the options.\n`);
             return 2;
         }
-        if (error instanceof ConfigError) {
+        if (error instanceof ConfigError || error instanceof GitError || error instanceof FileListError) {
             io.error(`crowded-folders: ${error.message}\n`);
             return 2;
         }

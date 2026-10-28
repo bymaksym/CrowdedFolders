@@ -1,7 +1,14 @@
 # In CI and in hooks
 
 crowded-folders reads file names only and has no dependencies, so it runs anywhere Node 20.19+ runs,
-in half a second on a repository of 14,000 files (the Godot engine, measured).
+in half a second on a repository of 14,000 files (the Godot engine, measured on Linux). On Windows,
+where starting Node and git costs more, a run takes about 0.4 s on this repository (150 files) and 0.6 s
+on one of 2,400 files: one `git ls-files` instead of four calls took about 0.1 s off each (median of 21
+and 15 runs, measured alternating with the version before).
+
+On CI (`CI` set), the run fails with exit code 2 when git cannot list the files, instead of reading the
+disk: pass `--no-git` for a checkout without `.git`. `--output` will not write over a file git tracks
+unless `--force` is given.
 
 **Pin an exact version.** Only a major version finds more than the one before (a new preset, a lower
 limit: [decisions.md](decisions.md#what-a-version-promises)), but a pinned run is one you can repeat. The

@@ -14,20 +14,26 @@ Usage
   crowded-folders rules                        list the rules and their options
   crowded-folders print-config [folder]        print the configuration in effect
 
-Where it looks
-  -c, --config <file>        the configuration (default: found from here upwards, up to the
-                             top of the git repository)
+Where it looks (paths given to options start from the current folder)
+  -c, --config <file>        the configuration (default: found from the root given with --root,
+                             else from here, upwards to the top of the git repository)
       --root <dir>           the folder to check (default: the configuration's folder, else the
-                             top of the git repository, else the current folder)
+                             top of the git repository, else the current folder). Inside the
+                             configuration's folder, its patterns still start where it is
   -p, --preset <name>        use a preset; repeatable. Without a configuration file the presets
                              are detected from the repository (init writes them down)
-      --stdin                read the file list from standard input, one path per line
+      --stdin                read the file list from standard input, one path per line, from
+                             the root or from the current folder as git prints them
                              (e.g. git ls-tree -r --name-only HEAD | crowded-folders --stdin)
-      --no-git               list files from the disk instead of asking git (.gitignore is not read)
+      --no-git               list files from the disk instead of asking git (.gitignore files
+                             are read; .gitattributes is not)
+      --require-git          fail instead of reading the disk when git cannot list the files
+                             (default when CI is set; inside a repository a failing git always fails)
 
 What it prints
   -f, --format <format>      text (default), json, sarif, github (annotations), markdown
-  -o, --output <file>        write the report to a file instead of standard output
+  -o, --output <file>        write the report to a file instead of standard output (never over
+                             a file git tracks without --force)
   -q, --quiet                report errors only
       --moves                print a git mv for every file a problem suggests moving
       --color, --no-color    force colours on or off (default: on in a terminal; NO_COLOR and
@@ -45,7 +51,8 @@ Adopting it in a repository that already has problems
                                      at the root, or "suppressions" in the configuration)
 
 Other
-      --force                init: overwrite an existing configuration
+      --force                init: overwrite an existing configuration; --output: write over a
+                             file git tracks, or over the configuration
   -h, --help                 this help
   -v, --version              the version
 

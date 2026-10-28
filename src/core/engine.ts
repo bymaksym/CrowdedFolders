@@ -2,6 +2,7 @@ import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
 import { compareText, modulesOf, type Naming } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
+import { FileListError, normaliseFileList } from './paths/input.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
 import type { FolderView, Move, Problem, Rule } from './rules/rule.ts';
 
@@ -28,7 +29,10 @@ export interface EngineInput {
     readonly config: ResolvedConfig;
     /** Every rule that can be named: built-in and from plugins. */
     readonly rules: Readonly<Record<string, Rule>>;
-    /** When given, only folders equal to or under these are reported (their siblings are still counted). */
+    /**
+     * When given, only folders equal to or under these are checked and counted; the files elsewhere are
+     * left out before the tree is built, so one folder of a large repository is quick to check.
+     */
     readonly only?: readonly string[];
 }
 
@@ -48,38 +52,45 @@ export interface FolderExplanation {
     readonly findings: readonly Finding[];
 }
 
-/** Filters the files by `include` and `exclude`. */
+/**
+ * Filters the files by `include` and `exclude`. Both match a path or any folder above it:
+ * `include: ["src"]` takes `src/a.ts`, as `exclude: ["src"]` would leave it out.
+ */
 export function selectFiles(files: readonly string[], config: Pick<ResolvedConfig, 'exclude' | 'include'>): string[] {
     const include = config.include.map(compileGlob);
     const exclude = config.exclude.map(compileGlob);
     return files.filter(
-        file =>
-            (include.length === 0 || include.some(glob => glob.test(file))) && !matchesSelfOrAncestor(file, exclude),
+        file => (include.length === 0 || matchesSelfOrAncestor(file, include)) && !matchesSelfOrAncestor(file, exclude),
     );
 }
 
-/** Runs every rule that is on over every folder. */
+/** Runs every rule that is on over every folder (or every folder under `only`). */
 export function runEngine(input: EngineInput): EngineResult {
-    const files = selectFiles(input.files, input.config);
+    const only = scopeOf(input.only);
+    const files = selectFiles(inScope(filesOf(input.files), only), input.config);
     const tree = buildTree(files);
     const context = new FolderContext(input.config, input.rules);
-    const only = input.only?.map(path => (path === '' ? '.' : path));
 
     const findings: Finding[] = [];
+    let folderCount = 0;
     for (const entry of tree) {
-        if (only?.every(path => !(path === '.' || entry.path === path || entry.path.startsWith(`${path}/`)))) {
-            context.markOverridesUsed(entry.path);
+        if (only?.every(path => !isInside(entry.path, path))) {
             continue;
         }
+        folderCount++;
         findings.push(...context.check(entry));
     }
-    findings.push(...context.unusedOverrideFindings());
-    return { findings: sortFindings(findings), folderCount: tree.length, fileCount: files.length };
+    // Whether an override matches no folder is a question about the whole tree: a run over some
+    // folders cannot answer it.
+    if (!only) {
+        findings.push(...context.unusedOverrideFindings());
+    }
+    return { findings: sortFindings(findings), folderCount, fileCount: files.length };
 }
 
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
 export function explainFolder(input: EngineInput, path: string): FolderExplanation | undefined {
-    const tree = buildTree(selectFiles(input.files, input.config));
+    const tree = buildTree(selectFiles(inScope(filesOf(input.files), scopeOf([path])), input.config));
     const entry = tree.find(candidate => candidate.path === path);
     if (!entry) {
         return undefined;
@@ -148,10 +159,6 @@ class FolderContext {
         return { naming, rules, overrides: applied };
     }
 
-    markOverridesUsed(path: string): void {
-        this.settingsFor(path);
-    }
-
     viewOf(entry: FolderEntry, state: NamingState): FolderView {
         const naming = this.compileNaming(state);
         return { ...entry, naming, modules: modulesOf(entry.files, naming) };
@@ -212,6 +219,29 @@ class FolderContext {
         this.namingCache.set(id, naming);
         return naming;
     }
+}
+
+/** The file paths, read the way the command reads them (`./a`, `a\b`); a path outside the root is an error. */
+function filesOf(paths: readonly string[]): readonly string[] {
+    const { files, problems } = normaliseFileList(paths);
+    if (problems.length > 0) {
+        throw new FileListError(problems);
+    }
+    return files;
+}
+
+/** The folders of `only`, or `undefined` when they cover the whole tree. */
+function scopeOf(only: readonly string[] | undefined): string[] | undefined {
+    const folders = only?.map(path => (path === '' ? '.' : path));
+    return folders === undefined || folders.includes('.') ? undefined : folders;
+}
+
+function inScope(files: readonly string[], only: readonly string[] | undefined): readonly string[] {
+    return only ? files.filter(file => only.some(path => file.startsWith(`${path}/`))) : files;
+}
+
+function isInside(folder: string, path: string): boolean {
+    return folder === path || folder.startsWith(`${path}/`);
 }
 
 function toFinding(

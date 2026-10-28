@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 import { parseJsonc } from '../../core/config/jsonc.ts';
 import { runEngine } from '../../core/engine.ts';
@@ -17,14 +16,15 @@ import {
 } from '../../core/suppressions.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, wantsColor, writeFileAtomic } from '../io.ts';
-import { foldersFromPaths, type Session } from '../session.ts';
+import { foldersFromPaths, noticeIfOutside, outputPathOf, type Session, suppressionsPathOf } from '../session.ts';
 import { TOOL } from '../tool.ts';
 
 export const DEFAULT_SUPPRESSIONS = 'crowded-folders-suppressions.json';
 
 /** The default command: checks the repository and prints the report. Returns the exit code. */
 export function check(args: Args, io: Io, session: Session): number {
-    const only = args.paths.length > 0 ? foldersFromPaths(args.paths, session, io.cwd) : undefined;
+    const only = args.paths.length > 0 ? foldersFromPaths(args.paths, session, io.cwd) : session.only;
+    const outputPath = outputPathOf(args, session);
     const result = runEngine({
         files: session.files,
         config: session.loaded.config,
@@ -32,10 +32,7 @@ export function check(args: Args, io: Io, session: Session): number {
         ...(only && { only }),
     });
 
-    const suppressionsPath = resolve(
-        session.root,
-        args.suppressionsLocation ?? session.loaded.config.suppressions ?? DEFAULT_SUPPRESSIONS,
-    );
+    const suppressionsPath = suppressionsPathOf(args, session, DEFAULT_SUPPRESSIONS);
     let suppressions = readSuppressions(suppressionsPath);
     if (args.suppressAll || args.suppressRules.length > 0) {
         const unknown = args.suppressRules.filter(rule => session.loaded.rules[rule] === undefined);
@@ -48,10 +45,12 @@ export function check(args: Args, io: Io, session: Session): number {
             args.suppressAll ? undefined : args.suppressRules,
         );
         writeFileAtomic(suppressionsPath, serialiseSuppressions(suppressions));
+        noticeIfOutside(io, session, suppressionsPath);
     }
     if (args.pruneSuppressions) {
         suppressions = pruneSuppressions(suppressions, result.findings);
         writeFileAtomic(suppressionsPath, serialiseSuppressions(suppressions));
+        noticeIfOutside(io, session, suppressionsPath);
     }
     const outcome = applySuppressions(result.findings, suppressions);
     const findings = args.quiet ? outcome.kept.filter(finding => finding.severity === 'error') : outcome.kept;
@@ -72,12 +71,13 @@ export function check(args: Args, io: Io, session: Session): number {
             })),
     };
 
-    const isColor = args.output === undefined && wantsColor(args.color, io);
+    const isColor = outputPath === undefined && wantsColor(args.color, io);
     const output = render(report, args, isColor);
-    if (args.output === undefined) {
+    if (outputPath === undefined) {
         io.write(output);
     } else {
-        writeFileAtomic(resolve(io.cwd, args.output), output);
+        writeFileAtomic(outputPath, output);
+        noticeIfOutside(io, session, outputPath);
     }
     if (session.detected && args.format === 'text' && args.output === undefined) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');

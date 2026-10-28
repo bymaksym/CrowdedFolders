@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { basename, dirname, extname, join } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 
 import { isObject } from '../core/config/json-schema.ts';
 import { parseJsonc } from '../core/config/jsonc.ts';
@@ -73,6 +73,59 @@ export async function readConfigFile(path: string): Promise<unknown> {
     }
     const value = await importDefault(path);
     return typeof value === 'function' ? await (value as () => unknown)() : value;
+}
+
+/** Where a run reads from: the configuration, the folder checked, and the folder its paths start from. */
+export interface Locations {
+    readonly configPath: string | undefined;
+    /** The folder whose files are listed and checked. */
+    readonly root: string;
+    /**
+     * The folder the paths of the configuration and of the report start from: the configuration's
+     * folder when the root is inside it (`--root android` under a configuration that says `/android`),
+     * else the root.
+     */
+    readonly base: string;
+    /** The root seen from the base, `/`-separated: `.` when they are the same folder. */
+    readonly scope: string;
+}
+
+/**
+ * Works out where a run reads from, the same way for the command and for `lint()`. The configuration
+ * is looked for from the root when one is given, else from `cwd`: `--root ../other` reads other's
+ * configuration and loads other's plugins, never the ones of the folder the command was typed in.
+ * The root defaults to the configuration's folder, else the top of the git repository, else `cwd`.
+ *
+ * Every folder is its real path (`realpathSync.native`), so that a Windows short name
+ * (`MAKSYM~1.OST`), a different case of a drive letter or macOS's `/var` → `/private/var` is the same
+ * folder as its long form, and relative paths between them do not climb out with `..`.
+ */
+export function locate(options: {
+    readonly cwd: string;
+    /** An absolute path that exists. */
+    readonly configPath?: string | undefined;
+    /** An absolute path that exists. */
+    readonly root?: string | undefined;
+}): Locations {
+    const cwd = realPath(options.cwd);
+    const given = options.root === undefined ? undefined : realPath(options.root);
+    const configPath = options.configPath === undefined ? findConfig(given ?? cwd)?.path : realPath(options.configPath);
+    const projectDir = configPath === undefined ? undefined : projectDirOf(configPath);
+    const root = given ?? projectDir ?? gitRootOf(cwd) ?? cwd;
+    const inside = projectDir === undefined ? undefined : relative(projectDir, root);
+    if (projectDir === undefined || inside === undefined || inside.startsWith('..') || isAbsolute(inside)) {
+        return { configPath, root, base: root, scope: '.' };
+    }
+    return { configPath, root, base: projectDir, scope: inside === '' ? '.' : inside.replaceAll('\\', '/') };
+}
+
+/** The real path of something that exists (the long, correctly cased form); the path itself otherwise. */
+export function realPath(path: string): string {
+    try {
+        return realpathSync.native(path);
+    } catch {
+        return path;
+    }
 }
 
 /**

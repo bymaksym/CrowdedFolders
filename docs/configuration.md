@@ -15,8 +15,8 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | `$schema` | string | This schema, for editors. |
 | `extends` | see below[] | Presets and configurations applied before this one, in order; later ones win. |
 | `plugins` | string[] | Packages or files whose default export is a plugin: more rules and presets. |
-| `include` | string[] | Globs of the files looked at. Default: every file git knows about, or every file under the root without git. |
-| `exclude` | string[] | Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth. |
+| `include` | string[] | Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git. |
+| `exclude` | string[] | Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth; "!x" removes an inherited x, and brings no file back. |
 | `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
 | `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
 | `overrides` | object[] | Settings for some folders only. Every override says why. |

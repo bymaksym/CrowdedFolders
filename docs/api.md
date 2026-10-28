@@ -17,13 +17,18 @@ else under `dist/` can be imported (`exports` closes it), so nothing else is par
 Checks a repository the way the command does and returns the findings, without printing or writing
 anything. Suppressions are not applied: they are the command's business.
 
-| Option   | Default                                                                    |                                                                                  |
-| -------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `cwd`    | `process.cwd()`                                                            | Where to look for the configuration and the repository.                          |
-| `config` | found from `cwd` upwards                                                   | A configuration object, or the path of a configuration file.                     |
-| `root`   | the configuration's folder, else the top of the git repository, else `cwd` | The folder checked.                                                              |
-| `files`  | asked to git, or read from the disk                                        | Paths relative to the root. Pass them to check a list without touching the disk. |
-| `rules`  | `{}`                                                                       | Extra rules by full name, as a plugin would add them (handy for testing a rule). |
+| Option   | Default                                                                    |                                                                                     |
+| -------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `cwd`    | `process.cwd()`                                                            | Where relative paths start, and where to look for the configuration without `root`. |
+| `config` | found from `root`, else from `cwd`, upwards                                | A configuration object, or the path of a configuration file.                        |
+| `root`   | the configuration's folder, else the top of the git repository, else `cwd` | The folder checked.                                                                 |
+| `files`  | asked to git, or read from the disk                                        | Paths relative to the root. Pass them to check a list without touching the disk.    |
+
+`files` are read the way the command reads them: `./a.ts` and `a\b.ts` are `a.ts` and `a/b.ts`, an
+absolute path under the root is made relative to it, and a path outside the root (`../x`, `/src/a.ts`)
+throws a `FileListError` listing each one. `runEngine` reads its `files` the same way. Inside a git
+repository whose git fails, `lint()` throws a `GitError` instead of reading the disk.
+| `rules` | `{}` | Extra rules by full name, as a plugin would add them (handy for testing a rule). |
 
 Returns `{ findings, folderCount, fileCount, root }`. A `Finding` is:
 

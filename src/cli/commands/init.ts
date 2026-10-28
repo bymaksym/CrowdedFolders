@@ -22,12 +22,12 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     // Never over a package.json that holds the configuration under a key: that file is not ours.
     const isReuse =
         existing !== undefined && existing.path.endsWith('.json') && basename(existing.path) !== 'package.json';
-    const path = isReuse ? existing.path : join(session.root, CONFIG_NAMES[0]);
+    const path = isReuse ? existing.path : join(session.base, CONFIG_NAMES[0]);
 
     const detections: Detection[] =
         args.presets.length > 0
             ? args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }))
-            : detectPresets(session.files, dependenciesOf(session.root, session.files), BUILT_IN_PRESETS);
+            : detectPresets(session.files, dependenciesOf(session.base, session.files), BUILT_IN_PRESETS);
     const presets = [...new Set(detections.map(detection => detection.preset))];
     // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
     // written down so that they can be read and changed.
@@ -35,7 +35,7 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     const config = { $schema: SCHEMA_URL, extends: presets, ...(exclude.length > 0 && { exclude }) };
     writeFileAtomic(path, `${JSON.stringify(config, undefined, 4)}\n`);
 
-    const loaded = await loadConfig(config, path, session.root);
+    const loaded = await loadConfig(config, path, session.base);
     const result = runEngine({ files: session.files, config: loaded.config, rules: loaded.rules });
     const errors = result.findings.filter(finding => finding.severity === 'error').length;
 

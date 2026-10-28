@@ -20,7 +20,15 @@ Two of them in the same folder is an error: one would be read and the other igno
 
 **The root** — the folder whose files are checked — is the folder of the configuration (the folder
 above `.config/`), not the folder the command was typed in. Without a configuration it is the top of
-the git repository. `--root` sets it.
+the git repository. `--root` sets it, and the configuration is then looked for from there: `--root
+../other` reads other's configuration and plugins. When the root is inside the configuration's folder
+(`--root android` under a configuration in the folder above), the configuration's patterns still start
+at its own folder, `/android` keeps meaning that folder, and the report names folders from there too.
+A run with `--root` says which configuration and root it used.
+
+Paths given to options (`--config`, `--root`, `--output`, `--suppressions-location`) and folders given
+as arguments start from the current folder, as in most commands. `suppressions` in the configuration
+starts from the configuration's folder.
 
 ## Starting from presets
 
@@ -110,10 +118,16 @@ so.
 | `/data`       | only the `data` at the root                                                 |
 | `src/*.ts`    | `.ts` files directly in `src`                                               |
 | `src/**/test` | `src/test`, `src/a/test`, `src/a/b/test`                                    |
+| `src/app/**`  | `src/app` and everything under it, as minimatch reads it                    |
 | `*.{png,svg}` | either extension                                                            |
 | `[!_]*`       | names not starting with `_`                                                 |
 
-`exclude` matches a path or any folder above it: excluding `fixtures` leaves out everything inside.
+`exclude` and `include` match a path or any folder above it: excluding `fixtures` leaves out
+everything inside, and `"include": ["src"]` takes everything under `src`. An `include` that takes no
+file is an error, and an entry of your `exclude` or `include` that matches no file is a warning.
+
+`"!x"` in `exclude` takes out an `x` inherited from a preset; it is not a gitignore negation and brings
+no file back. One that removes nothing is a warning.
 
 ## Naming: telling the tool how your files are named
 

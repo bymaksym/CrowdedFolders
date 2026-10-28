@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
-import { defineRule, lint } from './index.ts';
+import { defineRule, FileListError, lint } from './index.ts';
 
 describe('lint()', () => {
     it('checks a list of files with a configuration object, the way docs/plugins.md tests a plugin', async () => {
@@ -40,5 +40,22 @@ describe('lint()', () => {
             ['render'],
         );
         assert.equal(result.fileCount, 5);
+    });
+
+    it('reads files the way the command does (./src made a folder "./src", src\\a.ts went to the root)', async () => {
+        const files = [
+            './cli/render-json.ts',
+            String.raw`cli\render-text.ts`,
+            'cli/render-pr.ts',
+            'cli/render-sarif.ts',
+            'cli/main.ts',
+        ];
+        const result = await lint({ cwd: tmpdir(), root: tmpdir(), files });
+        assert.deepEqual(
+            result.findings.map(finding => `${finding.folder} ${finding.key ?? ''}`),
+            ['cli render'],
+        );
+        await assert.rejects(lint({ cwd: tmpdir(), root: tmpdir(), files: ['../outside/a.ts'] }), FileListError);
+        await assert.rejects(lint({ cwd: tmpdir(), root: tmpdir(), files: ['/src/a.ts'] }), FileListError);
     });
 });

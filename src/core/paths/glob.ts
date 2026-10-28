@@ -5,6 +5,7 @@
  * | -------- | ---------------------------------------------- |
  * | `*`      | anything inside one segment                    |
  * | `**`     | any number of segments, none included          |
+ * | `x/**`   | `x` and everything under it                    |
  * | `?`      | one character that is not `/`                  |
  * | `{a,b}`  | either alternative                             |
  * | `[abc]`  | one of the characters (`[!abc]` negates)       |
@@ -22,29 +23,29 @@ export function compileGlob(pattern: string): Glob {
     const isRooted = pattern.startsWith('/') || pattern.startsWith('./');
     const trimmed = trimSlashes(pattern.startsWith('./') ? pattern.slice(2) : pattern);
     const anchored = isRooted || trimmed.includes('/') ? trimmed : `**/${trimmed}`;
-    const expression = new RegExp(`^${translate(anchored)}$`, 'u');
+    // A final `/**` takes the folder itself too, as minimatch and picomatch read it: `src/generated/**`
+    // leaves out `src/generated`, not only what is inside it.
+    const source = anchored.endsWith('/**') ? `${translate(anchored.slice(0, -3))}(?:/.*)?` : translate(anchored);
+    const expression = new RegExp(`^${source}$`, 'u');
     return { source: pattern, test: path => expression.test(path) };
 }
 
 /**
  * Whether a path, or any folder above it, matches one of the globs: excluding `fixtures` excludes
- * `fixtures/vite/dist/main.js`.
+ * `fixtures/vite/dist/main.js`. The folders are tried from the top down, so a path inside an
+ * excluded folder stops at that folder instead of testing every one below it first.
  */
 export function matchesSelfOrAncestor(path: string, globs: readonly Glob[]): boolean {
     if (globs.length === 0) {
         return false;
     }
-    let current = path;
-    for (;;) {
-        if (globs.some(glob => glob.test(current))) {
+    for (let slash = path.indexOf('/'); slash !== -1; slash = path.indexOf('/', slash + 1)) {
+        const folder = path.slice(0, slash);
+        if (globs.some(glob => glob.test(folder))) {
             return true;
         }
-        const slash = current.lastIndexOf('/');
-        if (slash === -1) {
-            return false;
-        }
-        current = current.slice(0, slash);
     }
+    return globs.some(glob => glob.test(path));
 }
 
 /** Whether a pattern is one `compileGlob` can read; the message says why not. */
