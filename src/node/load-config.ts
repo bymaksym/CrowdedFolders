@@ -13,13 +13,15 @@ import {
     type RuleSetting,
 } from '../core/config/types.ts';
 import { ConfigError, validateConfig } from '../core/config/validate.ts';
+import { selectFiles } from '../core/engine.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 import { BUILT_IN_RULES } from '../core/rules/index.ts';
 import type { Rule } from '../core/rules/rule.ts';
-import { isCode, projectDirOf, readConfigFile } from './config-file.ts';
+import { isCode, type NestedConfig, projectDirOf, readConfigFile } from './config-file.ts';
 import { didYouMean, loadPlugin, resolveExtends } from './plugins.ts';
 
 export { ConfigError } from '../core/config/validate.ts';
+export type { NestedConfig } from './config-file.ts';
 export { pluginProblem } from './plugins.ts';
 
 export interface LoadedConfig {
@@ -33,13 +35,6 @@ export interface LoadedConfig {
     readonly warnings: readonly string[];
     /** The `include` and `exclude` of the configuration itself (not what it extends), to say which match no file. */
     readonly own: { readonly origin: string; readonly include: readonly string[]; readonly exclude: readonly string[] };
-}
-
-/** The configuration of a package below the run's base: applied to its folder with `"root": false`. */
-export interface NestedConfig {
-    readonly path: string;
-    /** Its folder (the one above `.config/`), from the base, `/`-separated. */
-    readonly folder: string;
 }
 
 export interface LoadOptions {
@@ -166,6 +161,10 @@ class Loader {
     /** The package configurations below the base: applied to their folder with `"root": false`, else said not to be read. */
     async applyNested(nested: readonly NestedConfig[]): Promise<void> {
         for (const { path, folder } of nested) {
+            // One in a folder the configuration leaves out (test fixtures, an example) is not the repository's.
+            if (selectFiles([relative(this.base, path).split(sep).join('/')], this.state).length === 0) {
+                continue;
+            }
             if (!this.code && isCode(path)) {
                 this.warnings.push(
                     `${path} is JavaScript and --no-code reads only JSON: it is not applied to ${folder}.`,

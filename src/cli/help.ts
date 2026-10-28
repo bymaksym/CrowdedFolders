@@ -72,8 +72,18 @@ Only what a change touched
                              (GITHUB_BASE_REF, CI_MERGE_REQUEST_TARGET_BRANCH_NAME, …); outside a
                              pull request, everything is checked
 
+Configuration and monorepos
+  crowded-folders overrides [options]  list every override: what it covers, what it silences,
+                             and the ones that cover more than a quarter of the folders
+      --project <dir>        check only <dir>, with the root, configuration and suppressions of its
+                             repository (for the per-package tasks of Nx or Turbo)
+      --no-detect            without a configuration, use only the presets given with --preset
+                             (by default --preset adds to what is detected)
+      --no-code              read only JSON configurations: no JavaScript configuration, package
+                             or plugin runs (for checking a repository you do not trust)
+
 Other
-      --force                init: overwrite an existing configuration; a report: write over a
+      --force               init: overwrite an existing configuration; a report: write over a
                              file git tracks, or over the configuration; with CI set, let
                              --suppress-all and --prune-suppressions write the suppressions file
   -h, --help                 this help

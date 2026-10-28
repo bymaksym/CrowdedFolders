@@ -1,6 +1,6 @@
 import { parseArgs } from 'node:util';
 
-export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config'] as const;
+export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config', 'overrides'] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export const FORMATS = [
@@ -30,7 +30,13 @@ export interface Args {
     readonly paths: readonly string[];
     readonly config: string | undefined;
     readonly root: string | undefined;
+    /** `--project <dir>`: check only this folder, with the repository's configuration and suppressions. */
+    readonly project: string | undefined;
     readonly presets: readonly string[];
+    /** `--no-detect`: without a configuration, use only the presets given with `--preset`. */
+    readonly detect: boolean;
+    /** `--no-code`: read only JSON configurations; no JavaScript configuration or plugin runs. */
+    readonly code: boolean;
     /** The first of `outputs`: what `--format` and `--output` said when there is one report. */
     readonly format: Format;
     readonly output: string | undefined;
@@ -86,7 +92,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
             options: {
                 config: { type: 'string', short: 'c' },
                 root: { type: 'string' },
+                project: { type: 'string' },
                 preset: { type: 'string', short: 'p', multiple: true },
+                'no-detect': { type: 'boolean' },
+                'no-code': { type: 'boolean' },
                 format: { type: 'string', short: 'f', multiple: true },
                 output: { type: 'string', short: 'o' },
                 'max-findings': { type: 'string' },
@@ -182,8 +191,19 @@ export function parseCommandLine(argv: readonly string[]): Args {
     if (command === 'explain' && paths.length !== 1 && !values.help) {
         throw new UsageError('explain takes one folder: crowded-folders explain src/components');
     }
-    if ((command === 'presets' || command === 'rules') && paths.length > 0) {
+    if ((['presets', 'rules', 'overrides'] as readonly string[]).includes(command) && paths.length > 0) {
         throw new UsageError(`${command} takes no paths`);
+    }
+    if (values.project !== undefined && values.root !== undefined) {
+        throw new UsageError(
+            '--project and --root cannot both be given: --project checks one folder of the repository, from its root',
+        );
+    }
+    if (values.project?.trim() === '') {
+        throw new UsageError('--project needs a folder: --project packages/api');
+    }
+    if (values.project !== undefined && command === 'check' && paths.length > 0) {
+        throw new UsageError('--project and folders cannot both be given: --project is the folder checked');
     }
 
     return {
@@ -191,7 +211,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
         paths,
         config: values.config,
         root: values.root,
+        project: values.project,
         presets: values.preset ?? [],
+        detect: !(values['no-detect'] ?? false),
+        code: !(values['no-code'] ?? false),
         format: outputs[0]?.format ?? 'text',
         output: outputs[0]?.target,
         outputs,

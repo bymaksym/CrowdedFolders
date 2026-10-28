@@ -6,9 +6,9 @@ import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
-import { type Detection, detectPresets, excludesFor } from '../core/presets/detect.ts';
+import { configFromDetections, type Detection, detectPresets } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
-import { gitRootOf, locate, projectDirOf, realPath } from '../node/config-file.ts';
+import { gitRootOf, locate, misnamedConfigs, nestedConfigs, projectDirOf, realPath } from '../node/config-file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
 import { dependenciesOf, type Manifests, MAX_MANIFESTS } from '../node/manifests.ts';
@@ -55,12 +55,24 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     if (rootArg !== undefined && !statSync(rootArg).isDirectory()) {
         throw new UsageError(`--root ${args.root ?? ''}: ${rootArg} is a file; the root is a folder`);
     }
-    const { configPath, root, base, scope } = locate({ cwd, configPath: configArg, root: rootArg });
+    const projectArg = projectOf(args, cwd);
+    // --project reads the repository's configuration: it is looked for from the top of the git repository.
+    const start = projectArg === undefined ? cwd : (gitRootOf(projectArg) ?? projectArg);
+    const { configPath, root, base, scope, project } = locate({ cwd: start, configPath: configArg, root: rootArg });
+    const projectFolder = projectArg === undefined ? project : within(base, projectArg);
+    if (projectArg !== undefined && projectFolder === undefined) {
+        throw new UsageError(
+            `--project ${args.project ?? ''}: ${projectArg} is outside ${base}, the folder of the repository's configuration`,
+        );
+    }
     const notices: string[] = [];
 
     let listed: string[];
     let fileSource: string;
     let only: string[] | undefined = scope === '.' ? undefined : [scope];
+    if (projectFolder !== undefined && projectFolder !== '.') {
+        only = [projectFolder];
+    }
     if (args.stdin) {
         const read = await filesFromStdin(io, cwd, root, notices);
         listed = read.files;
@@ -78,25 +90,33 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
 
     let loaded: LoadedConfig;
     let detected: Detection[] | undefined;
+    const nested = nestedConfigs(files, base, configPath);
+    const options = { code: args.code, base, nested };
     if (configPath === undefined) {
-        let presets = args.presets;
-        let exclude: string[] = [];
-        if (presets.length === 0) {
-            const manifests = dependenciesOf(base, files);
-            warnIfTruncated(manifests, io);
-            detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
-            presets = detected.map(detection => detection.preset);
-            exclude = excludesFor(detected, files, BUILT_IN_PRESETS);
+        detected = presetsWithoutConfiguration(args, base, files, io);
+        const made = configFromDetections(detected, files, BUILT_IN_PRESETS);
+        loaded = await loadConfig(
+            { extends: made.extends, exclude: made.exclude, overrides: made.overrides },
+            '(the command line)',
+            base,
+            {},
+            options,
+        );
+        for (const name of new Set([...misnamedConfigs(base), ...misnamedConfigs(cwd)])) {
+            notices.push(
+                `${name} is not a name crowded-folders reads, so it was not used: rename it to crowded-folders.config.json (or .config/crowded-folders.json).`,
+            );
         }
-        loaded = await loadConfig({ extends: presets, exclude }, '(the command line)', base);
     } else {
-        loaded = await loadConfigFile(configPath);
+        loaded = await loadConfigFile(configPath, {}, options);
         if (args.presets.length > 0) {
             const own = loaded.own;
             const layered = await loadConfig(
                 { extends: [...args.presets, configPath] },
                 '(the command line)',
                 dirname(configPath),
+                {},
+                options,
             );
             loaded = { ...layered, own };
         }
@@ -104,6 +124,11 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
 
     notices.push(...loaded.warnings);
     checkSelection({ files, loaded, configPath, scope, base, cwd, notices, args });
+    if (projectArg === undefined && project !== undefined && configPath !== undefined) {
+        notices.push(
+            `the configuration of ${project} says "root": false, so ${shown(cwd, configPath)} is used, from ${shown(cwd, root)}, and only ${project} is checked`,
+        );
+    }
     if (args.root !== undefined || scope !== '.') {
         const from = scope === '.' ? '' : `; its paths start at ${shown(cwd, base)}, so the report's do too`;
         notices.push(
@@ -111,6 +136,37 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         );
     }
     return { root, base, scope, cwd, configPath, loaded, files, fileSource, detected, only, notices };
+}
+
+/** `--project <dir>`, as a real path, after checking that it is a folder. */
+function projectOf(args: Args, cwd: string): string | undefined {
+    if (args.project === undefined) {
+        return undefined;
+    }
+    const path = resolve(cwd, args.project);
+    if (!existsSync(path) || !statSync(path).isDirectory()) {
+        throw new UsageError(`--project ${args.project}: ${path} is not a folder`);
+    }
+    return realPath(path);
+}
+
+/**
+ * Without a configuration file: the presets detected, plus the ones given with `--preset` (later,
+ * so they win); with `--no-detect`, the given ones only, or recommended when none is given.
+ */
+export function presetsWithoutConfiguration(args: Args, base: string, files: readonly string[], io: Io): Detection[] {
+    const found: Detection[] = [];
+    if (args.detect) {
+        const manifests = dependenciesOf(base, files);
+        warnIfTruncated(manifests, io);
+        found.push(...detectPresets(files, manifests.names, BUILT_IN_PRESETS));
+    }
+    for (const preset of args.presets) {
+        if (found.every(detection => detection.preset !== preset)) {
+            found.push({ preset, evidence: 'given with --preset', folders: ['.'] });
+        }
+    }
+    return found.length > 0 ? found : [{ preset: 'recommended', evidence: 'every repository', folders: ['.'] }];
 }
 
 /**

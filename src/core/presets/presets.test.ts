@@ -880,14 +880,18 @@ describe('detectPresets', () => {
             ]),
             BUILT_IN_PRESETS,
         );
+        // React stays for apps/web, where no react-native extends it; android takes java's root.
         assert.deepEqual(
-            found.map(detection => detection.preset),
-            ['recommended', 'react-native', 'android'],
+            found.map(detection => [detection.preset, ...detection.folders]),
+            [
+                ['recommended', '.'],
+                ['react', 'apps/web'],
+                ['react-native', 'apps/mobile'],
+                ['android', 'app/src/main', '.'],
+            ],
         );
-        assert.deepEqual(
-            found[1]?.extended?.map(parent => parent.preset),
-            ['react'],
-        );
+        assert.deepEqual(found[2]?.extended, [{ preset: 'react', folders: ['apps/mobile'] }]);
+        assert.deepEqual(found[3]?.extended, [{ preset: 'java', folders: ['.'] }]);
     });
 
     it('writes one glob for sixty apps instead of sixty lines (apps/*/src/environments)', () => {
@@ -917,7 +921,8 @@ describe('detectPresets', () => {
             ]),
             BUILT_IN_PRESETS,
         );
-        assert.deepEqual(found.find(detection => detection.preset === 'react-native')?.folders, ['apps/mobile']);
+        // The root's react is react-native's too: it applies from the root, and its /ios is the app's.
+        assert.deepEqual(found.find(detection => detection.preset === 'react-native')?.folders, ['apps/mobile', '.']);
         assert.deepEqual(excludesFor(found, files, BUILT_IN_PRESETS), ['apps/mobile/ios']);
     });
 });

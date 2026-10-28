@@ -122,6 +122,32 @@ export function runEngine(input: EngineInput): EngineResult {
     };
 }
 
+/** The folders each override applies to, for `crowded-folders overrides`. */
+export interface OverrideCoverage {
+    /** The folders checked (under `only`, when given). */
+    readonly folderCount: number;
+    /** Every override of the configuration, in order, with the folders it applies to. */
+    readonly overrides: readonly { readonly state: OverrideState; readonly folders: readonly string[] }[];
+}
+
+export function overrideCoverage(input: EngineInput): OverrideCoverage {
+    const only = scopeOf(input.only);
+    const tree = buildTree(selectFiles(inScope(filesOf(input.files), only), input.config));
+    const context = new FolderContext(input.config, input.rules);
+    const covered = new Map<OverrideState, string[]>(input.config.overrides.map(state => [state, []]));
+    let folderCount = 0;
+    for (const entry of tree) {
+        if (only?.every(path => !isInside(entry.path, path))) {
+            continue;
+        }
+        folderCount++;
+        for (const state of context.settingsFor(entry).overrides) {
+            covered.get(state)?.push(entry.path);
+        }
+    }
+    return { folderCount, overrides: [...covered].map(([state, folders]) => ({ state, folders })) };
+}
+
 /** Everything about one folder; `undefined` when no selected file lives in or under it. */
 export function explainFolder(input: EngineInput, path: string): FolderExplanation | undefined {
     const tree = buildTree(selectFiles(inScope(filesOf(input.files), scopeOf([path])), input.config));

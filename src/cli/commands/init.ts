@@ -2,14 +2,13 @@ import { basename, join, relative } from 'node:path';
 
 import { SCHEMA_URL } from '../../core/config/schema.ts';
 import { runEngine } from '../../core/engine.ts';
-import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
+import { configFromDetections, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { CONFIG_NAMES, findConfig } from '../../node/config-file.ts';
 import { loadConfig } from '../../node/load-config.ts';
-import { dependenciesOf } from '../../node/manifests.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, writeFileAtomic } from '../io.ts';
-import { type Session, warnIfTruncated } from '../session.ts';
+import { presetsWithoutConfiguration, type Session } from '../session.ts';
 
 /**
  * Writes `crowded-folders.config.json` at the root with the presets that fit the repository, then
@@ -25,18 +24,13 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         existing !== undefined && existing.path.endsWith('.json') && basename(existing.path) !== 'package.json';
     const path = isReuse ? existing.path : join(session.base, CONFIG_NAMES[0]);
 
-    let detections: Detection[];
-    if (args.presets.length > 0) {
-        detections = args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }));
-    } else {
-        const manifests = dependenciesOf(session.base, session.files);
-        warnIfTruncated(manifests, io);
-        detections = detectPresets(session.files, manifests.names, BUILT_IN_PRESETS);
-    }
-    const presets = [...new Set(detections.map(detection => detection.preset))];
-    // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
-    // written down so that they can be read and changed.
-    let exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    // --preset adds to what is detected, unless --no-detect.
+    const detections = presetsWithoutConfiguration(args, session.base, session.files, io);
+    // A preset found only in sub-folders (a pom.xml in server/) applies there, in an override; one at
+    // the root, in extends, with its root-anchored excludes read from every folder it was found in.
+    const made = configFromDetections(detections, session.files, BUILT_IN_PRESETS);
+    const presets = made.extends;
+    let exclude = [...made.exclude];
     // Godot's addons/ is left out by the preset, and a plugin of your own lives there too: one line each.
     const addons = godotAddons(detections, session.files);
     for (const { folder, names } of addons) {
@@ -44,18 +38,25 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         exclude = exclude.filter(pattern => pattern !== `${base}addons`);
         exclude.push(...(folder === '.' ? ['!/addons'] : []), ...names.map(name => `${base}addons/${name}`));
     }
-    const config = { $schema: SCHEMA_URL, extends: presets, ...(exclude.length > 0 && { exclude }) };
+    const config = {
+        $schema: SCHEMA_URL,
+        extends: presets,
+        ...(exclude.length > 0 && { exclude }),
+        ...(made.overrides.length > 0 && { overrides: made.overrides }),
+    };
     writeFileAtomic(path, `${JSON.stringify(config, undefined, 4)}\n`);
 
     const loaded = await loadConfig(config, path, session.base);
     const result = runEngine({ files: session.files, config: loaded.config, rules: loaded.rules });
     const errors = result.findings.filter(finding => finding.severity === 'error').length;
 
-    const lines = [`Wrote ${relative(io.cwd, path) || path} with ${presets.join(', ')}:`];
+    const scoped = made.overrides.flatMap(override => override.extends ?? []);
+    const lines = [`Wrote ${relative(io.cwd, path) || path} with ${[...presets, ...scoped].join(', ')}:`];
     for (const detection of detections) {
         const preset = BUILT_IN_PRESETS[detection.preset];
+        const under = made.overrides.find(override => override.extends?.includes(detection.preset));
         lines.push(
-            `  ${detection.preset.padEnd(14)} ${detection.evidence}${preset ? ` — ${firstSentence(preset.description)}` : ''}`,
+            `  ${detection.preset.padEnd(14)} ${detection.evidence}${under ? ` (only under ${under.folders.join(', ')})` : ''}${preset ? ` — ${firstSentence(preset.description)}` : ''}`,
         );
     }
     for (const { folder, names } of addons) {

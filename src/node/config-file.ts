@@ -1,20 +1,34 @@
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { isObject } from '../core/config/json-schema.ts';
 import { duplicateKeys, parseJsonc } from '../core/config/jsonc.ts';
 import { ConfigError } from '../core/config/validate.ts';
 import { importDefault } from './modules.ts';
 
-/** The names a configuration can have, in the order they are looked for in each folder. */
+/**
+ * The names a configuration can have, in the order they are looked for in each folder. `.ts` and
+ * `.mts` load only where Node runs TypeScript itself (22.18 and later, or 22.6 with
+ * `--experimental-strip-types`); elsewhere they are an error that says so.
+ */
 export const CONFIG_NAMES = [
     'crowded-folders.config.json',
     'crowded-folders.config.jsonc',
     'crowded-folders.config.mjs',
     'crowded-folders.config.js',
+    'crowded-folders.config.cjs',
+    'crowded-folders.config.mts',
+    'crowded-folders.config.ts',
+    // The name people guess first; .config/ already takes it.
+    'crowded-folders.json',
+    'crowded-folders.jsonc',
     '.config/crowded-folders.json',
     '.config/crowded-folders.jsonc',
     '.config/crowded-folders.mjs',
+    '.config/crowded-folders.js',
+    '.config/crowded-folders.cjs',
+    '.config/crowded-folders.mts',
+    '.config/crowded-folders.ts',
 ] as const;
 
 export const PACKAGE_KEY = 'crowded-folders';
@@ -24,14 +38,21 @@ export interface FoundConfig {
     readonly path: string;
     /** The folder it describes: where it is, or above `.config/`. Relative paths in it start here. */
     readonly projectDir: string;
+    /**
+     * The folder of the package configuration (`"root": false`) found first on the way up, when this
+     * configuration above it is the one used: the folder to check.
+     */
+    readonly project?: string;
 }
 
 /**
  * Looks for a configuration from `startDir` upwards, stopping at the top of the git repository (or
  * of the disk). Two configurations in one folder is an error rather than a choice: one would be
- * read and the other silently ignored.
+ * read and the other silently ignored. A JSON configuration with `"root": false` belongs to a
+ * package: the search goes on to the one above it, and checks the package's folder with it.
  */
 export function findConfig(startDir: string): FoundConfig | undefined {
+    let nested: FoundConfig | undefined;
     for (let dir = startDir; ; dir = dirname(dir)) {
         const found = CONFIG_NAMES.map(name => join(dir, name)).filter(path => existsSync(path));
         const manifest = join(dir, 'package.json');
@@ -44,13 +65,60 @@ export function findConfig(startDir: string): FoundConfig | undefined {
             );
         }
         const [path] = found;
+        if (path !== undefined && !isPackageConfig(path)) {
+            return { path, projectDir: projectDirOf(path), ...(nested && { project: nested.projectDir }) };
+        }
         if (path !== undefined) {
-            return { path, projectDir: projectDirOf(path) };
+            nested ??= { path, projectDir: projectDirOf(path) };
         }
         if (existsSync(join(dir, '.git')) || dirname(dir) === dir) {
-            return undefined;
+            return nested;
         }
     }
+}
+
+/** Whether a configuration says it belongs to a package (`"root": false`); read from JSON only. */
+export function isPackageConfig(path: string): boolean {
+    if (isCode(path)) {
+        return false;
+    }
+    try {
+        const value = parseJsonc(readFileSync(path, 'utf8'));
+        const config = basename(path) === 'package.json' && isObject(value) ? value[PACKAGE_KEY] : value;
+        return isObject(config) && config['root'] === false;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Files of a folder that look like a configuration and are not one (`crowded-folders.yaml`,
+ * `.crowded-foldersrc`), to say so when no configuration is found.
+ */
+export function misnamedConfigs(dir: string): string[] {
+    let names: string[];
+    try {
+        names = readdirSync(dir);
+    } catch {
+        return [];
+    }
+    const known = new Set<string>(CONFIG_NAMES.filter(name => !name.includes('/')));
+    return names.filter(
+        name =>
+            (name.startsWith('crowded-folders') || name.startsWith('.crowded-folders')) &&
+            !known.has(name) &&
+            !name.startsWith('crowded-folders-suppressions') &&
+            !name.startsWith('crowded-folders-report'),
+    );
+}
+
+/**
+ * Whether this Node runs TypeScript itself (`process.features.typescript`, from 22.10: "strip" or
+ * "transform" when on). Node 20 has no such feature.
+ */
+export function runsTypeScript(features: object = process.features): boolean {
+    const typescript: unknown = (features as { readonly typescript?: unknown }).typescript;
+    return typeof typescript === 'string' && typescript !== '';
 }
 
 /** Whether reading a configuration file runs it: anything but JSON and package.json. */
@@ -84,6 +152,14 @@ export async function readConfigFile(path: string): Promise<unknown> {
         refuseDuplicates(path, text, '');
         return value;
     }
+    if ((extension === '.ts' || extension === '.mts') && !runsTypeScript()) {
+        throw new ConfigError(path, [
+            {
+                at: '(the configuration)',
+                message: `is TypeScript, and this Node (${process.version}) does not run it: Node runs TypeScript from 22.18 (22.6 with --experimental-strip-types). Rename it to .mjs, or use JSON.`,
+            },
+        ]);
+    }
     const value = await importDefault(path);
     return typeof value === 'function' ? await (value as () => unknown)() : value;
 }
@@ -101,6 +177,11 @@ export interface Locations {
     readonly base: string;
     /** The root seen from the base, `/`-separated: `.` when they are the same folder. */
     readonly scope: string;
+    /**
+     * The folder of a package configuration (`"root": false`) the search started in, from the base:
+     * the run checks only it, with the configuration above. `undefined` otherwise.
+     */
+    readonly project?: string;
 }
 
 /**
@@ -122,14 +203,26 @@ export function locate(options: {
 }): Locations {
     const cwd = realPath(options.cwd);
     const given = options.root === undefined ? undefined : realPath(options.root);
-    const configPath = options.configPath === undefined ? findConfig(given ?? cwd)?.path : realPath(options.configPath);
+    const found = options.configPath === undefined ? findConfig(given ?? cwd) : undefined;
+    const configPath = options.configPath === undefined ? found?.path : realPath(options.configPath);
     const projectDir = configPath === undefined ? undefined : projectDirOf(configPath);
     const root = given ?? projectDir ?? gitRootOf(cwd) ?? cwd;
     const inside = projectDir === undefined ? undefined : relative(projectDir, root);
+    // Without --root, a package configuration with "root": false checks its package with the one above.
+    const project =
+        given === undefined && found?.project !== undefined && projectDir !== undefined
+            ? relative(projectDir, found.project).replaceAll('\\', '/')
+            : undefined;
     if (projectDir === undefined || inside === undefined || inside.startsWith('..') || isAbsolute(inside)) {
-        return { configPath, root, base: root, scope: '.' };
+        return { configPath, root, base: root, scope: '.', ...(project && { project }) };
     }
-    return { configPath, root, base: projectDir, scope: inside === '' ? '.' : inside.replaceAll('\\', '/') };
+    return {
+        configPath,
+        root,
+        base: projectDir,
+        scope: inside === '' ? '.' : inside.replaceAll('\\', '/'),
+        ...(project && { project }),
+    };
 }
 
 /** The real path of something that exists (the long, correctly cased form); the path itself otherwise. */
@@ -186,4 +279,39 @@ function hasPackageKey(manifest: string): boolean {
     } catch {
         return false;
     }
+}
+
+/** The configuration of a package below the run's base: applied to its folder with `"root": false`. */
+export interface NestedConfig {
+    readonly path: string;
+    /** Its folder (the one above `.config/`), from the base, `/`-separated. */
+    readonly folder: string;
+}
+
+/**
+ * The configurations of packages among the files listed (paths from `base`), other than `except`,
+ * the shallowest first so that a deeper one is applied after and wins in its folder.
+ */
+export function nestedConfigs(files: readonly string[], base: string, except: string | undefined): NestedConfig[] {
+    const names = new Set<string>(CONFIG_NAMES);
+    const found: NestedConfig[] = [];
+    for (const file of files) {
+        const slash = file.lastIndexOf('/');
+        if (slash === -1) {
+            continue;
+        }
+        const name = file.slice(slash + 1);
+        const parent = file.slice(0, slash);
+        const isDotConfig = parent === '.config' || parent.endsWith('/.config');
+        if (!names.has(isDotConfig ? `.config/${name}` : name)) {
+            continue;
+        }
+        const folder = isDotConfig ? parent.slice(0, Math.max(0, parent.length - '/.config'.length)) : parent;
+        const path = join(base, file);
+        if (folder === '' || folder === '.config' || (except !== undefined && resolve(path) === resolve(except))) {
+            continue;
+        }
+        found.push({ path, folder });
+    }
+    return found.toSorted((a, b) => a.folder.split('/').length - b.folder.split('/').length);
 }

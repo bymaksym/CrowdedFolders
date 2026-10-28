@@ -197,12 +197,15 @@ describe('the command', () => {
         assert.match(config.$schema, /schema\.json$/u);
         assert.match(ran.out, /--suppress-all/u);
         assert.equal((await cli(root, ['init'])).code, 2);
-        assert.equal((await cli(root, ['init', '--force', '--preset', 'strict'])).code, 0);
-        assert.deepEqual(
+        // --preset adds to what is detected (Lucía: -p strict switched detection off without a word)…
+        const written = (): string[] =>
             (JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as { extends: string[] })
-                .extends,
-            ['strict'],
-        );
+                .extends;
+        assert.equal((await cli(root, ['init', '--force', '--preset', 'strict'])).code, 0);
+        assert.deepEqual(written(), ['recommended', 'rust', 'strict']);
+        // …and --no-detect leaves only what was given.
+        assert.equal((await cli(root, ['init', '--force', '--no-detect', '--preset', 'strict'])).code, 0);
+        assert.deepEqual(written(), ['strict']);
     });
 
     it('init lists the addons of a Godot project and writes one exclusion for each', async () => {
@@ -239,8 +242,14 @@ describe('the command', () => {
         assert.equal(ran.code, 0, ran.err);
         const config = JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as {
             extends: string[];
+            overrides: { folders: string[]; extends: string[] }[];
         };
-        assert.deepEqual(config.extends, ['recommended', 'nestjs']);
+        // Found in one package only, it applies there.
+        assert.deepEqual(config.extends, ['recommended']);
+        assert.deepEqual(
+            config.overrides.map(override => [override.folders, override.extends]),
+            [[['services/backend/core/api/**'], ['nestjs']]],
+        );
         assert.equal(ran.err, '');
     });
 

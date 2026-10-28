@@ -6,6 +6,7 @@ import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
+import { overrides } from './commands/overrides.ts';
 import { HELP } from './help.ts';
 import { type Io, processIo } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
@@ -42,6 +43,9 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             }
             case 'explain': {
                 return explain(args, io, session);
+            }
+            case 'overrides': {
+                return overrides(args, io, session);
             }
             case 'print-config': {
                 return printConfig(args, io, session);

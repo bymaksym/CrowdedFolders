@@ -104,6 +104,11 @@ export interface Detect {
     readonly files?: readonly string[];
     /** Package names in any package.json's dependencies or devDependencies. */
     readonly dependencies?: readonly string[];
+    /**
+     * Globs of file names: a file of `files` is evidence only when one of these is in its folder or
+     * below it. A requirements.txt is Python only with Python next to it: mkdocs keeps one in docs/.
+     */
+    readonly confirmedBy?: readonly string[];
 }
 
 /**
