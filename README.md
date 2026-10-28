@@ -140,6 +140,19 @@ Exit codes: `0` clean, `1` problems, `2` the configuration or the command line i
 scanning, Markdown for a job summary, JSON for scripts, GitLab, pre-commit, husky and lefthook:
 [docs/ci.md](docs/ci.md).
 
+## For AI coding agents
+
+```sh
+npx crowded-folders where src/core/enums/foo-bar.enum.ts   # WORSE max-files 14→15 (limit 10)
+npx crowded-folders init --agents                          # the Claude Code hook + a block for AGENTS.md
+npx crowded-folders explain src/core/enums --prompt        # the reorganisation, as a task to paste
+```
+
+`where` says whether a file that does not exist yet would create, worsen or leave as it is a problem in its
+folder, and which existing folder fits its name. The Claude Code hook asks it before every new file and warns
+the agent without blocking it; the package also ships a skill and a plugin
+([docs/agents.md](docs/agents.md)).
+
 ## Plugins
 
 A plugin is an npm package that exports rules and presets; a rule is one function that looks at a
@@ -181,6 +194,7 @@ findings wherever ESLint runs: [docs/eslint.md](docs/eslint.md).
 | [rules/](docs/rules)                      | One page per rule, with examples.                                  |
 | [adopting.md](docs/adopting.md)           | Starting in a repository that already has crowded folders.         |
 | [ci.md](docs/ci.md)                       | GitHub Actions, GitLab, pre-commit, hooks, output formats.         |
+| [agents.md](docs/agents.md)               | `where`, the Claude Code hook, the skill and the plugin.           |
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
 | [distribution.md](docs/distribution.md)   | Binaries without Node, Docker, and the listings still to do.       |

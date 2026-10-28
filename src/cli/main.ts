@@ -1,14 +1,18 @@
+import { AgentsKitError } from '../core/agents.ts';
 import { FileListError } from '../core/paths/input.ts';
 import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
 import { describeConfigError } from '../node/config/error.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
+import { initAgents } from './commands/agents.ts';
 import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
+import { hook } from './commands/hook.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
 import { overrides } from './commands/overrides.ts';
+import { where } from './commands/where.ts';
 import { COMMAND_HELP, HELP } from './help.ts';
 import { type Io, processIo, WriteError } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
@@ -34,6 +38,12 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             io.write(`${TOOL.version}\n`);
             return 0;
         }
+        if (args.command === 'init' && args.agents) {
+            return initAgents(args, io);
+        }
+        if (args.command === 'hook') {
+            return await hook(args, io);
+        }
         if (args.command === 'presets') {
             return await listPresets(args, io);
         }
@@ -51,6 +61,9 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             }
             case 'explain': {
                 return await explain(args, io, session);
+            }
+            case 'where': {
+                return where(args, io, session);
             }
             case 'overrides': {
                 return overrides(args, io, session);
@@ -82,7 +95,8 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             error instanceof GitError ||
             error instanceof FileListError ||
             (error instanceof RuleError && error.rule.includes('/')) ||
-            error instanceof WriteError
+            error instanceof WriteError ||
+            error instanceof AgentsKitError
         ) {
             io.error(`crowded-folders: ${error.message}\n`);
             return 2;

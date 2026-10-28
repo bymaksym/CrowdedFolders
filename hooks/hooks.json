@@ -1,0 +1,16 @@
+{
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Write|Edit|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "node \"${CLAUDE_PLUGIN_ROOT}/bin/crowded-folders.js\" hook claude",
+                        "timeout": 10
+                    }
+                ]
+            }
+        ]
+    }
+}

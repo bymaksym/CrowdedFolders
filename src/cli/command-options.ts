@@ -19,8 +19,11 @@ const REPOSITORY_OPTIONS = [
  * text, `rules --suppress-all` doing nothing). `check` takes all of them.
  */
 const COMMAND_OPTIONS: Readonly<Record<Exclude<Command, 'check'>, readonly string[]>> = {
-    init: [...REPOSITORY_OPTIONS, 'force'],
-    explain: REPOSITORY_OPTIONS,
+    init: [...REPOSITORY_OPTIONS, 'force', 'agents', 'dry-run'],
+    explain: [...REPOSITORY_OPTIONS, 'prompt'],
+    where: [...REPOSITORY_OPTIONS, 'format', 'fail-on'],
+    // The agent's hook reads where it is from the JSON it is sent; these say which configuration to use.
+    hook: ['config', 'root', 'no-code'],
     'print-config': REPOSITORY_OPTIONS,
     // The configuration found from --config or --root says which plugins add rules and presets to the lists.
     presets: ['config', 'root', 'no-code'],

@@ -18,6 +18,7 @@ const THEIR_ERRORS = new Set([
     'FileListError',
     'RuleError',
     'WriteError',
+    'AgentsKitError',
     // A suppressions file that does not parse: the command makes it a UsageError, lint() hands it to the caller.
     'SuppressionsFileError',
 ]);
