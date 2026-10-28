@@ -37,12 +37,27 @@ icon.png  icon.png.import                                                   → 
 
 _Why the first dot:_ it joins every companion extension at once (`.spec.ts`, `.component.html`,
 `.cs.meta`, `.png.import`) without a list of extensions per ecosystem. The cost is a name with a dot
-inside (`jquery.min.js` is `jquery`), which is rare and harmless.
+inside (`jquery.min.js` is `jquery`), which is rare and harmless. Three dots are not cuts, because
+cutting there joined files that are each their own thing:
+
+| Name                                            | Stem                                       | Why                                                        |
+| ----------------------------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| `v1.25.1.md`, `db.changelog-1.3.xml`, `ls.1`    | `v1.25.1`, `db.changelog-1.3`, `ls.1`      | a dot before a number is part of a version                 |
+| `[...slug].tsx`, `[[...slug]].tsx`              | `[...slug]`, `[[...slug]]`                 | dots inside brackets are a route segment (Expo, Next.js)   |
+| `org.example.Service`, `Elixir.MyApp.User.beam` | `org.example.Service`, `Elixir.MyApp.User` | a reverse package name is one name; it belongs to no group |
 
 Then **companions** — regular expressions from the presets — are removed until nothing changes, for
 the conventions that mark a companion inside the name: `foo_test.go`, `foo_linux_amd64.go`,
 `test_foo.py`, `FooTest.java`, `IFoo.cs`, `User+Codable.swift`. Underscores around the stem go too
-(`_tokens.scss`, `__init__.py`). Comparison ignores case: `README.md` and `Readme.txt` are one.
+(`_tokens.scss`, `__init__.py`). Comparison ignores case and Unicode normalisation: `README.md` and
+`Readme.txt` are one, and so are `diseño` typed on macOS (NFD) and elsewhere (NFC). Not two files
+whose whole names differ only in case (`Foo.ts`, `foo.ts`): Linux keeps both, so they are two modules,
+and [`case-collision`](rules/case-collision.md) says that they cannot be checked out on Windows or macOS.
+
+Some files are not counted at all, and `explain` lists them with the reason: the files that describe
+their folder (`naming.folderFiles`: `package-info.java`, `__init__.py`, `doc.go`, `mod.rs`, Expo
+Router's `_layout`) and the files that go with a sibling folder (`naming.folderCompanions`: Unity's
+`Scripts.meta` next to `Scripts/`).
 
 ## 4. Words
 
@@ -54,6 +69,10 @@ The stem is split into words in one pass, without regular expressions:
 | `HTTPServer`                                                                 | `http`, `server` (an acronym ends at the capital that starts the next word) |
 | `i18n-utils`                                                                 | `i18n`, `utils` (digits stay with their letters)                            |
 | `2024-01-01-post`                                                            | `2024`, `01`, `01`, `post` (a run of digits is a word)                      |
+| `getURLs`, `userIDs`, `APIs`                                                 | `get`, `urls`; `user`, `ids`; `apis` (an acronym's plural s stays with it)  |
+| `II18nKey`                                                                   | `i`, `i18n`, `key` (a capital before a word with digits is a word)          |
+| `OAuthClient`, `iOSApp`, `macOS`, `eBay`                                     | `oauth`, `client`; `ios`, `app`; `macos`; `ebay` (a short list of names)    |
+| `v1.25.1`, `हिन्दी`, `١٢٣-post`                                              | `v1.25.1`; `हिन्दी`; `١٢٣`, `post` (marks and digits of every script)       |
 | `ПользовательСервис`, `用户-服务`                                            | any script, cased or not                                                    |
 
 _Why one pass:_ it runs on every file of repositories with a hundred thousand of them, and a regular
@@ -61,10 +80,17 @@ expression with alternatives can backtrack.
 
 ## 5. The subject and the group
 
-Leading words in `naming.ignoreLeadingWords` are skipped — `use` of a React hook, `i` of a C#
-interface, `bp` of an Unreal blueprint — leaving the **subject**: what the file is about. Its first word
-(or first `words` words) is the module's **group**. A subject that starts with a number has no group
-unless `groupNumericPrefixes` is on: numbered files are an order, not a family.
+A single capital glued to a capitalised word is a type letter and is skipped: the `I` of
+`IUserService` and `II18nKey`, the `T` of `TProps`, the `A` of `AActor`. Then the leading words in
+`naming.ignoreLeadingWords` are skipped — `use` of a React hook, `bp` of an Unreal blueprint — leaving
+the **subject**: what the file is about. Its first word (or first `words` words, or with `"auto"` the
+longest prefix that keeps the group) is the module's **group**. Singular and plural are one word
+there: `UsersController` is in the group `user` with `UserGroups`, and the key is written with the
+singular when the folder has it. A subject that starts with a number has no group unless
+`groupNumericPrefixes` is on: numbered files are an order, not a family.
+
+The plural comes from a small English inflector (`-s`, `-es`, `-ies`, and a list of irregulars such
+as `children`), with a list of words that only look plural (`news` is not more than one `new`).
 
 ## 6. Settings per folder
 
@@ -75,7 +101,10 @@ removes; options merge over the defaults. `crowded-folders explain <folder>` pri
 ## 7. Rules
 
 Each rule that is on looks at the folder — its files, sub-folders, modules and naming — and reports.
-Built-in rules and plugin rules receive exactly the same thing. A finding carries what was measured
+Built-in rules and plugin rules receive exactly the same thing. A rule may also read another rule's
+settings in the folder (`prefix-groups` does not propose a folder that `max-files` would report), and
+leave a note of what it chose not to report: `explain` lists them under "Not reported, and why". A
+finding carries what was measured
 (`measured`) and, for groups, the prefix (`key`): together with the folder and the rule they are what a
 suppression remembers.
 
