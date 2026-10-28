@@ -19,7 +19,7 @@ import { callRule, frozenCopy, LATE_REPORT, ReadOnlySet, reportProblem, RuleErro
 import { caseless } from './rules/moves.ts';
 import type { FolderView, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
 
-export type { EngineInput, EngineResult, Finding, FolderExplanation, FolderStat, RuleNote } from './findings.ts';
+export type { EngineInput, EngineResult, Finding, FolderExplanation, FolderStat } from './findings.ts';
 
 /**
  * Filters the files by `include` and `exclude`. Both match a path or any folder above it:
