@@ -15,14 +15,47 @@ inputs:
   summary:
     description: Also add the Markdown report to the job summary.
     default: 'true'
+  sarif:
+    description: Also write a SARIF report and upload it to code scanning (needs `security-events - write` permission).
+    default: 'false'
+  sarif-file:
+    description: Where the SARIF report is written, relative to the working directory.
+    default: crowded-folders.sarif
+  category:
+    description: The code scanning category of the SARIF upload; tell runs on different folders apart with it.
+    default: crowded-folders
+  fail-on:
+    description: 'When the step fails - "error" (errors, stale suppressions), "warning" (also any warning) or "none" (only when the configuration or the command line is wrong).'
+    default: error
   working-directory:
     description: Where to run it (the configuration is looked for from here).
     default: '.'
 
+outputs:
+  exit-code:
+    description: The exit code of crowded-folders - 0 clean, 1 problems, 2 the configuration or the command line is wrong.
+    value: ${{ steps.check.outputs.exit-code }}
+  errors:
+    description: How many errors it reported.
+    value: ${{ steps.check.outputs.errors }}
+  warnings:
+    description: How many warnings it reported.
+    value: ${{ steps.check.outputs.warnings }}
+  sarif-file:
+    description: The SARIF report, relative to the working directory, when `sarif` is true.
+    value: ${{ steps.check.outputs.sarif-file }}
+
+# Why composite and not `node24`. A JavaScript action runs a bundle committed to the tag, and the
+# bundle has to be produced by a build step this repository does not have (no dependency, no
+# bundler); a bundle that is not rebuilt exactly at each release would silently run old code.
+# Composite runs the published package instead, which release-please already versions with the
+# tag. Its costs are the runner's `node` and `npx` (both present on every GitHub-hosted runner)
+# and that pinning by SHA pins the Action's own steps, not the npm code: the version it runs is
+# the one in package.json at that SHA, fetched by exact number.
 runs:
   using: composite
   steps:
-    # The version is decided once, for both steps: the Action's own unless one is given.
+    # The version is decided once: the Action's own unless one is given.
     - name: Resolve the version
       id: resolve
       shell: bash
@@ -31,24 +64,58 @@ runs:
         echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       env:
         VERSION: ${{ inputs.version }}
-    - name: Report in the job summary
-      if: inputs.summary == 'true'
+    # One run writes every report: annotations on the log, the job summary, the SARIF and the JSON
+    # whose counts become outputs.
+    - name: Check
+      id: check
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
         if [ "$VERSION" = "local" ]; then cmd=(node "$GITHUB_ACTION_PATH/bin/crowded-folders.js"); else cmd=(npx --yes "crowded-folders@$VERSION"); fi
+        json="$RUNNER_TEMP/crowded-folders-report.json"
+        rm -f "$json"
+        reports=(-f github -f "json=$json")
+        if [ "$SUMMARY" = "true" ]; then reports+=(-f "markdown=$GITHUB_STEP_SUMMARY"); fi
+        if [ "$SARIF" = "true" ]; then reports+=(-f "sarif=$SARIF_FILE"); echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"; fi
+        extra=()
+        if [ "$FAIL_ON" = "warning" ]; then
+          case " $ARGS " in *" --max-warnings"*) ;; *) extra+=(--max-warnings 0) ;; esac
+        fi
+        set +e
         # shellcheck disable=SC2086 # ARGS is a list of arguments on purpose
-        "${cmd[@]}" --format markdown $ARGS >> "$GITHUB_STEP_SUMMARY" || true
+        "${cmd[@]}" "${reports[@]}" "${extra[@]}" $ARGS
+        code=$?
+        set -e
+        errors=0; warnings=0
+        if [ -f "$json" ]; then
+          read -r errors warnings < <(node -e "const s=JSON.parse(require('fs').readFileSync(process.argv[1],'utf8')).summary;console.log(s.errors+' '+s.warnings)" "$json")
+        fi
+        {
+          echo "exit-code=$code"
+          echo "errors=$errors"
+          echo "warnings=$warnings"
+        } >> "$GITHUB_OUTPUT"
       env:
         VERSION: ${{ steps.resolve.outputs.version }}
         ARGS: ${{ inputs.args }}
-    - name: Check, with annotations
+        SUMMARY: ${{ inputs.summary }}
+        SARIF: ${{ inputs.sarif }}
+        SARIF_FILE: ${{ inputs.sarif-file }}
+        FAIL_ON: ${{ inputs.fail-on }}
+    - name: Upload the SARIF report
+      if: always() && inputs.sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.working-directory }}/${{ inputs.sarif-file }}
+        category: ${{ inputs.category }}
+    # The step above never fails by itself, so that the upload always runs; this one decides.
+    - name: Pass or fail
       shell: bash
-      working-directory: ${{ inputs.working-directory }}
       run: |
-        if [ "$VERSION" = "local" ]; then cmd=(node "$GITHUB_ACTION_PATH/bin/crowded-folders.js"); else cmd=(npx --yes "crowded-folders@$VERSION"); fi
-        # shellcheck disable=SC2086 # ARGS is a list of arguments on purpose
-        "${cmd[@]}" --format github $ARGS
+        code="$CODE"
+        if [ "$code" = "2" ]; then exit 2; fi
+        if [ "$code" = "1" ] && [ "$FAIL_ON" != "none" ]; then exit 1; fi
+        exit 0
       env:
-        VERSION: ${{ steps.resolve.outputs.version }}
-        ARGS: ${{ inputs.args }}
+        CODE: ${{ steps.check.outputs.exit-code }}
+        FAIL_ON: ${{ inputs.fail-on }}

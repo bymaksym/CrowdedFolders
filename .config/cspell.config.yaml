@@ -38,6 +38,8 @@ words:
   - pytest
   - unpkg
   - npx
+  - reviewdog
+  - SonarQube
   - pnpm
   - semver
   - knip
