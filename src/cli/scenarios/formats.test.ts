@@ -106,9 +106,9 @@ describe('what the reports say about the run', () => {
             findings: Record<string, unknown>[];
         };
         assert.deepEqual(json.folders, [
-            { path: '.', modules: 0, files: 0, subfolders: 2, limit: 40 },
-            { path: 'cli', modules: 5, files: 5, subfolders: 0, limit: 20 },
-            { path: 'lib', modules: 1, files: 1, subfolders: 0, limit: 20 },
+            { path: '.', modules: 0, files: 0, subfolders: 2, limit: 40, unit: 'modules', used: 0 },
+            { path: 'cli', modules: 5, files: 5, subfolders: 0, limit: 20, unit: 'modules', used: 5 },
+            { path: 'lib', modules: 1, files: 1, subfolders: 0, limit: 20, unit: 'modules', used: 1 },
         ]);
         assert.equal('files' in (json.findings[0] ?? {}), false);
         assert.equal(json.findings[0]?.['fileCount'], 4);

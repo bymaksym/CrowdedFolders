@@ -13,6 +13,8 @@ export const FORMAT_VERSION = 1;
 export interface JsonOptions {
     /** Leave out `files` and `moves` of each finding (`--no-files`): on a big repository they are most of the report. */
     readonly files?: boolean;
+    /** Leave out `folders` (the numbers of every folder) unless asked for with `--stats`; default: keep them. */
+    readonly folders?: boolean;
 }
 
 /**
@@ -55,7 +57,7 @@ export function formatJson(report: Report, options: JsonOptions = {}): string {
                 measured: stale.measured ?? null,
             })),
             ...(report.knownOnBase && { knownOnBase: report.knownOnBase }),
-            ...(report.folderStats && { folders: report.folderStats }),
+            ...(report.folderStats && options.folders !== false && { folders: report.folderStats }),
         },
         undefined,
         2,

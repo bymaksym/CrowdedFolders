@@ -18,6 +18,9 @@ ignoreRegExpList:
 words:
   # The tool and its rules.
   - jsonc
+  - treemap
+  - squarified
+  - zoomable
   - sarif
   - lefthook
   - localsend

@@ -28,6 +28,10 @@ export interface FolderStat {
     readonly subfolders: number;
     /** The `max-files` limit in effect for the folder; `null` when that rule is off there. */
     readonly limit: number | null;
+    /** What `max-files` counts here: `modules` (the default of the presets) or `files`. */
+    readonly unit: 'files' | 'modules';
+    /** The number the rule compares with the limit, in that unit; the modules when the rule is off. */
+    readonly used: number;
 }
 
 export interface EngineInput {

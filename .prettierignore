@@ -7,3 +7,5 @@ CHANGELOG.md
 schema.json
 docs/configuration.md
 docs/presets.md
+# Written by tooling/field-trial.mjs: regenerate, never edit.
+src/core/report/tree/trial-data.ts
