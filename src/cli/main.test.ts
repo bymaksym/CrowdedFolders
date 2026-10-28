@@ -36,6 +36,10 @@ const ALLOWED = [
         why: 'a rule that writes to what it was given gets a TypeError, inside callRule, which makes it a RuleError for that rule',
     },
     {
+        file: 'eslint.ts',
+        why: 'ESLint shows the error of a rule that throws; this one carries what the child process printed, which is the message of the command itself',
+    },
+    {
         file: 'testing.ts',
         why: "RuleTestError is a failing test of a plugin's author, thrown inside their test runner, not the command",
     },
