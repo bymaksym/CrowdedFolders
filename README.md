@@ -81,12 +81,15 @@ own as a shared configuration.
 
 ## Configuration
 
-`crowded-folders init` writes this, with the presets it detected:
+`crowded-folders init` writes the first two lines below, `$schema` (pinned to the major version) and
+`extends` with the presets it detected, in `crowded-folders.config.json` (or `.config/crowded-folders.json`
+when the repository keeps its tool configurations there; `--config <file>` says where). The rest is what a
+configuration looks like once the team has made it its own:
 
 ```jsonc
 // crowded-folders.config.json — comments are allowed
 {
-    "$schema": "https://unpkg.com/crowded-folders/schema.json",
+    "$schema": "https://unpkg.com/crowded-folders@1/schema.json",
     "extends": ["recommended", "react"],
     "rules": {
         "prefix-groups": ["error", { "ignore": ["check"] }],

@@ -156,12 +156,12 @@ describe('suppressions', () => {
         assert.equal(ran.code, 1);
         assert.match(
             ran.out,
-            /Progress\n {2}↓ cli {2}prefix-groups#render {2}5 → 4\n {2}Save it with --prune-suppressions/u,
+            /Progress\n {2}down cli {2}prefix-groups#render {2}5 to 4\n {2}Save it with --prune-suppressions/u,
         );
         assert.doesNotMatch(ran.out, /nothing needs/u);
-        // Point 118 (Marta, Óscar, Irina): never a ✔ on a run that exits with 1.
-        assert.match(ran.out, /✖ 1 suppression to prune \(/u);
-        assert.doesNotMatch(ran.out, /✔ No crowded folders/u);
+        // Point 118 (Marta, Óscar, Irina): never a OK on a run that exits with 1.
+        assert.match(ran.out, /FAIL 1 suppression to prune \(/u);
+        assert.doesNotMatch(ran.out, /OK No crowded folders/u);
     });
 
     // Point 21 (Daniel), through the command.
@@ -193,7 +193,7 @@ describe('suppressions', () => {
         );
         const ran = await cli(root, []);
         assert.equal(ran.code, 1);
-        assert.match(ran.out, /✖ cli {2}no-such-rule {2}\(suppressed at 2; "no-such-rule" is not a rule\)/u);
+        assert.match(ran.out, /stale cli {2}no-such-rule {2}\(suppressed at 2; "no-such-rule" is not a rule\)/u);
         assert.match(ran.out, /1 problem suppressed/u);
     });
 
@@ -269,7 +269,7 @@ describe('suppressions', () => {
 });
 
 describe('the summary follows the exit code', () => {
-    // Point 118: -q --max-warnings 0 said "✔ No crowded folders" and exited with 1.
+    // Point 118: -q --max-warnings 0 said "OK No crowded folders" and exited with 1.
     it('with --quiet and --max-warnings', async () => {
         const root = repository({
             ...renderers('cli'),
@@ -277,10 +277,10 @@ describe('the summary follows the exit code', () => {
         });
         const ran = await cli(root, ['-q', '--max-warnings', '0']);
         assert.equal(ran.code, 1);
-        assert.match(ran.out, /^✖ 1 warning \(1 hidden by --quiet\), over --max-warnings 0 \(/mu);
+        assert.match(ran.out, /^FAIL 1 warning \(1 hidden by --quiet\), over --max-warnings 0 \(/mu);
         const loud = await cli(root, ['--max-warnings', '0']);
-        assert.match(loud.out, /✖ 0 errors, 1 warning in 1 folder, over --max-warnings 0 \(/u);
-        assert.match((await cli(root, [])).out, /⚠ 0 errors, 1 warning in 1 folder/u);
+        assert.match(loud.out, /FAIL 0 errors, 1 warning in 1 folder, over --max-warnings 0 \(/u);
+        assert.match((await cli(root, [])).out, /WARN 0 errors, 1 warning in 1 folder/u);
     });
 });
 

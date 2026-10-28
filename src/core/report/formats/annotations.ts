@@ -1,3 +1,4 @@
+import { shownOf } from '../../plural.ts';
 import { anchors, staleAnchor } from '../context/anchor.ts';
 import { byWeight, describe, describeStale, failureMessage, STALE_SUPPRESSION_RULE } from '../describe.ts';
 import type { Report, ReportFinding } from '../report.ts';
@@ -63,12 +64,12 @@ function annotationsOf(report: Report, options: AnnotationOptions): Annotation[]
     for (const level of ['error', 'warning'] as const) {
         const ofLevel = [...all, ...stale].filter(annotation => annotation.level === level);
         // Stale suppressions fail the run, so within the errors they go after the worst findings.
-        const shown = ofLevel.length > max ? ofLevel.slice(0, max) : ofLevel;
-        result.push(...shown);
-        if (ofLevel.length <= max) {
+        const kept = shownOf(ofLevel.length, max);
+        result.push(...ofLevel.slice(0, kept));
+        if (ofLevel.length <= kept) {
             continue;
         }
-        const rest = ofLevel.length - max;
+        const rest = ofLevel.length - kept;
         result.push({
             level,
             rule: 'more',

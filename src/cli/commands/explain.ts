@@ -1,29 +1,37 @@
 import { explainFolder, type Finding } from '../../core/engine.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
 import { type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
+import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
-import { type Args, UsageError } from '../args.ts';
-import type { Io } from '../io.ts';
+import { plural } from '../../core/plural.ts';
+import { asciiProse } from '../../core/report/ascii.ts';
+import type { Args } from '../args.ts';
+import { type Io, wantsSymbols } from '../io.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
+import { isEmptyOption, labelOf, patternOrigin, ruleOrigins, withOverrides } from './provenance.ts';
 
 /**
  * Shows one folder the way the rules see it: which overrides apply and why, how each file name was
- * read (stem, words, subject, group), the rules in effect with their options, and what they report.
- * It is the answer to "why does it say that about this folder?".
+ * read (stem, words, subject, group), the rules in effect with their options and where each value comes
+ * from, and what they report. It is the answer to "why does it say that about this folder?" - and to
+ * "why does it say nothing?": a folder the configuration leaves out says what left it out.
  */
-export function explain(args: Args, io: Io, session: Session): number {
+export async function explain(args: Args, io: Io, session: Session): Promise<number> {
     const [path = '.'] = foldersFromPaths(args.paths, session, io.cwd);
     const folder = normalisePath(path) ?? '.';
     const explanation = explainFolder(
         { files: session.files, config: session.loaded.config, rules: session.loaded.rules },
         folder,
     );
+    const say = wantsSymbols(io) ? (text: string): string => text : asciiProse;
     if (!explanation) {
-        throw new UsageError(`${folder} holds no file that is checked (it is empty, excluded, or not in git)`);
+        const lines = await notChecked(folder, session);
+        io.write(say(`${lines.join('\n')}\n`));
+        return 0;
     }
     const { folder: view, rules, overrides, findings, notes } = explanation;
     const lines: string[] = [
-        `${view.path === '.' ? '. (the root)' : `${view.path}/`}  ${view.files.length} files, ${view.modules.length} modules, ${view.folders.length} subfolders`,
+        `${view.path === '.' ? '. (the root)' : `${view.path}/`}  ${plural(view.files.length, 'file')}, ${plural(view.modules.length, 'module')}, ${plural(view.folders.length, 'subfolder')}`,
         '',
         'Overrides that apply',
     ];
@@ -32,13 +40,17 @@ export function explain(args: Args, io: Io, session: Session): number {
         lines.push('  none');
     }
     for (const override of overrides) {
-        lines.push(`  ${override.folders.join(', ')}  (${override.origin})`, `    ${override.reason}`);
+        lines.push(
+            `  ${override.folders.join(', ')}  (${labelOf(override.origin, session)})`,
+            `    ${override.reason}`,
+        );
     }
 
     lines.push(
         '',
         'Naming',
-        `  companions:           ${view.naming.companions.map(pattern => `/${pattern.source}/`).join(' ') || 'none'}`,
+        `  companions:           ${view.naming.companions.map(pattern => `/${pattern.source}/`).join(' ') || 'none configured'}`,
+        `  joined by:            ${joinedBy(view.modules, view.naming.companions.length > 0)}`,
         `  ignoreLeadingWords:   ${[...view.naming.ignoreLeadingWords].join(', ') || 'none'}`,
         `  groupNumericPrefixes: ${String(view.naming.groupNumericPrefixes)}`,
         `  folderFiles:          ${(view.naming.folderFiles ?? []).map(glob => glob.source).join(', ') || 'none'}`,
@@ -82,12 +94,19 @@ export function explain(args: Args, io: Io, session: Session): number {
         }
     }
 
-    lines.push('', 'Rules in effect');
+    const origins = withOverrides(await ruleOrigins(session), overrides, session);
+    lines.push('', 'Rules in effect (value ← where it comes from)');
     for (const [name, state] of Object.entries(rules)) {
         if (state.severity === 'off') {
             continue;
         }
-        lines.push(`  ${state.severity.padEnd(5)} ${name}  ${JSON.stringify(state.effectiveOptions)}`);
+        const where = origins[name] ?? {};
+        lines.push(`  ${state.severity.padEnd(5)} ${name} ← ${where['severity'] ?? 'default'}`);
+        for (const [option, value] of Object.entries(state.effectiveOptions)) {
+            if (!isEmptyOption(value)) {
+                lines.push(`        ${option}: ${JSON.stringify(value)} ← ${where[option] ?? 'default'}`);
+            }
+        }
     }
 
     lines.push('', 'Problems');
@@ -104,7 +123,7 @@ export function explain(args: Args, io: Io, session: Session): number {
             lines.push(`  ${note.rule}  ${note.message}`);
         }
     }
-    io.write(`${lines.join('\n')}\n`);
+    io.write(say(`${lines.join('\n')}\n`));
     return 0;
 }
 
@@ -135,4 +154,53 @@ function closeGroups(
         `Groups that come close (prefix-groups needs ${min})`,
         `  ${path} (${limit}): ${close.length > 0 ? close.join(', ') : 'none: no two modules start with the same word'}`,
     ];
+}
+
+/**
+ * How files became one module, for the ones that did. A name is read up to its first dot, so
+ * `date.utils.spec.ts` goes with `date.utils.ts` with no companion configured at all: saying "none"
+ * there hides the rule that grouped them.
+ */
+function joinedBy(modules: readonly Module[], hasCompanions: boolean): string {
+    const joined = modules.filter(module => module.files.length > 1);
+    if (joined.length === 0) {
+        return 'nothing: every file is a module of its own';
+    }
+    const shown = joined.slice(0, 3).map(module => `${module.files.join(' + ')} → ${module.stem}`);
+    const more = joined.length > 3 ? `, and ${joined.length - 3} more` : '';
+    return `the name up to its first dot${hasCompanions ? ', and the companions above' : ''} (${plural(joined.length, 'module')}: ${shown.join('; ')}${more})`;
+}
+
+/**
+ * A folder that no rule looks at, and what left it out: the exclude that took it (with the preset or file
+ * that wrote it), an include that does not reach it, or git not listing a file in it. Not an error: the
+ * answer to "why does it say nothing about this folder?".
+ */
+async function notChecked(folder: string, session: Session): Promise<string[]> {
+    const { config } = session.loaded;
+    const under = folder === '.' ? session.files : session.files.filter(file => file.startsWith(`${folder}/`));
+    const lines = [`${folder === '.' ? '. (the root)' : `${folder}/`}  is not checked`];
+    if (under.length === 0) {
+        lines.push(
+            '  no file in it is listed: it is empty, or .gitignore hides it, or git does not know its files yet (untracked files are not counted with --tracked-only or on CI)',
+        );
+        return lines;
+    }
+    const exclude = config.exclude.map(pattern => ({ pattern, glob: compileGlob(pattern) }));
+    const include = config.include.map(compileGlob);
+    const reasons = new Map<string, number>();
+    for (const file of under) {
+        const excluded = exclude.find(({ glob }) => matchesSelfOrAncestor(file, [glob]));
+        let reason = 'not checked for a reason this command cannot name';
+        if (excluded) {
+            reason = `excluded by ${excluded.pattern} (${await patternOrigin(session, 'exclude', excluded.pattern)})`;
+        } else if (include.length > 0 && !matchesSelfOrAncestor(file, include)) {
+            reason = `not taken by include (${config.include.join(', ')})`;
+        }
+        reasons.set(reason, (reasons.get(reason) ?? 0) + 1);
+    }
+    for (const [reason, count] of reasons) {
+        lines.push(`  ${count === under.length ? `all ${plural(count, 'file')}` : plural(count, 'file')}: ${reason}`);
+    }
+    return lines;
 }

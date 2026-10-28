@@ -2,6 +2,7 @@ import type { JsonSchema } from '../config/json-schema.ts';
 import type { Module, Naming, Uncounted } from '../naming/modules.ts';
 import { compileGlob } from '../paths/glob.ts';
 import type { FolderEntry } from '../paths/tree.ts';
+import { shownOf } from '../plural.ts';
 
 export type Severity = 'error' | 'off' | 'warn';
 
@@ -139,9 +140,12 @@ export function defineRule<Options extends object>(rule: Rule<Options>): Rule<Op
     return rule;
 }
 
-/** Shows a list of names, cut after `max` with how many more there are. */
+/** Shows a list of names, cut after `max` with how many more there are (never "and 1 more": that is the name). */
 export function listNames(names: readonly string[], max = 5): string {
-    return names.length <= max ? names.join(', ') : `${names.slice(0, max).join(', ')} and ${names.length - max} more`;
+    const shown = shownOf(names.length, max);
+    return shown === names.length
+        ? names.join(', ')
+        : `${names.slice(0, shown).join(', ')} and ${names.length - shown} more`;
 }
 
 /** The JSON Schema of the `hintFor` option that `max-files` and `prefix-groups` share. */

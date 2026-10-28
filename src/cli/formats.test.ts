@@ -124,7 +124,7 @@ describe('what the reports say about the run', () => {
         const json = JSON.parse((await cli(root, ['-f', 'json'])).out) as { findings: { project: string }[] };
         assert.equal(json.findings[0]?.project, 'apps/web');
         const text = (await cli(root, ['--group-by', 'project'])).out;
-        assert.match(text, /^Top 1 projects|^apps\/web\n {2}✖ error {2}prefix-groups {2}apps\/web\/cli: 4 modules/mu);
+        assert.match(text, /^Top 1 projects|^apps\/web\n {2}error {2}prefix-groups {2}apps\/web\/cli: 4 modules/mu);
     });
 
     it('uses CODEOWNERS: owners in the report, and --owner to see only one team', async () => {

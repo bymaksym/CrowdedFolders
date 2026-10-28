@@ -1,3 +1,4 @@
+import { plural } from '../plural.ts';
 import { defineRule, listNames } from './rule.ts';
 
 export interface MaxFoldersOptions {
@@ -23,7 +24,7 @@ export const maxFolders = defineRule<MaxFoldersOptions>({
             return;
         }
         report({
-            message: `${measured} subfolders, over the limit of ${options.max} (${listNames(folder.folders)}): group them by what they are about.`,
+            message: `${plural(measured, 'subfolder')}, over the limit of ${options.max} (${listNames(folder.folders)}): group them by what they are about.`,
             measured,
             limit: options.max,
         });

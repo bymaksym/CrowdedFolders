@@ -14,7 +14,7 @@ import {
 import type { Report } from '../../core/report/report.ts';
 import { formatText } from '../../core/report/text.ts';
 import type { Args, Format } from '../args.ts';
-import { type Io, wantsColor, writeFileAtomic } from '../io.ts';
+import { commandName, type Io, terminalWidth, wantsColor, wantsSymbols, writeFileAtomic } from '../io.ts';
 
 /** The format `auto` stands for: what the CI the command runs in reads. */
 export function resolveFormat(
@@ -54,6 +54,10 @@ export function emit(report: Report, args: Args, io: Io): Emitted {
         const text = render(report, format, args, {
             color: toStdout && wantsColor(args.color, io),
             hyperlinks: toStdout && io.stdoutIsTTY && wantsColor(args.color, io) && io.env['TERM'] !== 'dumb',
+            // A report in a file is not for this terminal: its width and its symbols are not this one's.
+            width: toStdout ? terminalWidth(io) : undefined,
+            symbols: !toStdout || wantsSymbols(io),
+            command: commandName(io),
         });
         if (toStdout) {
             io.write(text);
@@ -79,7 +83,7 @@ function render(
     report: Report,
     format: Exclude<Format, 'auto'>,
     args: Args,
-    text: { color: boolean; hyperlinks: boolean },
+    text: { color: boolean; hyperlinks: boolean; width: number | undefined; symbols: boolean; command: string },
 ): string {
     switch (format) {
         case 'json': {
@@ -109,6 +113,10 @@ function render(
                 moves: args.moves,
                 hyperlinks: text.hyperlinks,
                 groupBy: args.groupBy,
+                quiet: args.quiet,
+                symbols: text.symbols,
+                command: text.command,
+                ...(text.width !== undefined && { width: text.width }),
             });
         }
     }

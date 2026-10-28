@@ -15,6 +15,11 @@ ownership" in a container) stops the run with exit code 2 and what git said: rea
 would count what `.gitignore` hides and look like an ordinary run. Outside a repository the disk is
 walked, and the run says so; with `--require-git`, the default when `CI` is set, that is an error too.
 
+`--tracked-only` leaves out the untracked files git would add. It is the default when `CI` is set: a
+`test-results/` folder or a report an earlier step left in the checkout is not part of the repository,
+and counting it would make the same commit pass on a machine and fail in CI. `--no-tracked-only` brings
+them back. It needs git, as `--require-git` does.
+
 With `--no-git`, or outside a repository, the disk is walked, skipping `.git` and `node_modules`, and
 the `.gitignore` files are read — the root's, the nested ones, and those above the root up to the top
 of its repository — by a small matcher of their own syntax. `.gitattributes` is not read there.

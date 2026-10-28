@@ -19,6 +19,11 @@ export interface ListOptions {
     readonly git: boolean;
     /** Stop instead of reading the disk when git cannot be asked: `--require-git`, and the default on CI. */
     readonly requireGit?: boolean;
+    /**
+     * Only what git tracks, not the untracked files `.gitignore` does not hide: a file a previous CI
+     * step left in the checkout is not part of the repository. `--tracked-only`, and the default on CI.
+     */
+    readonly trackedOnly?: boolean;
     /** The environment git runs with; `GIT_DIR` in it means a repository even without a `.git` here. */
     readonly env?: Readonly<Record<string, string | undefined>>;
 }
@@ -67,7 +72,7 @@ export function listFiles(root: string, options: ListOptions): FileList {
             notice: `${root} is not in a git repository: the files were read from the disk, ${WITHOUT_GIT}.`,
         };
     }
-    return { files: gitFiles(root, env), source: 'git' };
+    return { files: gitFiles(root, env, options.trackedOnly === true), source: 'git' };
 }
 
 /** Reads paths, one per line (`\n`, `\r\n` or a lone `\r`) or NUL-separated, as given: not yet normalised. */
@@ -131,9 +136,18 @@ export function isTrackedByGit(path: string): boolean {
  * pathspecs leave out what is marked generated. One process instead of four: on Windows each costs
  * about a tenth of a second.
  */
-function gitFiles(root: string, env: Readonly<Record<string, string | undefined>>): string[] {
+function gitFiles(root: string, env: Readonly<Record<string, string | undefined>>, trackedOnly: boolean): string[] {
     const pathspecs = ['.', ...MARKED.map(attribute => `:(exclude,attr:${attribute})`)];
-    const args = ['ls-files', '-z', '-t', '--stage', '--cached', '--others', '--deleted', '--exclude-standard'];
+    const args = [
+        'ls-files',
+        '-z',
+        '-t',
+        '--stage',
+        '--cached',
+        ...(trackedOnly ? [] : ['--others']),
+        '--deleted',
+        '--exclude-standard',
+    ];
     const output = runGit(root, [...args, '--', ...pathspecs], env);
 
     const files = new Set<string>();

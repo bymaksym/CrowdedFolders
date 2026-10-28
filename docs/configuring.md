@@ -34,7 +34,7 @@ starts from the configuration's folder.
 
 ```jsonc
 {
-    "$schema": "https://unpkg.com/crowded-folders/schema.json",
+    "$schema": "https://unpkg.com/crowded-folders@1/schema.json",
     "extends": ["recommended", "react"],
 }
 ```

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, relative, sep } from 'node:path';
 
-import type { EngineResult, Finding } from '../../core/engine.ts';
+import { type EngineResult, type Finding, type FolderStat, runEngine } from '../../core/engine.ts';
 import { lineOfSequence, quoted } from '../../core/report/context/locate.ts';
 import { type Codeowners, ownersOf, parseCodeowners } from '../../core/report/context/owners.ts';
 import { projectFolders, projectOf } from '../../core/report/context/projects.ts';
@@ -79,6 +79,8 @@ export interface BuildInput {
     readonly knownOnBase?: Report['knownOnBase'];
     /** The files this change adds, when a base is known: annotations go on them first. */
     readonly addedFiles?: ReadonlySet<string>;
+    /** With a base known: before and after, for the folders over their `max-files` limit. */
+    readonly addedByFolder?: Report['addedByFolder'];
 }
 
 /** Everything the output formats need to know about a run. */
@@ -109,8 +111,10 @@ export function buildReport(input: BuildInput): Report {
         ...overrideLinesOf(input.findings, session),
         ...suppressionLinesOf(input.stale, input.suppressionFile),
         ...(input.addedFiles && { addedFiles: input.addedFiles }),
+        ...(input.addedByFolder && { addedByFolder: input.addedByFolder }),
         hide: hiddenFolders([session.root, session.base], io),
-        ...(result.folderStats && { folderStats: result.folderStats }),
+        ...(result.folderStats && args.stats && { folderStats: result.folderStats }),
+        ...(input.findings.length === 0 && { closest: closestToLimit(result.folderStats) }),
         hiddenWarnings: input.hiddenWarnings,
         ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
         ...(input.knownOnBase && { knownOnBase: input.knownOnBase }),
@@ -131,6 +135,26 @@ function referencesOf(findings: readonly Finding[], session: Session): Record<st
             .map(finding => [referencesKey(finding), finding.moves.map(move => move.from)] as const),
     );
     return Object.fromEntries(filesNaming(session.base, session.files, groups));
+}
+
+/** How many folders a clean run names as the nearest to their limit, and how near is worth naming. */
+const CLOSEST_SHOWN = 3;
+const CLOSEST_FROM = 0.6;
+
+/** The folders using most of their `max-files` limit, nearest first: what a clean run can still teach. */
+function closestToLimit(stats: EngineResult['folderStats']): NonNullable<Report['closest']> {
+    const items: { folder: string; count: number; limit: number }[] = [];
+    for (const stat of stats ?? []) {
+        if (stat.limit !== null && stat.limit > 0) {
+            items.push({ folder: stat.path, count: stat.modules, limit: stat.limit });
+        }
+    }
+    return items
+        .filter(item => item.count / item.limit >= CLOSEST_FROM)
+        .toSorted(
+            (a, b) => b.count / b.limit - a.count / a.limit || b.count - a.count || (a.folder < b.folder ? -1 : 1),
+        )
+        .slice(0, CLOSEST_SHOWN);
 }
 
 /** The folders that must not appear in a report: the repository, where it ran, the home folder. */
@@ -223,6 +247,43 @@ function suppressionLinesOf(
         }
     }
     return { suppressionLines: lines };
+}
+
+/**
+ * For the folders with a `max-files` finding, how many there were on the base and how many there are
+ * now, in the unit the finding counts (modules or files): "this change adds 1 (14→15)". Only the
+ * folders asked about are read, so a large repository costs one pass over a few folders.
+ */
+export function addedByFolder(input: {
+    readonly findings: readonly ReportFinding[];
+    readonly baseFiles: readonly string[];
+    readonly files: readonly string[];
+    readonly session: Session;
+}): Report['addedByFolder'] {
+    const wanted = input.findings.filter(finding => finding.rule === 'max-files');
+    if (wanted.length === 0) {
+        return undefined;
+    }
+    const { config, rules } = input.session.loaded;
+    const only = [...new Set(wanted.map(finding => finding.folder))];
+    const statsOf = (files: readonly string[]): Map<string, FolderStat> =>
+        new Map(runEngine({ files, config, rules, only, stats: true }).folderStats?.map(stat => [stat.path, stat]));
+    const before = statsOf(input.baseFiles);
+    const now = statsOf(input.files);
+    const result: Record<string, { before: number; after: number }> = {};
+    for (const finding of wanted) {
+        const current = now.get(finding.folder);
+        const unit =
+            current?.modules === finding.measured
+                ? 'modules'
+                : current?.files === finding.measured
+                  ? 'files'
+                  : undefined;
+        if (unit !== undefined) {
+            result[finding.folder] = { before: before.get(finding.folder)?.[unit] ?? 0, after: finding.measured };
+        }
+    }
+    return result;
 }
 
 const ANCHORED_FORMATS = new Set<Format>(['auto', 'azure', 'checkstyle', 'github', 'gitlab', 'sarif']);

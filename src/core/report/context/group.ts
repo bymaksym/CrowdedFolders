@@ -1,3 +1,4 @@
+import { shownOf } from '../../plural.ts';
 import { folderLabel } from '../describe.ts';
 import type { ReportFinding } from '../report.ts';
 
@@ -51,17 +52,18 @@ export function overview(groups: readonly Group[], noun: string): string[] {
     if (groups.length < 2) {
         return [];
     }
-    const lines = [`Top ${Math.min(TOP_GROUPS, groups.length)} ${noun}`];
-    const width = Math.max(...groups.slice(0, TOP_GROUPS).map(group => group.title.length));
-    for (const group of groups.slice(0, TOP_GROUPS)) {
+    const shown = shownOf(groups.length, TOP_GROUPS);
+    const lines = [`Top ${shown} ${noun}`];
+    const width = Math.max(...groups.slice(0, shown).map(group => group.title.length));
+    for (const group of groups.slice(0, shown)) {
         const errors = errorsOf(group.findings);
         const warnings = group.findings.length - errors;
         lines.push(
             `  ${group.title.padEnd(width)}  ${errors} error${errors === 1 ? '' : 's'}, ${warnings} warning${warnings === 1 ? '' : 's'}`,
         );
     }
-    if (groups.length > TOP_GROUPS) {
-        lines.push(`  … and ${groups.length - TOP_GROUPS} more`);
+    if (groups.length > shown) {
+        lines.push(`  … and ${groups.length - shown} more`);
     }
     return lines;
 }

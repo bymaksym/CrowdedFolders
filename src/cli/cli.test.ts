@@ -72,7 +72,7 @@ describe('the command', () => {
         const root = repository(render);
         const ran = await cli(root, []);
         assert.equal(ran.code, 1);
-        assert.match(ran.out, /cli\/\n {2}✖ error {2}prefix-groups {2}4 modules start with "render"/u);
+        assert.match(ran.out, /cli\/\n {2}error {2}prefix-groups {2}4 modules start with "render"/u);
         assert.match(ran.err, /No configuration file: used the presets detected — recommended/u);
     });
 
@@ -175,7 +175,7 @@ describe('the command', () => {
         });
         assert.equal((await cli(root, [])).code, 0);
         assert.equal((await cli(root, ['--max-warnings', '0'])).code, 1);
-        assert.match((await cli(root, ['--quiet'])).out, /✔ No errors \(.*; 1 warning hidden by --quiet\)/u);
+        assert.match((await cli(root, ['--quiet'])).out, /OK No errors \(.*; 1 warning hidden by --quiet\)/u);
     });
 
     it('writes the report to a file with --output', async () => {
@@ -269,9 +269,10 @@ describe('the command', () => {
         const root = repository(render);
         const ran = await cli(root, ['explain', 'cli']);
         assert.equal(ran.code, 0, ran.err);
-        assert.match(ran.out, /render-json ← render-json\.ts {2}· render json {2}· render/u);
+        assert.match(ran.out, /render-json <- render-json\.ts {2}\| render json {2}\| render/u);
         assert.match(ran.out, /error prefix-groups/u);
         assert.equal((await cli(root, ['explain', 'nowhere'])).code, 2);
+        assert.match(ran.out, /error {1,2}prefix-groups <- preset recommended/u);
     });
 
     it('explains what is not reported, and which companion joins IProfile and MProfile (Marta, 13-10)', async () => {
@@ -290,7 +291,7 @@ describe('the command', () => {
         const profile = await cli(root, ['explain', 'other']);
         assert.match(
             profile.out,
-            /IProfile, MProfile {2}· profile: .*naming\.companions \["\^\(\?:I\|M\)\(\?=\\\\p\{Lu\}\)"\]/u,
+            /IProfile, MProfile {2}\| profile: .*naming\.companions \["\^\(\?:I\|M\)\(\?=\\\\p\{Lu\}\)"\]/u,
         );
     });
 
@@ -314,7 +315,7 @@ describe('the command', () => {
         for (const args of [
             ['--nope'],
             ['--format', 'xml'],
-            ['--max-warnings', '-1'],
+            ['--max-warnings', '-2'],
             ['explain'],
             ['--stdin', '--no-git'],
             ['--color', '--no-color'],

@@ -1,5 +1,6 @@
 import { shownName } from '../naming/modules.ts';
 import { splitWords } from '../naming/words.ts';
+import { plural } from '../plural.ts';
 import { planMoves, repeatedWords, staysInPlace, withoutPrefix } from './moves.ts';
 import { defineRule, listNames } from './rule.ts';
 
@@ -60,7 +61,7 @@ export const redundantPrefix = defineRule<RedundantPrefixOptions>({
             existing,
         );
         report({
-            message: `${renamed.length} modules repeat the folder's name "${folder.name}" (${names(renamed)}): the folder already says it.${plan.notes.map(sentence => ` ${sentence}`).join('')}`,
+            message: `${plural(renamed.length, 'module')} repeat the folder's name "${folder.name}" (${names(renamed)}): the folder already says it.${plan.notes.map(sentence => ` ${sentence}`).join('')}`,
             measured: renamed.length,
             limit: options.min - 1,
             files: renamed.flatMap(module => module.files),

@@ -1,5 +1,6 @@
 import { FileListError } from '../core/paths/input.ts';
 import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
+import { describeConfigError } from '../node/config-error.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
@@ -7,8 +8,8 @@ import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
-import { HELP } from './help.ts';
-import { type Io, processIo } from './io.ts';
+import { COMMAND_HELP, HELP } from './help.ts';
+import { type Io, processIo, WriteError } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
 import { openSession, type Session } from './session.ts';
 import { TOOL } from './tool.ts';
@@ -20,7 +21,12 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
     try {
         args = parseCommandLine(argv);
         if (args.help) {
-            io.write(HELP);
+            io.write(
+                args.commandGiven
+                    ? `${COMMAND_HELP[args.command]}
+`
+                    : HELP,
+            );
             return 0;
         }
         if (args.version) {
@@ -43,10 +49,10 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
                 return await init(args, io, session);
             }
             case 'explain': {
-                return explain(args, io, session);
+                return await explain(args, io, session);
             }
             case 'print-config': {
-                return printConfig(args, io, session);
+                return await printConfig(args, io, session);
             }
             default: {
                 return check(args, io, session);
@@ -62,11 +68,18 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             io.error(`crowded-folders: ${error.message}\nRun crowded-folders --help for the options.\n`);
             return 2;
         }
-        if (error instanceof RuleError && error.rule.includes('/')) {
-            io.error(`crowded-folders: ${error.message}\n`);
+        if (error instanceof ConfigError) {
+            io.error(`crowded-folders: ${describeConfigError(error, io.cwd)}\n`);
             return 2;
         }
-        if (error instanceof ConfigError || error instanceof GitError || error instanceof FileListError) {
+        // What the person who ran it caused: the files git lists, a plugin's rule, a file it cannot write.
+        // A built-in rule that throws is our bug, and falls through to say so.
+        if (
+            error instanceof GitError ||
+            error instanceof FileListError ||
+            (error instanceof RuleError && error.rule.includes('/')) ||
+            error instanceof WriteError
+        ) {
             io.error(`crowded-folders: ${error.message}\n`);
             return 2;
         }

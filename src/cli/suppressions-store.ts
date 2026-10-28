@@ -1,3 +1,4 @@
+import { plural, shownOf } from '../core/plural.ts';
 import {
     DEFAULT_SUPPRESSIONS,
     serialiseSuppressions,
@@ -67,13 +68,14 @@ function describe(
         .filter(([, count]) => count > 0)
         .map(([kind, count]) => `${kind} ${count}`);
     const folders = new Set(entries.map(entry => entry.folder)).size;
-    const now = `it holds ${entries.length} suppression${entries.length === 1 ? '' : 's'} in ${folders} folder${folders === 1 ? '' : 's'}`;
+    const now = `it holds ${plural(entries.length, 'suppression')} in ${plural(folders, 'folder')}`;
     const lines = [`${verb === 'add' ? 'Wrote' : 'Pruned'} ${label}: ${counts.join(', ')}; ${now}. Commit it.`];
-    for (const change of changes.slice(0, SHOWN)) {
+    const shown = shownOf(changes.length, SHOWN);
+    for (const change of changes.slice(0, shown)) {
         lines.push(`  ${lineOf(change)}`);
     }
-    if (changes.length > SHOWN) {
-        lines.push(`  … and ${changes.length - SHOWN} more: the diff of ${label} has them all.`);
+    if (changes.length > shown) {
+        lines.push(`  … and ${changes.length - shown} more: the diff of ${label} has them all.`);
     }
     return `${lines.join('\n')}\n`;
 }

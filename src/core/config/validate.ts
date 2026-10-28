@@ -9,6 +9,9 @@ import type { Config, NamingConfig, RuleSetting } from './types.ts';
 export interface ConfigProblem {
     readonly at: string;
     readonly message: string;
+    /** Where in the file it is (from 1), when the reader of the file knows; else found from `at`. */
+    readonly line?: number;
+    readonly column?: number;
 }
 
 /**

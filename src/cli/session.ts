@@ -6,6 +6,7 @@ import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
+import { plural } from '../core/plural.ts';
 import type { Detection } from '../core/presets/detect.ts';
 import { gitRootOf, locate, realPath } from '../node/config-file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
@@ -45,7 +46,9 @@ export interface Session {
 export async function openSession(args: Args, io: Io): Promise<Session> {
     const cwd = realPath(io.cwd);
     const configArg = args.config === undefined ? undefined : resolve(cwd, args.config);
-    if (configArg !== undefined && !existsSync(configArg)) {
+    // `init --config x.json` names the file to create: it does not exist yet, and nothing is read from it.
+    const writesConfig = args.command === 'init';
+    if (configArg !== undefined && !writesConfig && !existsSync(configArg)) {
         throw new UsageError(`--config ${args.config ?? ''}: ${configArg} does not exist`);
     }
     const rootArg = args.root === undefined ? undefined : resolve(cwd, args.root);
@@ -55,7 +58,11 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     if (rootArg !== undefined && !statSync(rootArg).isDirectory()) {
         throw new UsageError(`--root ${args.root ?? ''}: ${rootArg} is a file; the root is a folder`);
     }
-    const { configPath, root, base, scope } = locate({ cwd, configPath: configArg, root: rootArg });
+    const { configPath, root, base, scope } = locate({
+        cwd,
+        configPath: writesConfig ? undefined : configArg,
+        root: rootArg,
+    });
     const notices: string[] = [];
 
     let listed: string[];
@@ -67,7 +74,12 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         only = read.under === undefined ? only : [joinScope(scope, read.under)];
         fileSource = 'standard input';
     } else {
-        const list = listFiles(root, { git: args.git, requireGit: args.requireGit ?? isCi(io.env), env: io.env });
+        const list = listFiles(root, {
+            git: args.git,
+            requireGit: args.requireGit ?? isCi(io.env),
+            trackedOnly: args.trackedOnly ?? isCi(io.env),
+            env: io.env,
+        });
         listed = [...list.files];
         fileSource = list.source === 'git' ? 'git' : 'the disk';
         if (list.notice !== undefined) {
@@ -78,7 +90,10 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
 
     let loaded: LoadedConfig;
     let detected: Detection[] | undefined;
-    if (configPath === undefined) {
+    if (writesConfig) {
+        // `init` writes the configuration: it needs the files, not what an old one says.
+        loaded = await loadConfig({}, '(init)', base);
+    } else if (configPath === undefined) {
         let config: Config = { extends: args.presets, exclude: [] };
         if (args.presets.length === 0) {
             const detection = detectConfig(base, files);
@@ -101,6 +116,9 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     }
 
     notices.push(...loaded.warnings);
+    if (writesConfig) {
+        return { root, base, scope, cwd, configPath, loaded, files, fileSource, detected, only, notices };
+    }
     checkSelection({ files, loaded, configPath, scope, base, cwd, notices, args });
     if (args.root !== undefined || scope !== '.') {
         const from = scope === '.' ? '' : `; its paths start at ${shown(cwd, base)}, so the report's do too`;
@@ -215,7 +233,7 @@ async function filesFromStdin(
             lines = lines.map(line => (isAbsolutePath(line) ? line : `${here}/${line}`));
         } else if (fromRoot * 2 < sample.length) {
             notices.push(
-                `${sample.length - fromRoot} of the ${sample.length} paths looked at from standard input do not exist under the root (${root}): they are read from the root, not from the current folder (${here}).`,
+                `${sample.length - fromRoot} of the ${plural(sample.length, 'path')} looked at from standard input do not exist under the root (${root}): they are read from the root, not from the current folder (${here}).`,
             );
         }
     }
@@ -251,7 +269,7 @@ function leaveOutDeep(files: string[], notices: string[]): string[] {
     const first = deep[0] ?? '';
     const shownPath = `${first.split('/').slice(0, 3).join('/')}/…`;
     notices.push(
-        `${deep.length === 1 ? '1 file' : `${deep.length} files`} deeper than ${MAX_DEPTH} folders left out (the first in ${shownPath}): a tree that deep is generated, not arranged by hand.`,
+        `${plural(deep.length, 'file')} deeper than ${MAX_DEPTH} folders left out (the first in ${shownPath}): a tree that deep is generated, not arranged by hand.`,
     );
     const kept = new Set(deep);
     return files.filter(path => !kept.has(path));
@@ -289,7 +307,7 @@ function checkSelection(context: {
             throw new ConfigError(origin, [
                 {
                     at: 'include',
-                    message: `${config.include.map(pattern => `"${pattern}"`).join(', ')} takes none of the ${files.length} files listed, so nothing would be checked. Paths start at ${shown(cwd, base)}; a name takes the folder and everything in it ("src"), and a pattern with "/" is anchored there.`,
+                    message: `${config.include.map(pattern => `"${pattern}"`).join(', ')} takes none of the ${plural(files.length, 'file')} listed, so nothing would be checked. Paths start at ${shown(cwd, base)}; a name takes the folder and everything in it ("src"), and a pattern with "/" is anchored there.`,
                 },
             ]);
         }
