@@ -1,10 +1,22 @@
 import { parseArgs } from 'node:util';
 
 import { closest } from '../core/paths/suggest.ts';
+import { joinNegativeOne, maxWarningsOf, refuseAgentMisuse, refuseFolder, wholeNumber } from './args-values.ts';
 import { takes } from './command-options.ts';
 import { HELP } from './help.ts';
+import { UsageError } from './usage-error.ts';
 
-export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config', 'overrides'] as const;
+export const COMMANDS = [
+    'check',
+    'init',
+    'explain',
+    'where',
+    'hook',
+    'presets',
+    'rules',
+    'print-config',
+    'overrides',
+] as const;
 export type Command = (typeof COMMANDS)[number];
 
 export const FORMATS = [
@@ -96,13 +108,19 @@ export interface Args {
     /** `--new-since <ref>`: fail only on problems that are new or grew since `ref`. */
     readonly newSince: string | undefined;
     readonly force: boolean;
+    /** `where --fail-on worse`: exit 1 when a file would create or worsen a problem. */
+    readonly failOn: 'worse' | undefined;
+    /** `explain --prompt`: print the reorganisation task for an agent instead of the explanation. */
+    readonly prompt: boolean;
+    /** `init --agents`: add the hook and the notes for AI agents instead of writing a configuration. */
+    readonly agents: boolean;
+    /** `init --agents --dry-run`: print what would change as a diff, and change nothing. */
+    readonly dryRun: boolean;
     readonly help: boolean;
     readonly version: boolean;
 }
 
-export class UsageError extends Error {
-    override readonly name = 'UsageError';
-}
+export { UsageError } from './usage-error.ts';
 
 /** The options every command that reads a repository takes: where it is and how its files are listed. */
 /** The long name an option error of Node's names (`-c, --config <value>`, `--stdin`, `-q`). */
@@ -151,6 +169,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 changed: { type: 'boolean' },
                 'new-since': { type: 'string' },
                 force: { type: 'boolean' },
+                'fail-on': { type: 'string' },
+                prompt: { type: 'boolean' },
+                agents: { type: 'boolean' },
+                'dry-run': { type: 'boolean' },
                 help: { type: 'boolean', short: 'h' },
                 version: { type: 'boolean', short: 'v' },
             },
@@ -228,6 +250,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
     if (command === 'explain' && paths.length !== 1 && !values.help) {
         throw new UsageError('explain takes one folder: crowded-folders explain src/components');
     }
+    refuseAgentMisuse({ command, paths, values, outputs });
     if ((command === 'presets' || command === 'rules') && paths.length > 1) {
         throw new UsageError(`${command} takes one name to filter by: crowded-folders ${command} ${paths[0] ?? ''}`);
     }
@@ -283,6 +306,10 @@ export function parseCommandLine(argv: readonly string[]): Args {
         changed: values.changed ?? false,
         newSince: values['new-since'],
         force: values.force ?? false,
+        failOn: values['fail-on'] === 'worse' ? 'worse' : undefined,
+        prompt: values.prompt ?? false,
+        agents: values.agents ?? false,
+        dryRun: values['dry-run'] ?? false,
         help: values.help ?? false,
         version: values.version ?? false,
     };
@@ -358,26 +385,6 @@ function moveScriptOf(value: string | undefined): MoveScript | undefined {
     return value as MoveScript;
 }
 
-/** A report goes to a file: blank or ending in a separator, it names a folder. */
-function refuseFolder(option: string, target: string): void {
-    if (target.trim() === '' || /[/\\]$/u.test(target)) {
-        throw new UsageError(
-            `${option}: give the file to write${target.trim() === '' ? '' : `, such as ${target}crowded-folders.sarif`}; that is a folder`,
-        );
-    }
-}
-
-function wholeNumber(option: string, value: string | undefined, minimum: number): number | undefined {
-    if (value === undefined) {
-        return undefined;
-    }
-    const number = /^\d+$/u.test(value) ? Number(value) : NaN;
-    if (!Number.isSafeInteger(number) || number < minimum) {
-        throw new UsageError(`${option} must be a whole number of ${minimum} or more, not "${value}"`);
-    }
-    return number;
-}
-
 /** The options that may be given more than once; every other is an error the second time. */
 const REPEATABLE = new Set(['preset', 'format', 'owner', 'suppress-rule']);
 
@@ -408,33 +415,6 @@ function refuseOptionsOfOtherCommands(command: Command, tokens: Tokens): void {
             `--${token.name} does not apply to ${command}${where.length === 0 ? '' : `; it applies to ${where.join(', ')}`}`,
         );
     }
-}
-
-/**
- * `--max-warnings` is a whole number, or -1 for no limit (as in ESLint). `Number()` took `0x10`, `1e3`,
- * ` 5` and the empty string (as 0); a limit is read as written.
- */
-function maxWarningsOf(value: string | undefined): number | undefined {
-    if (value === undefined || value === '-1') {
-        return undefined;
-    }
-    if (!/^\d+$/u.test(value) || !Number.isSafeInteger(Number(value))) {
-        throw new UsageError(`--max-warnings must be a whole number of 0 or more, or -1 for no limit, not "${value}"`);
-    }
-    return Number(value);
-}
-
-/** `--max-warnings -1` is two words to Node, which takes `-1` for an option: make it `--max-warnings=-1`. */
-function joinNegativeOne(argv: readonly string[]): string[] {
-    const joined: string[] = [];
-    for (const [index, word] of argv.entries()) {
-        if (word === '-1' && argv[index - 1] === '--max-warnings') {
-            joined[joined.length - 1] = '--max-warnings=-1';
-        } else {
-            joined.push(word);
-        }
-    }
-    return joined;
 }
 
 /** Node's own words for a bad option are long, quote badly and suggest nothing: say it in one line. */

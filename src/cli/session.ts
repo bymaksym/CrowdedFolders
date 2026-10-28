@@ -430,7 +430,7 @@ export function within(root: string, path: string): string | undefined {
         : (normalisePath(inside) ?? '.');
 }
 
-function joinScope(scope: string, path: string): string {
+export function joinScope(scope: string, path: string): string {
     return scope === '.' ? path : path === '.' ? scope : `${scope}/${path}`;
 }
 

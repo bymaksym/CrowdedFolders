@@ -11,6 +11,8 @@ Usage
   crowded-folders [paths...]              check the repository, or these folders
   crowded-folders init                    write a configuration file
   crowded-folders explain <folder>        show how one folder is read, and why
+  crowded-folders where <new-path>...     would a new file make a folder worse?
+  crowded-folders hook claude             Claude Code hook: warns on new files
   crowded-folders presets [name]          list the presets and their sources
   crowded-folders rules [name]            list the rules and their options
   crowded-folders print-config [folder]   print the configuration in effect
@@ -114,6 +116,15 @@ Configuration and monorepos
                            configuration, package or plugin runs (for checking a
                            repository you do not trust)
 
+For AI agents
+      --fail-on worse      where: exit 1 when a file would create or worsen a
+                           problem (default: always 0, it only says)
+      --prompt             explain: print the reorganisation task for an agent
+                           (folder, groups, moves, files to update, tests)
+      --agents             init: add the Claude Code hook to .claude/ and a
+                           block to AGENTS.md, not a configuration
+      --dry-run            init --agents: print the diff, change nothing
+
 Other
       --force              init: overwrite an existing configuration; a report:
                            write over a file git tracks, or over the
@@ -150,6 +161,8 @@ many problems it has today.
                        the root, or in .config/ when the repository has one)
   -p, --preset <name>  use these presets instead of detecting them
       --force          replace the existing configuration
+      --agents         instead: the Claude Code hook and a block for AGENTS.md
+      --dry-run        with --agents: print the diff, change nothing
 Example: crowded-folders init --preset react --preset strict`,
     explain: `crowded-folders explain <folder> [options]
 
@@ -157,8 +170,25 @@ Shows how one folder is read: the overrides that apply, how each file name was
 split into words, which modules and groups came out, the rules in effect with
 where each value comes from, and why the folder is or is not reported. A folder
 the configuration leaves out says what excluded it (exit 0).
+      --prompt         print the reorganisation task for an AI agent instead
   -c, --config <file>  --root <dir>  -p, --preset <name>  --stdin  --no-git
-Example: crowded-folders explain src/components`,
+Example: crowded-folders explain src/components --prompt`,
+    where: `crowded-folders where <new-path>... [options]
+
+Says whether a file added at each path would create, worsen or leave as it is a
+problem in its folder ("WORSE max-files 14->15"), and which existing folder
+fits its name. The file need not exist. Exit 0 unless --fail-on worse.
+  -f, --format text|json   --fail-on worse: exit 1 for CREATES or WORSE
+  -c, --config <file>  --root <dir>  -p, --preset <name>  --no-git
+Example: crowded-folders where src/core/enums/foo-bar.enum.ts`,
+    hook: `crowded-folders hook claude
+
+A Claude Code PreToolUse hook for Write, Edit and MultiEdit: reads the hook
+JSON from standard input and, when the file is new and would make its folder
+worse, answers with a warning for the agent and for you. It never blocks (exit
+0); errors are silent. Add it with crowded-folders init --agents.
+  -c, --config <file>  --root <dir>  --no-code
+Example: crowded-folders init --agents --dry-run`,
     presets: `crowded-folders presets [name]
 
 Lists the presets with what each one does and the guide its numbers come

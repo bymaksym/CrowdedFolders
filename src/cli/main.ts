@@ -9,6 +9,7 @@ import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
 import { overrides } from './commands/overrides.ts';
+import { where } from './commands/where.ts';
 import { COMMAND_HELP, HELP } from './help.ts';
 import { type Io, processIo, WriteError } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
@@ -51,6 +52,9 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             }
             case 'explain': {
                 return await explain(args, io, session);
+            }
+            case 'where': {
+                return where(args, io, session);
             }
             case 'overrides': {
                 return overrides(args, io, session);

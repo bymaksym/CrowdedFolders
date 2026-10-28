@@ -130,6 +130,16 @@ export function isTrackedByGit(path: string): boolean {
     }
 }
 
+/** Whether `.gitignore` hides this path (a file that does not exist yet too); false when it does not, or there is no git. */
+export function isIgnoredByGit(root: string, path: string): boolean {
+    try {
+        execFileSync('git', ['-C', root, 'check-ignore', '-q', '--', path], { stdio: 'ignore' });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 /**
  * One `git ls-files` for everything: `-t` tags each record (`?` untracked, `R` deleted), `--stage`
  * gives the mode, which tells a submodule (160000, another repository) from a file, and the attribute
