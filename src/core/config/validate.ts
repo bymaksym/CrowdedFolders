@@ -117,3 +117,18 @@ function checkRules(
 export function formatProblems(problems: readonly ConfigProblem[]): string {
     return problems.map(problem => `  ${problem.at}: ${problem.message}`).join('\n');
 }
+
+/** A configuration that cannot be used, with every problem found in it. */
+export class ConfigError extends Error {
+    readonly origin: string;
+    readonly problems: readonly ConfigProblem[];
+
+    constructor(origin: string, problems: readonly ConfigProblem[]) {
+        super(
+            `${origin} has ${problems.length === 1 ? 'a problem' : `${problems.length} problems`}:\n${formatProblems(problems)}`,
+        );
+        this.name = 'ConfigError';
+        this.origin = origin;
+        this.problems = problems;
+    }
+}

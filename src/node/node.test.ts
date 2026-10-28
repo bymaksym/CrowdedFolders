@@ -107,7 +107,12 @@ describe('plugins', () => {
         assert.match(pluginProblem({ meta: { name: 'x', namespace: 'X Y' } }) ?? '', /namespace/u);
         assert.match(
             pluginProblem({ meta: { name: 'x', namespace: 'x' }, rules: { a: {} } }) ?? '',
-            /needs "meta" and a "check"/u,
+            /rule "a" needs a "meta" object/u,
+        );
+        const meta = { description: 'd', defaultOptions: {} };
+        assert.match(
+            pluginProblem({ meta: { name: 'x', namespace: 'x' }, rules: { a: { meta } } }) ?? '',
+            /rule "a" needs a "check" function \(or "create"/u,
         );
         assert.match(
             pluginProblem({ meta: { name: 'x', namespace: 'x' }, presets: { a: { config: {} } } }) ?? '',
