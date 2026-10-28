@@ -36,12 +36,12 @@ about the median 95th percentile of folder sizes (19), the biggest folder in twe
 | [`elixir`](#elixir) | When it finds a file matching `mix.exs`. |
 | [`scala`](#scala) | When it finds a file matching `build.sbt`. |
 | [`c-cpp`](#c-cpp) | When it finds a file matching `CMakeLists.txt` or `meson.build` or `configure.ac` or `*.vcxproj` or `conanfile.txt` or `conanfile.py` or `vcpkg.json`. |
-| [`protobuf`](#protobuf) | When it finds a file matching `*.proto` or `buf.yaml` or `buf.gen.yaml`. |
-| [`bazel`](#bazel) | When it finds a file matching `MODULE.bazel` or `WORKSPACE` or `WORKSPACE.bazel`. |
 | [`unity`](#unity) | When it finds a file matching `ProjectSettings/ProjectVersion.txt`. |
 | [`unreal`](#unreal) | When it finds a file matching `*.uproject`. |
 | [`godot`](#godot) | When it finds a file matching `project.godot`. |
 | [`terraform`](#terraform) | When it finds a file matching `*.tf`. |
+| [`bazel`](#bazel) | When it finds a file matching `MODULE.bazel` or `WORKSPACE` or `WORKSPACE.bazel`. |
+| [`protobuf`](#protobuf) | When it finds a file matching `*.proto` or `buf.yaml` or `buf.gen.yaml`. |
 | [`docs`](#docs) | When it finds a file matching `docusaurus.config.js` or `docusaurus.config.ts` or `docusaurus.config.mjs` or `mkdocs.yml` or `.vitepress/config.{js,ts,mjs,mts}` or `**/.vitepress/config.{js,ts,mjs,mts}` or `hugo.{toml,yaml,yml,json}` or `**/hugo.{toml,yaml,yml,json}` or `_config.yml` or `**/_config.yml`, or a dependency on `@astrojs/starlight` or `astro` or `vitepress` or `@docusaurus/core`. |
 | [`data-science`](#data-science) | When it finds a file matching `notebooks/*.ipynb`. |
 | [`latex`](#latex) | When it finds a file matching `*.tex`. |
@@ -412,33 +412,6 @@ Sources:
 - [Google C++ style guide: file names](https://google.github.io/styleguide/cppguide.html)
 - [Pitchfork: a C++ project layout](https://github.com/vector-of-bool/pitchfork)
 
-## protobuf
-
-Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
-
-- **Extends:** [recommended](#recommended)
-- **Companions:** `_(?:grpc_web_pb|grpc_pb|pb2_grpc|pb2|pb|grpc|connect)$`
-
-Sources:
-
-- [Protocol Buffers, Python generated code: "The extension (.proto) is replaced with _pb2.py"](https://protobuf.dev/reference/python/python-generated/)
-- [Protocol Buffers, Go generated code: "replacing the .proto extension with .pb.go"](https://protobuf.dev/reference/go/go-generated/)
-- [Buf style guide: "All files of the same package should be in the same directory"](https://buf.build/docs/best-practices/style-guide/)
-
-## bazel
-
-Bazel: a folder with a BUILD.bazel is a package, with its own targets and its own visibility, so a new folder is a new BUILD file and a new set of visibility rules, not just a directory (the hint says so on every folder it proposes). The limits are recommended's measured 20 (no Bazel guide gives a number), the root of every package gets the 40 of the repository root, and the bazel-* symlinks to the output are left out.
-
-- **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
-- **`prefix-groups`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
-- **Left out:** `bazel-*`
-
-Sources:
-
-- [Bazel: BUILD files, "By definition, every package contains a BUILD file"](https://bazel.build/concepts/build-files)
-- [Bazel: visibility, "Visibility is specified by listing allowed packages"](https://bazel.build/concepts/visibility)
-
 ## unity
 
 Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), numbered series such as Model1, Model2 are one asset family, and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here.
@@ -503,6 +476,33 @@ Sources:
 
 - [Terraform: standard module structure](https://developer.hashicorp.com/terraform/language/modules/develop/structure)
 - [Terraform: style guide (file names)](https://developer.hashicorp.com/terraform/language/style)
+
+## bazel
+
+Bazel: a folder with a BUILD.bazel is a package, with its own targets and its own visibility, so a new folder is a new BUILD file and a new set of visibility rules, not just a directory (the hint says so on every folder it proposes). The limits are recommended's measured 20 (no Bazel guide gives a number), the root of every package gets the 40 of the repository root, and the bazel-* symlinks to the output are left out.
+
+- **Extends:** [recommended](#recommended)
+- **`max-files`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
+- **`prefix-groups`:** `error` `{"hint":"In Bazel a folder with a BUILD.bazel is a package: a new folder needs its own BUILD file and its own visibility."}`
+- **Left out:** `bazel-*`
+
+Sources:
+
+- [Bazel: BUILD files, "By definition, every package contains a BUILD file"](https://bazel.build/concepts/build-files)
+- [Bazel: visibility, "Visibility is specified by listing allowed packages"](https://bazel.build/concepts/visibility)
+
+## protobuf
+
+Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
+
+- **Extends:** [recommended](#recommended)
+- **Companions:** `_(?:grpc_web_pb|grpc_pb|pb2_grpc|pb2|pb|grpc|connect)$`
+
+Sources:
+
+- [Protocol Buffers, Python generated code: "The extension (.proto) is replaced with _pb2.py"](https://protobuf.dev/reference/python/python-generated/)
+- [Protocol Buffers, Go generated code: "replacing the .proto extension with .pb.go"](https://protobuf.dev/reference/go/go-generated/)
+- [Buf style guide: "All files of the same package should be in the same directory"](https://buf.build/docs/best-practices/style-guide/)
 
 ## docs
 

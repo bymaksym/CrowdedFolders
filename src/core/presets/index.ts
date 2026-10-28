@@ -1,13 +1,14 @@
 import type { Preset } from '../config/types.ts';
+import { bazel } from './content/bazel.ts';
 import { dataScience } from './content/data-science.ts';
 import { docs } from './content/docs.ts';
 import { latex } from './content/latex.ts';
+import { protobuf } from './content/protobuf.ts';
 import { terraform } from './content/terraform.ts';
 import { godot } from './games/godot.ts';
 import { unity } from './games/unity.ts';
 import { unreal } from './games/unreal.ts';
 import { recommended, strict } from './general.ts';
-import { bazel } from './languages/bazel.ts';
 import { cpp } from './languages/c-cpp.ts';
 import { dotnet } from './languages/dotnet.ts';
 import { elixir } from './languages/elixir.ts';
@@ -15,7 +16,6 @@ import { flutter } from './languages/flutter.ts';
 import { go } from './languages/go.ts';
 import { android, java } from './languages/jvm.ts';
 import { php } from './languages/php.ts';
-import { protobuf } from './languages/protobuf.ts';
 import { django, python } from './languages/python.ts';
 import { rails } from './languages/rails.ts';
 import { rust } from './languages/rust.ts';
@@ -59,14 +59,14 @@ export const BUILT_IN_PRESETS: Readonly<Record<string, Preset>> = {
     elixir,
     scala,
     'c-cpp': cpp,
-    protobuf,
-    bazel,
     // Games
     unity,
     unreal,
     godot,
     // Infrastructure, documents and data
     terraform,
+    bazel,
+    protobuf,
     docs,
     'data-science': dataScience,
     latex,

@@ -789,7 +789,7 @@ describe('protobuf, elixir, scala and bazel', () => {
         );
         assert.deepEqual(
             found.map(detection => detection.preset),
-            ['recommended', 'elixir', 'scala', 'protobuf', 'bazel'],
+            ['recommended', 'elixir', 'scala', 'bazel', 'protobuf'],
         );
     });
 });
