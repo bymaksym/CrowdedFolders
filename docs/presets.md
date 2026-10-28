@@ -44,20 +44,27 @@ about the 95th percentile of folder sizes, the biggest folder in twenty.
 
 ## recommended
 
-The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github).
+The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github). Migrations are left out by their name as well as by their folder (Flyway V1__init.sql, golang-migrate 000001_x.up.sql), and so are fastlane/metadata and the usual names of generated code (__generated__, *.generated.*). The root of every package (a folder with package.json, go.mod, Cargo.toml…) gets the 40 of the repository root, scripts/ and tooling/ read validate-i18n as being about i18n, and __tests__ and stories follow the code they sit next to.
 
 - **`max-files`:** `error` `{"max":20,"count":"modules","dotfiles":false}`
 - **`prefix-groups`:** `error` `{"min":4,"words":1,"ignore":["test","tests","spec","get","set","is","has","can","should"]}`
 - **`max-folders`:** `off`
 - **`redundant-prefix`:** `off`
 - **`single-file-folders`:** `off`
-- **Left out:** `node_modules`, `vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `migrations`, `migrate`, `**/alembic/versions`, `**/db/migration`, `dist`, `coverage`, `__pycache__`, `.git`
-- **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/Localization`, `**/Localization/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
+- **Left out:** `node_modules`, `/vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `**/fastlane/metadata`, `migrations`, `**/db/migrate`, `**/alembic/versions`, `**/db/migration`, `{V,U}[0-9]*__*`, `R__*`, `*.{up,down}.sql`, `[0-9][0-9][0-9][0-9][0-9][0-9]*[_-]*.{sql,ts,js,mjs,cjs,php,rb,py,cs,exs}`, `__generated__`, `*.generated.*`, `/generated`, `/gen`, `**/src/generated`, `**/src/gen`, `dist`, `coverage`, `__pycache__`, `.git`
+- **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/[lL]ocali[sz]ation`, `**/[lL]ocali[sz]ation/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
+- **In `**/scripts`, `**/scripts/**`, `**/tooling`, `**/tooling/**`, `**/bin`, `**/bin/**`:** . Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.
+- **In `**/__tests__`, `**/__tests__/**`, `**/__stories__`, `**/__stories__/**`, `**/stories`, `**/stories/**`:** `prefix-groups` `off`. Tests and stories mirror the code they are next to: when the code is split into folders they follow it, so the group is reported once, in the code.
 - **In `.`:** `max-files` `error` `{"max":40}`. The root holds what tools look for there on their own: manifests, lockfiles, licences, configs.
+- **In `**`:** `max-files` `error` `{"max":40}`. The root of a package holds what its tools look for, like the root of the repository: the same 25 config files pass in the root and would fail in apps/shop.
 
 Sources:
 
 - [Angular style guide: "consider splitting further"](https://angular.dev/style-guide#project-structure)
+- [Flyway: versioned migrations are named like V001.002__NewTwitterColumn.sql, repeatable ones R__SetDefaults.sql](https://documentation.red-gate.com/flyway/flyway-concepts/migrations/versioned-migrations)
+- [golang-migrate: {version}_{title}.up.{extension} and {version}_{title}.down.{extension}](https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md)
+- [fastlane deliver: "The folder has to be structured like this" (fastlane/metadata/en-US)](https://docs.fastlane.tools/actions/deliver/)
+- [Relay: "ahead-of-time compilation of GraphQL queries and fragments to generate artifacts" (kept in __generated__ folders)](https://relay.dev/docs/guides/compiler/)
 - [docs/presets.md: how the limits were measured](https://github.com/bymaksym/CrowdedFolders/blob/main/docs/presets.md)
 
 ## strict
@@ -235,13 +242,15 @@ Sources:
 
 ## java
 
-Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceTest and UserServiceIT are read as UserService. One top-level class per file makes folders larger than in TypeScript, hence 20.
+Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceTest and UserServiceIT are read as UserService, AbstractUserService, DefaultUserService and FakeUserService as being about user, and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.
 
 - **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer."}`
-- **`prefix-groups`:** `error` `{"hint":"A folder is a package: they would be the package of that feature."}`
+- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
+- **`prefix-groups`:** `error` `{"hint":"A folder is a package: they would be the package of that feature.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
 - **Companions:** `(Test|Tests|IT|IntegrationTest|Spec)$`
-- **Left out:** `target`, `build`, `.gradle`, `generated`, `generated-sources`
+- **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
+- **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
+- **In `**/build-logic`, `**/build-logic/**`, `**/buildSrc`, `**/buildSrc/**`:** . Convention plugins are named after the platform they configure (AndroidApplicationConventionPlugin, AndroidLibraryConventionPlugin): the platform is not what they are about.
 
 Sources:
 
@@ -249,46 +258,55 @@ Sources:
 - [Google Java style guide](https://google.github.io/styleguide/javaguide.html)
 - [Kotlin coding conventions: directory structure](https://kotlinlang.org/docs/coding-conventions.html)
 - [IntelliJ inspection: package with too many classes (50)](https://jetbrains.com/help/inspectopedia/PackageWithTooManyClasses.html)
+- [Martin Fowler, Test Double: the kinds Gerard Meszaros lists (dummy, fake, stub, spy, mock)](https://martinfowler.com/bliki/TestDouble.html)
+- [Gradle: buildSrc "is a separate build located in the root of your Gradle project"](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html)
+- [Spring Boot: auto-configuration is registered in META-INF/spring](https://docs.spring.io/spring-boot/reference/features/developing-auto-configuration.html)
 
 ## android
 
-Java/Kotlin, plus Android resources: res/ folders cannot have sub-folders ("Alternative resource directories can't be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ is left out.
+Java/Kotlin, plus Android resources: res/ folders cannot have sub-folders ("Alternative resource directories can't be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ and the composeResources/ of Kotlin Multiplatform (the same fixed layout: drawable, font, values, files) are left out, and Platform.kt, Platform.android.kt and Platform.ios.kt are one module, as the Kotlin conventions name them.
 
 - **Extends:** [java](#java)
-- **Left out:** `**/src/*/res`, `/res`
+- **Left out:** `**/src/*/res`, `/res`, `**/src/*/composeResources`
 
 Sources:
 
 - [Android: providing resources](https://developer.android.com/guide/topics/resources/providing-resources)
+- [Compose Multiplatform resources: images in the drawable directory, fonts in the font directory](https://kotlinlang.org/docs/multiplatform/compose-multiplatform-resources-setup.html)
+- [Kotlin coding conventions, multiplatform: files in platform source sets take a suffix (Platform.jvm.kt, Platform.android.kt)](https://kotlinlang.org/docs/coding-conventions.html)
 - [ribot Android guidelines: resource naming](https://github.com/ribot/android-guidelines/blob/master/project_and_code_guidelines.md)
 
 ## dotnet
 
-C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an interface is not what it is about (IUserService belongs with UserService), and UserServiceTests is UserService. One type per file, hence 20.
+C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an interface is not what it is about (IUserService belongs with UserService), and UserServiceTests is UserService, and FakeUserService is about user. One type per file, hence 20.
 
 - **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"In C# a folder is a namespace (IDE0130)."}`
-- **`prefix-groups`:** `error` `{"hint":"In C# a folder is a namespace (IDE0130)."}`
+- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"]}`
+- **`prefix-groups`:** `error` `{"hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"]}`
 - **Companions:** `^I(?=[A-Z])`, `(Tests|Test)$`
-- **Leading words skipped:** `i`
+- **Leading words skipped:** `i`, `fake`, `mock`, `stub`, `spy`, `dummy`
 - **Left out:** `bin`, `obj`, `Migrations`, `wwwroot/lib`, `Properties`, `.vs`
 
 Sources:
 
 - [IDE0130: namespace does not match folder structure](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0130)
 - [C# identifier names: interfaces start with I](https://learn.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/identifier-names)
+- [Martin Fowler, Test Double: the kinds Gerard Meszaros lists (dummy, fake, stub, spy, mock)](https://martinfowler.com/bliki/TestDouble.html)
 
 ## swift
 
-Swift and iOS: User+Codable.swift is an extension of User and belongs with it, and UserTests is User. Asset catalogs, localisation folders and Xcode bundles are left out.
+Swift and iOS: User+Codable.swift is an extension of User and belongs with it, and UserTests is User. FakeUserService and MockUserService are about user. Asset catalogs, localisation folders, Xcode bundles, vendored frameworks (.xcframework, .framework, .bundle) and DocC resources are left out.
 
 - **Extends:** [recommended](#recommended)
 - **Companions:** `\+.+$`, `(Tests|Test|Spec)$`
-- **Left out:** `*.xcassets`, `*.lproj`, `*.xcodeproj`, `*.xcworkspace`, `DerivedData`, `Pods`, `Carthage`, `.build`
+- **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`
+- **Left out:** `*.xcassets`, `*.lproj`, `*.xcodeproj`, `*.xcworkspace`, `DerivedData`, `Pods`, `Carthage`, `.build`, `*.xcframework`, `*.framework`, `*.bundle`, `**/*.docc/Resources`
 
 Sources:
 
 - [Google Swift style guide: file names (MyType+MyProtocol.swift)](https://google.github.io/swift/)
+- [Apple: creating a static framework (a .framework bundle: a compiled library with its headers)](https://developer.apple.com/documentation/xcode/creating-a-static-framework)
+- [Martin Fowler, Test Double: the kinds Gerard Meszaros lists (dummy, fake, stub, spy, mock)](https://martinfowler.com/bliki/TestDouble.html)
 
 ## flutter
 
@@ -359,7 +377,7 @@ Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one)
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar's rule 2.7, the one number game guides give: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
 - **Companions:** `_?\d+$`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/Packages`, `Assets/Plugins`, `*~`
+- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/Packages`, `Assets/Plugins`, `*~`
 
 Sources:
 
@@ -376,7 +394,7 @@ Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName
 - **`prefix-groups`:** `error` `{"min":15,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
 - **Companions:** `_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$`, `_(P|Audio|Lighting|Geo|Gameplay)$`, `_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$`, `_\d+$`
 - **Leading words skipped:** `a`, `abp`, `ac`, `ai`, `aic`, `am`, `ao`, `att`, `bb`, `bp`, `bpfl`, `bpi`, `bpml`, `bs`, `bt`, `ca`, `cue`, `curve`, `dm`, `dt`, `dv`, `dw`, `e`, `eqs`, `f`, `ffe`, `fms`, `font`, `ft`, `lg`, `ll`, `ls`, `m`, `matinee`, `mf`, `mi`, `mp`, `mpc`, `msw`, `mt`, `ne`, `ns`, `ol`, `pfb`, `phys`, `pm`, `pp`, `ps`, `rig`, `rt`, `rtc`, `s`, `sgi`, `sif`, `sk`, `skel`, `sm`, `sp`, `spr`, `sprg`, `ss`, `t`, `tbp`, `tc`, `ti`, `tm`, `ts`, `vf`, `vfa`, `wbp`, `u`, `i`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `.vs`
+- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `.vs`
 
 Sources:
 
@@ -388,7 +406,7 @@ Godot: a scene and its script are one (player.tscn, player.gd), and so are the .
 
 - **Extends:** [recommended](#recommended)
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar's rule 2.7, the one number game guides give: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}`, `.godot`, `/addons`
+- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `.godot`, `/addons`
 
 Sources:
 

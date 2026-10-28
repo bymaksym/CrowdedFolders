@@ -1,11 +1,11 @@
 import type { Preset } from '../config/types.ts';
 
 /**
- * Images, sound, video and fonts. A folder of 300 icons is a set, not a drawer: crowding is about
+ * Images, sound, video, fonts and the formats of animation, 3D and mobile assets (Rive, Lottie, glTF, FBX, KTX2). A folder of 300 icons is a set, not a drawer: crowding is about
  * code and documents. The game presets put them back, because there the assets are the project.
  */
 export const MEDIA =
-    '*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf}';
+    '*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}';
 
 /**
  * Folders of test data: fixtures, snapshots, golden and expected outputs. Their shape is the thing
@@ -24,17 +24,66 @@ export const TEST_DATA: readonly string[] = [
 ];
 
 /**
+ * Migrations are a numbered series, flat and in order in every tool that writes them, wherever the
+ * project keeps them: Flyway has `locations`, TypeORM `src/migration`, golang-migrate any folder. The
+ * shape of the name says it, so these are left out by name and not only by folder. Written as globs,
+ * which compile to linear expressions.
+ *
+ * - Flyway: `V1__init.sql`, `V1_2__add_users.sql`, `U2__undo.sql`, repeatable `R__views.sql`.
+ * - golang-migrate: `000001_create_users.up.sql` and its `.down.sql`.
+ * - TypeORM, Sequelize, Knex, Phoenix, Prisma-style seeders: six or more digits (a timestamp), then
+ *   `_` or `-`, then a title: `1612345678901-CreateUsers.ts`, `20240101120000_create_users.exs`.
+ */
+export const MIGRATION_SERIES: readonly string[] = [
+    '{V,U}[0-9]*__*',
+    'R__*',
+    '*.{up,down}.sql',
+    '[0-9][0-9][0-9][0-9][0-9][0-9]*[_-]*.{sql,ts,js,mjs,cjs,php,rb,py,cs,exs}',
+];
+
+/**
+ * Generated code that is committed anyway, by the names its generators give it. `__generated__` is
+ * Relay's and GraphQL Code Generator's, `*.generated.*` is what many tools append. A bare
+ * `generated` or `gen` is a generated folder only at the root or directly in `src/`: further down it can
+ * be a Java package.
+ */
+export const GENERATED: readonly string[] = [
+    '__generated__',
+    '*.generated.*',
+    '/generated',
+    '/gen',
+    '**/src/generated',
+    '**/src/gen',
+];
+
+/**
  * What every repository gets, whatever its language: the two rules that make the tool, at limits
  * measured on real repositories (see docs/presets.md), and the folders that are never yours to
  * arrange.
  */
 export const recommended: Preset = {
     description:
-        'The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github).',
+        'The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github). Migrations are left out by their name as well as by their folder (Flyway V1__init.sql, golang-migrate 000001_x.up.sql), and so are fastlane/metadata and the usual names of generated code (__generated__, *.generated.*). The root of every package (a folder with package.json, go.mod, Cargo.toml…) gets the 40 of the repository root, scripts/ and tooling/ read validate-i18n as being about i18n, and __tests__ and stories follow the code they sit next to.',
     sources: [
         {
             title: 'Angular style guide: "consider splitting further"',
             url: 'https://angular.dev/style-guide#project-structure',
+        },
+        {
+            title: 'Flyway: versioned migrations are named like V001.002__NewTwitterColumn.sql, repeatable ones R__SetDefaults.sql',
+            url: 'https://documentation.red-gate.com/flyway/flyway-concepts/migrations/versioned-migrations',
+        },
+        {
+            title: 'golang-migrate: {version}_{title}.up.{extension} and {version}_{title}.down.{extension}',
+            url: 'https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md',
+        },
+        {
+            title: 'fastlane deliver: "The folder has to be structured like this" (fastlane/metadata/en-US)',
+            url: 'https://docs.fastlane.tools/actions/deliver/',
+        },
+        {
+            title: 'Relay: "ahead-of-time compilation of GraphQL queries and fragments to generate artifacts" (kept in __generated__ folders)',
+            url: 'https://relay.dev/docs/guides/compiler/',
         },
         {
             title: 'docs/presets.md: how the limits were measured',
@@ -45,7 +94,9 @@ export const recommended: Preset = {
         exclude: [
             // Someone else's code, kept byte for byte.
             'node_modules',
-            'vendor',
+            // Anchored: a Java package can be called vendor (com/acme/vendor). Next to the manifest
+            // that owns it, `init` and detection write it for each package of a monorepo.
+            '/vendor',
             'third_party',
             'third-party',
             // Test data: its shape is the thing under test, or the tool that produced it. Either case:
@@ -62,13 +113,18 @@ export const recommended: Preset = {
             // workflows directly inside .github/workflows.
             '.*',
             MEDIA,
+            // Fastlane reads one folder per language and one file per field, and nothing deeper.
+            '**/fastlane/metadata',
             // Migrations: flat and ordered by number or date in every tool that writes them, and
-            // the remedy for too many is squashing, not folders.
+            // the remedy for too many is squashing, not folders. `migrate` alone is also a Go
+            // command (cmd/migrate/main.go), so only Rails' db/migrate is left out by that name.
             'migrations',
-            'migrate',
+            '**/db/migrate',
             '**/alembic/versions',
             '**/db/migration',
+            ...MIGRATION_SERIES,
             // Generated, when it is committed anyway, or found by walking the disk without git.
+            ...GENERATED,
             'dist',
             'coverage',
             '__pycache__',
@@ -101,15 +157,38 @@ export const recommended: Preset = {
                     '**/translations',
                     '**/lang',
                     '**/langs',
-                    '**/Localization',
-                    '**/Localization/**',
+                    '**/[lL]ocali[sz]ation',
+                    '**/[lL]ocali[sz]ation/**',
                 ],
                 reason: 'Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.',
                 rules: { 'max-files': 'off', 'prefix-groups': 'off' },
             },
             {
+                folders: ['**/scripts', '**/scripts/**', '**/tooling', '**/tooling/**', '**/bin', '**/bin/**'],
+                reason: 'Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.',
+                naming: { ignoreLeadingWords: ['validate', 'check', 'build', 'generate', 'export'] },
+            },
+            {
+                folders: [
+                    '**/__tests__',
+                    '**/__tests__/**',
+                    '**/__stories__',
+                    '**/__stories__/**',
+                    '**/stories',
+                    '**/stories/**',
+                ],
+                reason: 'Tests and stories mirror the code they are next to: when the code is split into folders they follow it, so the group is reported once, in the code.',
+                rules: { 'prefix-groups': 'off' },
+            },
+            {
                 folders: ['.'],
                 reason: 'The root holds what tools look for there on their own: manifests, lockfiles, licences, configs.',
+                rules: { 'max-files': ['error', { max: 40 }] },
+            },
+            {
+                folders: ['**'],
+                withFiles: ['package.json', 'project.json', 'go.mod', 'Cargo.toml', 'BUILD.bazel'],
+                reason: 'The root of a package holds what its tools look for, like the root of the repository: the same 25 config files pass in the root and would fail in apps/shop.',
                 rules: { 'max-files': ['error', { max: 40 }] },
             },
         ],

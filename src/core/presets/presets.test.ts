@@ -286,6 +286,125 @@ describe('what the presets change', () => {
     });
 });
 
+/** `count` files named `name(i)`, in a folder. */
+const series = (folder: string, count: number, name: (index: number) => string): string[] =>
+    Array.from({ length: count }, (_, index) => `${folder}/${name(index)}`);
+/** The files of a folder, given their names. */
+const inFolder = (folder: string, names: readonly string[]): string[] => names.map(name => `${folder}/${name}`);
+const pad = (index: number, width = 2): string => String(index + 1).padStart(width, '0');
+
+describe('recommended, after the review of 21-10-2026', () => {
+    it('reads validate-i18n as being about i18n in scripts/ and tooling/ (espaciot-app), and not in src/', () => {
+        const verbs = ['validate-i18n', 'validate-links', 'validate-schema', 'validate-env', 'check-docs'];
+        const names = verbs.map(name => `${name}.mjs`);
+        assert.deepEqual(check('recommended', [...inFolder('tooling', names), ...inFolder('scripts', names)]), []);
+        const code = ['validate-a.ts', 'validate-b.ts', 'validate-c.ts', 'validate-d.ts', 'main.ts'];
+        assert.equal(check('recommended', inFolder('src/forms', code)).length, 1);
+    });
+
+    it('leaves the folders generators write out: __generated__, *.generated.*, a root generated/ (Relay, GraphQL)', () => {
+        const files = [
+            ...series('src/__generated__', 30, index => `Query${index}.graphql.ts`),
+            ...series('src/api', 30, index => `schema${index}.generated.ts`),
+            ...series('generated', 30, index => `file${index}.ts`),
+            ...series('gen', 30, index => `file${index}.ts`),
+        ];
+        assert.deepEqual(check('recommended', files), []);
+    });
+
+    it('does not take a Java package called generated, gen, vendor or build for generated code', () => {
+        const classes = (folder: string): string[] => series(folder, 25, index => `Class${index}.java`);
+        const files = [
+            ...classes('src/main/java/com/acme/generated'),
+            ...classes('src/main/java/com/acme/vendor'),
+            ...classes('com/acme/build'),
+        ];
+        assert.deepEqual(
+            check('java', files).map(finding => finding.folder),
+            ['com/acme/build', 'src/main/java/com/acme/generated', 'src/main/java/com/acme/vendor'],
+        );
+    });
+
+    it('checks a Go command called migrate (cmd/migrate), and still leaves out db/migrate', () => {
+        const files = [
+            ...series('cmd/migrate', 25, index => `step${index}.go`),
+            ...series('db/migrate', 40, index => `${pad(index, 14)}_add_column.rb`),
+        ];
+        assert.deepEqual(
+            check('recommended', files).map(finding => finding.folder),
+            ['cmd/migrate'],
+        );
+    });
+
+    it('leaves out fastlane/metadata, which fastlane wants flat (60 changelogs)', () => {
+        const files = series('fastlane/metadata/android/en-US/changelogs', 60, index => `${index + 100}.txt`);
+        assert.deepEqual(check('recommended', files), []);
+    });
+
+    it('recognises a series of migrations by the shape of its name, wherever it is kept', () => {
+        const flyway = [
+            ...series('src/main/sql', 30, index => `V${index + 1}_2__init.sql`),
+            ...series('src/main/sql', 6, index => `R__views${index}.sql`),
+            ...series('src/main/sql', 3, index => `U${index + 1}__undo.sql`),
+        ];
+        const files = [
+            ...flyway,
+            ...series('db/changes', 30, index => `${pad(index, 6)}_create_users.up.sql`),
+            ...series('db/changes', 30, index => `${pad(index, 6)}_create_users.down.sql`),
+            ...series('src/migration', 30, index => `${1_612_345_678_000 + index}-CreateUsers.ts`),
+        ];
+        assert.deepEqual(check('recommended', files), []);
+        // Not a series: a validator is not a migration.
+        const classes = series('src/main/java', 25, index => `V${index}Controller.java`);
+        assert.equal(check('recommended', classes).length, 1);
+    });
+
+    it('leaves out the formats of animation, 3D and mobile assets', () => {
+        const extensions = ['riv', 'lottie', 'caf', 'aiff', 'heic', 'glb', 'gltf', 'fbx', 'obj', 'tga', 'ktx2'];
+        const files = extensions.flatMap(extension =>
+            series(`assets/${extension}`, 25, index => `a${index}.${extension}`),
+        );
+        assert.deepEqual(check('recommended', files), []);
+    });
+
+    it('does not count translations in lib/src/localization, in lower case (flutter skeleton)', () => {
+        const files = series('lib/src/localization', 25, index => `app_${pad(index)}.arb`);
+        assert.deepEqual(check('recommended', files), []);
+    });
+
+    it('gives the root of a package the 40 of the root of the repository (apps/shop)', () => {
+        const configs = (folder: string): string[] => [
+            ...series(folder, 24, index => `config${index}.json`),
+            `${folder}/package.json`,
+        ];
+        const finding = check('recommended', [...configs('apps/shop'), ...configs('apps/shop/src/legacy')]);
+        assert.deepEqual(
+            finding.map(item => item.folder),
+            [],
+        );
+        const noManifest = series('apps/shop/docs-site', 25, index => `config${index}.json`);
+        assert.deepEqual(
+            check('recommended', noManifest).map(item => item.folder),
+            ['apps/shop/docs-site'],
+        );
+    });
+
+    it('does not ask __tests__ or stories to group on their own (packages/ui)', () => {
+        const components = ['button', 'badge', 'banner', 'bar', 'x'];
+        const files = [
+            ...components.map(name => `packages/ui/src/__tests__/${name}.test.tsx`),
+            ...components.map(name => `packages/ui/src/stories/${name}.stories.tsx`),
+        ];
+        assert.deepEqual(check('recommended', files), []);
+        assert.equal(
+            check('recommended', components.map(name => `packages/ui/src/${name}-a.tsx`).slice(0, 4)).length,
+            0,
+        );
+        const code = ['button-a', 'button-b', 'button-c', 'button-d', 'x'].map(name => `packages/ui/src/${name}.tsx`);
+        assert.equal(check('recommended', code).length, 1);
+    });
+});
+
 describe('detectPresets', () => {
     it('proposes recommended always, and each preset from a file or a dependency', () => {
         const found = detectPresets(
