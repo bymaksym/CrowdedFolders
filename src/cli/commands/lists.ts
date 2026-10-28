@@ -60,6 +60,8 @@ export function printConfig(args: Args, io: Io, session: Session): number {
               companions: explanation.folder.naming.companions.map(pattern => pattern.source),
               ignoreLeadingWords: [...explanation.folder.naming.ignoreLeadingWords],
               groupNumericPrefixes: explanation.folder.naming.groupNumericPrefixes,
+              folderFiles: explanation.folder.naming.folderFiles?.map(glob => glob.source) ?? [],
+              folderCompanions: explanation.folder.naming.folderCompanions ?? [],
           }
         : config.naming;
     io.write(`${JSON.stringify({ folder, naming, rules, overrides: explanation?.overrides ?? [] }, undefined, 2)}\n`);

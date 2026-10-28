@@ -56,6 +56,8 @@ export function mergeNaming(base: NamingState, layer: NamingConfig | undefined):
             layer.ignoreLeadingWords?.map(word => word.toLowerCase()),
         ),
         groupNumericPrefixes: layer.groupNumericPrefixes ?? base.groupNumericPrefixes,
+        folderFiles: mergeList(base.folderFiles, layer.folderFiles),
+        folderCompanions: mergeList(base.folderCompanions, layer.folderCompanions),
     };
 }
 

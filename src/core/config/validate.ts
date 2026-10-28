@@ -1,3 +1,4 @@
+import { splitWords } from '../naming/words.ts';
 import { globProblem } from '../paths/glob.ts';
 import type { Rule } from '../rules/rule.ts';
 import { isObject, validate } from './json-schema.ts';
@@ -63,14 +64,23 @@ function checkNaming(naming: NamingConfig | undefined, at: string, problems: Con
             });
         }
     }
-    for (const [index, word] of (naming?.ignoreLeadingWords ?? []).entries()) {
-        if (/[^\p{L}\p{N}!]/u.test(word)) {
-            problems.push({
-                at: `${at}.ignoreLeadingWords[${index}]`,
-                message: `"${word}" is not one word: names are split at "-", "_", "." and case changes`,
-            });
+    // Read the way names are read, or the entry never matches: "useState" is two words, "use" and "state".
+    for (const [index, entry] of (naming?.ignoreLeadingWords ?? []).entries()) {
+        const word = entry.startsWith('!') ? entry.slice(1) : entry;
+        const words = splitWords(word);
+        if (words.length === 1 && words[0] === word.toLowerCase()) {
+            continue;
         }
+        const suggestion = `${entry.startsWith('!') ? '!' : ''}${words[0] ?? ''}`;
+        problems.push({
+            at: `${at}.ignoreLeadingWords[${index}]`,
+            message:
+                words.length === 0
+                    ? `"${entry}" has no words, so it never matches`
+                    : `"${entry}" is not one word: names are split at "-", "_", "." and case changes, and it reads as ${words.map(part => `"${part}"`).join(', ')} — did you mean "${suggestion}"?`,
+        });
     }
+    checkGlobs(naming?.folderFiles, `${at}.folderFiles`, problems);
 }
 
 function checkRules(
@@ -90,8 +100,15 @@ function checkRules(
             problems.push({ at: where, message: `is not a rule; ${hint}` });
             continue;
         }
-        if (typeof setting !== 'string' && setting[1] !== undefined && rule.meta.options) {
-            problems.push(...validate(setting[1], rule.meta.options, `${where}[1]`));
+        if (typeof setting === 'string' || setting[1] === undefined || !rule.meta.options) {
+            continue;
+        }
+        const shape = validate(setting[1], rule.meta.options, `${where}[1]`);
+        problems.push(...shape);
+        if (shape.length === 0 && rule.meta.checkOptions) {
+            for (const problem of rule.meta.checkOptions(setting[1])) {
+                problems.push({ at: `${where}[1].${problem.at}`, message: problem.message });
+            }
         }
     }
 }

@@ -1,5 +1,5 @@
 import type { JsonSchema } from '../config/json-schema.ts';
-import type { Module, Naming } from '../naming/modules.ts';
+import type { Module, Naming, Uncounted } from '../naming/modules.ts';
 import type { FolderEntry } from '../paths/tree.ts';
 
 export type Severity = 'error' | 'off' | 'warn';
@@ -22,6 +22,17 @@ export interface RuleMeta<Options extends object> {
     readonly defaultOptions: Options;
     /** The options, as JSON Schema: checked when the configuration loads, and offered by editors. */
     readonly options?: JsonSchema;
+    /**
+     * What a schema cannot say about the options as written (not merged), as messages: an `ignore`
+     * entry that can never match, say. Checked when the configuration loads; any message stops it.
+     */
+    readonly checkOptions?: (options: Readonly<Record<string, unknown>>) => readonly OptionProblem[];
+}
+
+export interface OptionProblem {
+    /** The option, as a path inside the options: `ignore[2]`. */
+    readonly at: string;
+    readonly message: string;
 }
 
 /** A folder, ready for a rule: its files, its subfolders and its modules. */
@@ -30,12 +41,37 @@ export interface FolderView extends FolderEntry {
     readonly modules: readonly Module[];
     /** The naming in effect for this folder, after presets and overrides. */
     readonly naming: Naming;
+    /**
+     * Files of the folder that are in no module, and why: they describe the folder
+     * (`package-info.java`) or go with a sibling folder (Unity's `Scripts.meta`). Still in `files`.
+     */
+    readonly uncounted?: readonly Uncounted[];
 }
 
 export interface RuleContext<Options extends object> {
     /** The options in effect for this folder: the defaults, then the configuration, then overrides. */
     readonly options: Options;
     readonly report: (problem: Problem) => void;
+    /**
+     * Something the rule looked at and chose not to report, with why: `explain` lists them, so that
+     * "why is this not reported?" has an answer. Ignored by a normal run.
+     */
+    readonly note?: (note: Note) => void;
+    /**
+     * Another rule as it stands in this folder, its options merged over its defaults; `undefined`
+     * when it is off or unknown. For rules that must not contradict each other: `prefix-groups` does
+     * not propose a folder that `max-files` would report.
+     */
+    readonly settingsOf?: (
+        rule: string,
+    ) => { readonly severity: Severity; readonly options: Readonly<Record<string, unknown>> } | undefined;
+}
+
+/** What a rule did not report, and why. */
+export interface Note {
+    /** What it is about: a group key, a module. */
+    readonly key?: string;
+    readonly message: string;
 }
 
 export interface Problem {

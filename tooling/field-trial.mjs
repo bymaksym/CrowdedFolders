@@ -150,7 +150,13 @@ for (const trial of chosen) {
         {
             include: [],
             exclude: [],
-            naming: { companions: [], ignoreLeadingWords: [], groupNumericPrefixes: false },
+            naming: {
+                companions: [],
+                ignoreLeadingWords: [],
+                groupNumericPrefixes: false,
+                folderFiles: [],
+                folderCompanions: [],
+            },
             rules: {},
             overrides: [],
             layers: [],

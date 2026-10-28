@@ -1,9 +1,9 @@
 import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
-import { compareText, modulesOf, type Naming } from './naming/modules.ts';
+import { compareText, type Naming, readFolder } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
-import type { FolderView, Move, Problem, Rule } from './rules/rule.ts';
+import type { FolderView, Move, Note, Problem, Rule, RuleContext } from './rules/rule.ts';
 
 /** One problem in one folder, as every output format receives it. */
 export interface Finding {
@@ -46,6 +46,13 @@ export interface FolderExplanation {
     >;
     readonly overrides: readonly OverrideState[];
     readonly findings: readonly Finding[];
+    /** What the rules looked at and chose not to report, with why. */
+    readonly notes: readonly RuleNote[];
+}
+
+/** A note of one rule, for `explain`. */
+export interface RuleNote extends Note {
+    readonly rule: string;
 }
 
 /** Filters the files by `include` and `exclude`. */
@@ -96,11 +103,13 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
                 : state.options,
         };
     }
+    const notes: RuleNote[] = [];
     return {
         folder: context.viewOf(entry, naming),
         rules: effective,
         overrides,
-        findings: context.check(entry),
+        findings: context.check(entry, notes),
+        notes,
     };
 }
 
@@ -154,16 +163,29 @@ class FolderContext {
 
     viewOf(entry: FolderEntry, state: NamingState): FolderView {
         const naming = this.compileNaming(state);
-        return { ...entry, naming, modules: modulesOf(entry.files, naming) };
+        const { modules, uncounted } = readFolder(entry.files, naming, entry.folders);
+        return { ...entry, naming, modules, uncounted };
     }
 
-    check(entry: FolderEntry): Finding[] {
+    /** Runs the rules on one folder; with `notes`, also collects what they chose not to report. */
+    check(entry: FolderEntry, notes?: RuleNote[]): Finding[] {
         const { naming, rules } = this.settingsFor(entry.path);
         const active = Object.entries(rules).filter(([, state]) => state.severity !== 'off');
         if (active.length === 0) {
             return [];
         }
         const view = this.viewOf(entry, naming);
+        const settingsOf: RuleContext<object>['settingsOf'] = other => {
+            const state = rules[other];
+            const rule = this.rules[other];
+            if (!state || !rule || state.severity === 'off') {
+                return;
+            }
+            return {
+                severity: state.severity,
+                options: mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options),
+            };
+        };
         const findings: Finding[] = [];
         for (const [name, state] of active) {
             const rule = this.rules[name];
@@ -176,7 +198,13 @@ class FolderContext {
                     toFinding(name, state.severity === 'warn' ? 'warn' : 'error', entry.path, problem, rule.meta.url),
                 );
             };
-            rule.check(view, { options, report });
+            // Only `explain` asks for notes; a normal run does not spend time writing them.
+            const note = notes
+                ? (found: Note): void => {
+                      notes.push({ rule: name, ...found });
+                  }
+                : undefined;
+            rule.check(view, { options, report, settingsOf, ...(note && { note }) });
         }
         return findings;
     }
@@ -208,6 +236,8 @@ class FolderContext {
             companions: state.companions.map(pattern => new RegExp(pattern, 'u')),
             ignoreLeadingWords: new Set(state.ignoreLeadingWords),
             groupNumericPrefixes: state.groupNumericPrefixes,
+            folderFiles: state.folderFiles.map(compileGlob),
+            folderCompanions: state.folderCompanions,
         };
         this.namingCache.set(id, naming);
         return naming;
