@@ -84,8 +84,13 @@ const TYPE_PREFIXES = [
 
 export const unreal: Preset = {
     description:
-        "Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion.",
+        'Unreal Engine, after Allar\'s style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp.',
     sources: [
+        { title: 'Google C++ style guide: file names', url: 'https://google.github.io/styleguide/cppguide.html' },
+        {
+            title: 'Unreal Engine: World Partition, actors are saved to their own individual files (One File Per Actor)',
+            url: 'https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-in-unreal-engine',
+        },
         {
             title: "Allar's UE5 style guide (1.2 asset names, 2.6, 2.7)",
             url: 'https://github.com/Allar/ue5-style-guide',
@@ -102,6 +107,9 @@ export const unreal: Preset = {
             '/DerivedDataCache',
             '/Binaries',
             'Content/Developers',
+            // World Partition: one file per actor, named by hash, written by the editor.
+            '__ExternalActors__',
+            '__ExternalObjects__',
             '.vs',
         ],
         naming: {
@@ -115,13 +123,33 @@ export const unreal: Preset = {
         },
         rules: {
             'max-files': ['warn', { max: 50, count: 'modules' }],
+            // A warning like max-files: both are the guide's "should" (rule 2.7), and a drawer of 200
+            // assets must not pass while fifteen of one name break the build.
             'prefix-groups': [
-                'error',
+                'warn',
                 {
                     min: 15,
                     hint: 'Allar 2.7: "If you find yourself having 15+ of these assets that belong together, they should be together."',
+                    hintFor: ['*.{uasset,umap}'],
                 },
             ],
         },
+        overrides: [
+            {
+                folders: ['**/Source', '**/Source/**'],
+                reason: "The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).",
+                rules: {
+                    'max-files': ['error', { max: 20, count: 'modules' }],
+                    'prefix-groups': [
+                        'warn',
+                        {
+                            min: 5,
+                            hint: "In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.",
+                            hintFor: ['*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}'],
+                        },
+                    ],
+                },
+            },
+        ],
     },
 };

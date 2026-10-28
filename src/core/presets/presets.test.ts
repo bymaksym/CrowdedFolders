@@ -301,6 +301,8 @@ const series = (folder: string, count: number, name: (index: number) => string):
     Array.from({ length: count }, (_, index) => `${folder}/${name(index)}`);
 /** The files of a folder, given their names. */
 const inFolder = (folder: string, names: readonly string[]): string[] => names.map(name => `${folder}/${name}`);
+/** Two letters for each index: a name that no numeric companion can strip. */
+const letters = (index: number): string => String.fromCodePoint(97 + Math.floor(index / 26), 97 + (index % 26));
 const pad = (index: number, width = 2): string => String(index + 1).padStart(width, '0');
 
 describe('recommended, after the review of 21-10-2026', () => {
@@ -609,6 +611,68 @@ describe('languages, after the review of 21-10-2026', () => {
     });
 });
 
+describe('game engines, after the review of 21-10-2026', () => {
+    it('unity leaves out ProjectSettings and the third party in Assets, and checks embedded packages', () => {
+        const files = [
+            ...series('ProjectSettings', 40, index => `Setting${pad(index)}.asset`),
+            ...series('Assets/TextMesh Pro/Shaders', 40, index => `TMP_Shader${pad(index)}.shader`),
+            ...series('Assets/Samples/Cinemachine', 40, index => `Sample${pad(index)}.cs`),
+            ...series('Assets/ThirdParty/Lib', 40, index => `Lib${pad(index)}.cs`),
+            'Packages/manifest.json',
+            'Packages/packages-lock.json',
+        ];
+        assert.deepEqual(check('unity', files), []);
+        const embedded = series('Packages/com.acme.inventory/Runtime', 35, index => `Item${letters(index)}.cs`);
+        assert.deepEqual(
+            check('unity', embedded).map(finding => finding.folder),
+            ['Packages/com.acme.inventory/Runtime'],
+        );
+    });
+
+    it('unity and godot cite their own guide, not the one of Unreal', () => {
+        const art = series('Assets/Art', 16, index => `Rock_${letters(index)}.fbx`);
+        const unity = check('unity', [...art, 'Assets/Art/Other.fbx']).find(
+            finding => finding.rule === 'prefix-groups',
+        );
+        assert.match(unity?.message ?? '', /Unity's guide splits a project by asset type/u);
+        assert.doesNotMatch(unity?.message ?? '', /If you find yourself/u);
+        const godot = check('godot', [...art, 'Assets/Art/Other.fbx']).find(
+            finding => finding.rule === 'prefix-groups',
+        );
+        assert.match(godot?.message ?? '', /as close to scenes as possible/u);
+        assert.doesNotMatch(godot?.message ?? '', /If you find yourself/u);
+    });
+
+    it('godot reads run_01.png … run_24.png as one animation', () => {
+        const frames = series('assets/player', 24, index => `run_${pad(index)}.png`);
+        const imports = frames.map(name => `${name}.import`);
+        const others = series('assets/player', 4, index => `attack_${pad(index)}.png`);
+        assert.deepEqual(check('godot', [...frames, ...imports, ...others, 'assets/player/idle.png']), []);
+        assert.equal(check('recommended', [...frames, ...imports]).length, 1);
+        const bare = [...frames, 'assets/player/idle.png', ...series('assets/player', 2, index => `jump${index}.png`)];
+        assert.deepEqual(check('godot', bare), []);
+    });
+
+    it('unreal leaves out World Partition, takes C++ at the limits of c-cpp, and warns on both limits', () => {
+        const partition = series('Content/__ExternalActors__/Maps/L1/3/AB', 60, index => `C${pad(index, 8)}.uasset`);
+        assert.deepEqual(check('unreal', partition), []);
+        const code = series('Source/Game/Gameplay', 25, index => `Thing${pad(index)}.cpp`);
+        assert.deepEqual(
+            check('unreal', code).map(finding => `${finding.rule} ${finding.severity}`),
+            ['max-files error'],
+        );
+        const assets = series('Content/Props', 25, index => `SM_Thing${pad(index)}.uasset`);
+        assert.deepEqual(check('unreal', assets), []);
+        const sameName = series('Content/Props', 16, index => `SM_Rock_X${letters(index)}.uasset`);
+        assert.deepEqual(
+            check('unreal', [...sameName, 'Content/Props/T_Other.uasset']).map(
+                finding => `${finding.rule} ${finding.severity}`,
+            ),
+            ['prefix-groups warn'],
+        );
+    });
+});
+
 describe('detectPresets', () => {
     it('proposes recommended always, and each preset from a file or a dependency', () => {
         const found = detectPresets(
@@ -679,6 +743,43 @@ describe('detectPresets', () => {
             excludesFor(found, files, BUILT_IN_PRESETS).toSorted((a, b) => a.localeCompare(b)),
             ['app/android', 'app/ios', 'app/linux'],
         );
+    });
+
+    it('does not propose a preset that another detected preset already extends (react with react-native)', () => {
+        const found = detectPresets(
+            [
+                'apps/mobile/package.json',
+                'apps/web/package.json',
+                'apps/web/ios/notes.txt',
+                'build.gradle',
+                'app/src/main/AndroidManifest.xml',
+            ],
+            new Map([
+                ['react', ['apps/web/package.json', 'apps/mobile/package.json']],
+                ['react-native', ['apps/mobile/package.json']],
+            ]),
+            BUILT_IN_PRESETS,
+        );
+        assert.deepEqual(
+            found.map(detection => detection.preset),
+            ['recommended', 'react-native', 'android'],
+        );
+        assert.deepEqual(
+            found[1]?.extended?.map(parent => parent.preset),
+            ['react'],
+        );
+    });
+
+    it('writes one glob for sixty apps instead of sixty lines (apps/*/src/environments)', () => {
+        const apps = Array.from({ length: 60 }, (_, index) => `apps/app-${String(index).padStart(2, '0')}`);
+        const files = apps.flatMap(app => [`${app}/angular.json`, `${app}/src/environments/environment.ts`]);
+        const found = detectPresets(files, new Map(), BUILT_IN_PRESETS);
+        assert.deepEqual(excludesFor(found, files, BUILT_IN_PRESETS), ['apps/*/src/environments']);
+        const two = files.filter(file => file.startsWith('apps/app-00/') || file.startsWith('apps/app-01/'));
+        assert.deepEqual(excludesFor(detectPresets(two, new Map(), BUILT_IN_PRESETS), two, BUILT_IN_PRESETS), [
+            'apps/app-00/src/environments',
+            'apps/app-01/src/environments',
+        ]);
     });
 
     it('reads where a dependency was declared: React Native in a package of a monorepo', () => {

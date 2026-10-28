@@ -197,6 +197,23 @@ describe('the command', () => {
         );
     });
 
+    it('init lists the addons of a Godot project and writes one exclusion for each', async () => {
+        const root = repository({
+            'project.godot': '',
+            'addons/gut/plugin.cfg': '',
+            'addons/gut/gut.gd': '',
+            'addons/my_plugin/plugin.cfg': '',
+            'scenes/main.tscn': '',
+        });
+        const ran = await cli(root, ['init']);
+        assert.equal(ran.code, 0, ran.err);
+        assert.match(ran.out, /addons of the project: gut, my_plugin/u);
+        const config = JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as {
+            exclude: string[];
+        };
+        assert.deepEqual(config.exclude, ['!/addons', 'addons/gut', 'addons/my_plugin']);
+    });
+
     it('explains a folder: modules, groups, rules and problems', async () => {
         const root = repository(render);
         const ran = await cli(root, ['explain', 'cli']);

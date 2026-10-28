@@ -9,6 +9,11 @@ export interface Detection {
     readonly evidence: string;
     /** Every folder it was found in (`.` for the root): where its root-anchored excludes apply. */
     readonly folders: readonly string[];
+    /**
+     * The presets it extends that were found too, and where: they are not proposed (`react-native`
+     * already extends `react`), but their root-anchored excludes still apply in those folders.
+     */
+    readonly extended?: readonly { readonly preset: string; readonly folders: readonly string[] }[];
 }
 
 /**
@@ -89,7 +94,39 @@ export function detectPresets(
             folders,
         });
     }
-    return detections;
+    return withoutRedundant(detections, presets);
+}
+
+/**
+ * Drops the presets another detected preset already extends, `react` next to `react-native` or `java`
+ * next to `android`: writing both only repeats the parent. What the parent excludes by anchor stays in
+ * `extended`, so it still applies where the parent was found.
+ */
+function withoutRedundant(detections: readonly Detection[], presets: Readonly<Record<string, Preset>>): Detection[] {
+    const collect = (name: string, seen: Set<string>): Set<string> => {
+        for (const parent of presets[name]?.config.extends ?? []) {
+            if (seen.has(parent)) {
+                continue;
+            }
+            seen.add(parent);
+            collect(parent, seen);
+        }
+        return seen;
+    };
+    const ancestorsOf = (name: string): Set<string> => collect(name, new Set());
+    return detections
+        .filter(
+            detection =>
+                detection.preset === 'recommended' ||
+                detections.every(other => other === detection || !ancestorsOf(other.preset).has(detection.preset)),
+        )
+        .map(detection => {
+            const ancestors = ancestorsOf(detection.preset);
+            const extended = detections
+                .filter(other => other !== detection && other.preset !== 'recommended' && ancestors.has(other.preset))
+                .map(other => ({ preset: other.preset, folders: other.folders }));
+            return extended.length === 0 ? detection : { ...detection, extended };
+        });
 }
 
 /**
@@ -102,22 +139,75 @@ export function excludesFor(
     files: readonly string[],
     presets: Readonly<Record<string, Preset>>,
 ): string[] {
-    const excludes = new Set<string>();
+    const found: { readonly folder: string; readonly pattern: string }[] = [];
     for (const detection of detections) {
-        for (const folder of detection.folders) {
-            if (folder === '.') {
-                continue;
-            }
-            for (const pattern of anchoredPatterns(detection.preset, presets)) {
-                const rebased = `${folder}/${pattern}`;
-                const glob = compileGlob(rebased);
-                if (files.some(file => matchesSelfOrAncestor(file, [glob]))) {
-                    excludes.add(rebased);
+        const sources = [{ preset: detection.preset, folders: detection.folders }, ...(detection.extended ?? [])];
+        for (const { preset, folders } of sources) {
+            for (const folder of folders) {
+                if (folder === '.') {
+                    continue;
+                }
+                for (const pattern of anchoredPatterns(preset, presets)) {
+                    const glob = compileGlob(`${folder}/${pattern}`);
+                    if (files.some(file => matchesSelfOrAncestor(file, [glob]))) {
+                        found.push({ folder, pattern });
+                    }
                 }
             }
         }
     }
+    return collapseSiblings(found);
+}
+
+/**
+ * The excludes as globs, one per pattern: when three or more folders with the same parent need the
+ * same pattern (sixty Angular apps in `apps/`), one glob for all of them says it once.
+ */
+function collapseSiblings(found: readonly { readonly folder: string; readonly pattern: string }[]): string[] {
+    const byParent = new Map<string, Set<string>>();
+    for (const { folder, pattern } of found) {
+        const key = `${parentOf(folder)}|${pattern}`;
+        byParent.set(key, (byParent.get(key) ?? new Set()).add(folder));
+    }
+    const excludes = new Set<string>();
+    for (const { folder, pattern } of found) {
+        const parent = parentOf(folder);
+        const siblings = byParent.get(`${parent}|${pattern}`);
+        excludes.add(
+            siblings !== undefined && siblings.size >= COLLAPSE_FROM
+                ? `${parent === '.' ? '' : `${parent}/`}*/${pattern}`
+                : `${folder}/${pattern}`,
+        );
+    }
     return [...excludes];
+}
+
+/** How many sibling folders make a glob clearer than a line each. */
+const COLLAPSE_FROM = 3;
+
+/**
+ * The addons of the Godot projects found (`addons/<name>/plugin.cfg`), by project folder. The preset
+ * leaves `addons/` out because the guide keeps third-party resources there, but a plugin of your own
+ * lives there too: `init` writes one exclusion for each, so that deleting a line puts it back.
+ */
+export function godotAddons(
+    detections: readonly Detection[],
+    files: readonly string[],
+): { readonly folder: string; readonly names: readonly string[] }[] {
+    const projects = detections.find(detection => detection.preset === 'godot')?.folders ?? [];
+    const found: { folder: string; names: string[] }[] = [];
+    for (const folder of projects) {
+        const prefix = folder === '.' ? 'addons/' : `${folder}/addons/`;
+        const names = files
+            .filter(file => file.startsWith(prefix) && file.endsWith('/plugin.cfg'))
+            .map(file => file.slice(prefix.length, -'/plugin.cfg'.length))
+            .filter(name => name !== '' && !name.includes('/'))
+            .toSorted((a, b) => a.localeCompare(b));
+        if (names.length > 0) {
+            found.push({ folder, names });
+        }
+    }
+    return found;
 }
 
 /** A preset's root-anchored excludes, from it and what it extends, without the leading slash. */

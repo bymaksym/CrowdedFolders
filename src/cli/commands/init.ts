@@ -2,7 +2,7 @@ import { basename, join, relative } from 'node:path';
 
 import { SCHEMA_URL } from '../../core/config/schema.ts';
 import { runEngine } from '../../core/engine.ts';
-import { type Detection, detectPresets, excludesFor } from '../../core/presets/detect.ts';
+import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { CONFIG_NAMES, findConfig } from '../../node/config-file.ts';
 import { loadConfig } from '../../node/load-config.ts';
@@ -31,7 +31,14 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
     const presets = [...new Set(detections.map(detection => detection.preset))];
     // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
     // written down so that they can be read and changed.
-    const exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    let exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    // Godot's addons/ is left out by the preset, and a plugin of your own lives there too: one line each.
+    const addons = godotAddons(detections, session.files);
+    for (const { folder, names } of addons) {
+        const base = folder === '.' ? '' : `${folder}/`;
+        exclude = exclude.filter(pattern => pattern !== `${base}addons`);
+        exclude.push(...(folder === '.' ? ['!/addons'] : []), ...names.map(name => `${base}addons/${name}`));
+    }
     const config = { $schema: SCHEMA_URL, extends: presets, ...(exclude.length > 0 && { exclude }) };
     writeFileAtomic(path, `${JSON.stringify(config, undefined, 4)}\n`);
 
@@ -44,6 +51,11 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         const preset = BUILT_IN_PRESETS[detection.preset];
         lines.push(
             `  ${detection.preset.padEnd(14)} ${detection.evidence}${preset ? ` — ${firstSentence(preset.description)}` : ''}`,
+        );
+    }
+    for (const { folder, names } of addons) {
+        lines.push(
+            `  addons of ${folder === '.' ? 'the project' : folder}: ${names.join(', ')} — left out one by one in "exclude"; delete the line of a plugin of your own to check it`,
         );
     }
     lines.push('');

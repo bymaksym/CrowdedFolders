@@ -379,46 +379,53 @@ Sources:
 
 ## unity
 
-Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), numbered series such as Model1, Model2 are one asset family, and Library, Temp, Packages and third-party plugins are left out. C# reads as in the dotnet preset.
+Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), numbered series such as Model1, Model2 are one asset family, and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here.
 
 - **Extends:** [dotnet](#dotnet)
-- **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar's rule 2.7, the one number game guides give: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
+- **`prefix-groups`:** `warn` `{"min":15,"hint":"Unity's guide splits a project by asset type and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here.","hintFor":["!*.{cs,fs,vb}"]}`
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
 - **Companions:** `_?\d+$`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/Packages`, `Assets/Plugins`, `*~`
+- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/ProjectSettings`, `/Packages/*.json`, `Assets/Plugins`, `Assets/TextMesh Pro`, `Assets/Samples`, `Assets/ThirdParty`, `*~`
 
 Sources:
 
 - [Unity manual: asset metadata (.meta files)](https://docs.unity3d.com/Manual/AssetMetadata.html)
 - [Unity manual: special folder names](https://docs.unity3d.com/Manual/SpecialFolders.html)
+- [Unity manual: embedding a package in a project (Packages/<name>)](https://docs.unity3d.com/Manual/upm-embed.html)
+- [Allar's UE5 style guide, rule 2.7: the number 15 is borrowed from it, Unity's guide gives none](https://github.com/Allar/ue5-style-guide)
 - [Unity: best practices for organizing your project](https://unity.com/how-to/organizing-your-project)
 
 ## unreal
 
-Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion.
+Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName_Variant_Suffix, the prefix is its type and the base asset name is its group. Prefixes and texture suffixes (_D, _N, _ORM…) are skipped, so SM_Rock, T_Rock_D and M_Rock are all about Rock — and 15 or more of them get their own folder (guide rule 2.7). The guide sets no maximum per folder; 50 here is an opinion, and both limits are warnings because the guide says "should", not "must". Source/ is C++, not assets, and is read with the limits of c-cpp.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `warn` `{"max":50,"count":"modules"}`
-- **`prefix-groups`:** `error` `{"min":15,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
+- **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\"","hintFor":["*.{uasset,umap}"]}`
 - **Companions:** `_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$`, `_(P|Audio|Lighting|Geo|Gameplay)$`, `_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$`, `_\d+$`
 - **Leading words skipped:** `a`, `abp`, `ac`, `ai`, `aic`, `am`, `ao`, `att`, `bb`, `bp`, `bpfl`, `bpi`, `bpml`, `bs`, `bt`, `ca`, `cue`, `curve`, `dm`, `dt`, `dv`, `dw`, `e`, `eqs`, `f`, `ffe`, `fms`, `font`, `ft`, `lg`, `ll`, `ls`, `m`, `matinee`, `mf`, `mi`, `mp`, `mpc`, `msw`, `mt`, `ne`, `ns`, `ol`, `pfb`, `phys`, `pm`, `pp`, `ps`, `rig`, `rt`, `rtc`, `s`, `sgi`, `sif`, `sk`, `skel`, `sm`, `sp`, `spr`, `sprg`, `ss`, `t`, `tbp`, `tc`, `ti`, `tm`, `ts`, `vf`, `vfa`, `wbp`, `u`, `i`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `.vs`
+- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `__ExternalActors__`, `__ExternalObjects__`, `.vs`
+- **In `**/Source`, `**/Source/**`:** `max-files` `error` `{"max":20,"count":"modules"}`, `prefix-groups` `warn` `{"min":5,"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.","hintFor":["*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}"]}`. The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).
 
 Sources:
 
+- [Google C++ style guide: file names](https://google.github.io/styleguide/cppguide.html)
+- [Unreal Engine: World Partition, actors are saved to their own individual files (One File Per Actor)](https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-in-unreal-engine)
 - [Allar's UE5 style guide (1.2 asset names, 2.6, 2.7)](https://github.com/Allar/ue5-style-guide)
 
 ## godot
 
-Godot: a scene and its script are one (player.tscn, player.gd), and so are the .import and .uid files next to an asset. Godot's guide asks to keep resources close to the scenes that use them — folders by feature. .godot and addons are left out.
+Godot: a scene and its script are one (player.tscn, player.gd), and so are the .import and .uid files next to an asset. Godot's guide asks to keep resources close to the scenes that use them — folders by feature — so numbered frames (run_01.png … run_24.png) are one animation, not 24 modules. .godot and addons/ (third-party resources, in the guide's words) are left out; `crowded-folders init` lists the addons it finds and writes one exclusion for each, so that your own plugins can be checked by deleting their line.
 
 - **Extends:** [recommended](#recommended)
-- **`prefix-groups`:** `warn` `{"min":15,"hint":"Allar's rule 2.7, the one number game guides give: \"If you find yourself having 15+ of these assets that belong together, they should be together.\""}`
+- **`prefix-groups`:** `warn` `{"min":15,"hint":"Godot's guide groups assets \"as close to scenes as possible\" and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here."}`
+- **Companions:** `_\d+$`
 - **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `.godot`, `/addons`
 
 Sources:
 
 - [Godot: project organization](https://docs.godotengine.org/en/stable/tutorials/best_practices/project_organization.html)
+- [Allar's UE5 style guide, rule 2.7: the number 15 is borrowed from it, Godot's guide gives none](https://github.com/Allar/ue5-style-guide)
 - [Godot 4.4: .uid files](https://godotengine.org/article/uid-changes-coming-to-godot-4-4/)
 
 ## terraform
