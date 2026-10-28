@@ -1,7 +1,7 @@
 import { applySetting, mergeNaming, mergeOptions } from './config/merge.ts';
 import type { NamingState, OverrideState, ResolvedConfig, RuleState } from './config/types.ts';
 import { compareText, type Naming, readFolder } from './naming/modules.ts';
-import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
+import { compileGlob, type Glob, PathMatcher } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
 import type { FolderView, Move, Note, Problem, Rule, RuleContext } from './rules/rule.ts';
@@ -78,10 +78,10 @@ export interface RuleNote extends Note {
  * `include: ["src"]` takes `src/a.ts`, as `exclude: ["src"]` would leave it out.
  */
 export function selectFiles(files: readonly string[], config: Pick<ResolvedConfig, 'exclude' | 'include'>): string[] {
-    const include = config.include.map(compileGlob);
-    const exclude = config.exclude.map(compileGlob);
+    const include = new PathMatcher(config.include.map(compileGlob));
+    const exclude = new PathMatcher(config.exclude.map(compileGlob));
     return files.filter(
-        file => (include.length === 0 || matchesSelfOrAncestor(file, include)) && !matchesSelfOrAncestor(file, exclude),
+        file => (include.isEmpty || include.matchesSelfOrAncestor(file)) && !exclude.matchesSelfOrAncestor(file),
     );
 }
 
