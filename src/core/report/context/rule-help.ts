@@ -7,13 +7,15 @@ export const WHEN_IT_FIRES: Readonly<Record<string, string>> = {
     'max-files':
         'A folder holds more modules than `max` (or more files, with `count: "files"`). Split it into folders by what the files are about (`checkout/`, `catalog/`), not by what they are (`components/`, `services/`).',
     'prefix-groups':
-        'At least `min` modules in a folder start with the same word (`render-json`, `render-text`, `render-sarif`, `render-pr`). They are a folder nobody made: move them into `render/`. It stays quiet when the whole folder shares the prefix, for translations and for numbered series.',
+        'At least `min` modules in a folder start with the same word (`render-json`, `render-text`, `render-sarif`, `render-pr`). They are a folder nobody made: move them into `render/`. It stays quiet when the whole folder (or 85 % of it) shares the prefix, as for translations and numbered series, and for a group that would be over the `max-files` limit on its own.',
     'redundant-prefix':
         'Modules in a folder repeat the name of the folder (`render/render-json.ts`). The folder already says it: rename them (`render/json.ts`).',
     'max-folders':
         'A folder holds more subfolders than `max`. A long list of folders is a drawer too: group them by what they are about.',
     'single-file-folders':
         'A folder holds one file and no subfolders: a level of nesting with nothing to group. Move the file up, unless a convention needs the folder.',
+    'case-collision':
+        'Two files or folders of one folder have names that differ only in case or in Unicode normalisation (`Components/` and `components/`). Windows and macOS keep one of them: git cannot check both out there. Rename one, or join them.',
     'config/unused-override':
         'An override in the configuration matches no folder. Fix its globs, or remove it: an override that does nothing hides a mistake.',
     'config/stale-suppression':

@@ -57,16 +57,23 @@ export const nextjs: Preset = {
 
 export const reactNative: Preset = {
     description:
-        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository.',
+        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count.',
     sources: [
         {
             title: 'Expo: continuous native generation — prebuild "creates the android and ios directories"',
             url: 'https://docs.expo.dev/workflow/continuous-native-generation/',
+        },
+        {
+            title: 'Expo Router: notation (_layout, +html, +not-found, [param], (group))',
+            url: 'https://docs.expo.dev/router/basics/notation/',
         },
     ],
     detect: { dependencies: ['react-native', 'expo'] },
     config: {
         extends: ['react'],
         exclude: ['/ios', '/android', '.expo'],
+        // Expo Router's files for the folder itself: its layout, its HTML shell, its not-found screen
+        // and its deep-link handler. A folder of screens is not crowded by them.
+        naming: { folderFiles: ['_layout.*', '+html.*', '+not-found.*', '+native-intent.*'] },
     },
 };

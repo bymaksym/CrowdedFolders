@@ -37,6 +37,20 @@ const NAMING: JsonSchema = {
             description:
                 'Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. Default: false.',
         },
+        folderFiles: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description:
+                'Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs.',
+            examples: [['package-info.java', 'module-info.java'], ['__init__.py']],
+        },
+        folderCompanions: {
+            type: 'array',
+            items: { type: 'string', minLength: 1 },
+            description:
+                'Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/.',
+            examples: [['.meta']],
+        },
     },
 };
 

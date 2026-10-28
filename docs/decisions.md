@@ -79,6 +79,28 @@ is enough. A run over some folders judges only their suppressions: it says nothi
 pruning, with folders, everything the run did not see — which emptied the file on the recipe this
 documentation gave.
 
+## A group is something to move, not the folder itself
+
+**Decided:** `prefix-groups` does not propose a group that holds 85 % of the folder's modules or
+more, nor one that would be over `max-files`' limit on its own. A folder over the limit can still
+get both findings when it has a real group: one says it is too big, the other where to cut — never
+both about the same modules.
+**Why:** in a folder of 93 interfaces, moving 92 into `ext/` adds a level and leaves a folder as
+crowded as before, and the folder came out twice. Above roughly 85 % the prefix is what the folder
+is about: rename the folder, or drop the prefix from the names. The share is a judgement, not a
+measured limit; at 4 to 6 modules it lets 4 of 5 and 5 of 6 through.
+**Discarded:** joining the two findings into one (each has its own suppression key); hiding
+`prefix-groups` wherever `max-files` fires (the group is the way out).
+
+## Case collisions are their own rule, off by default
+
+**Decided:** modules are joined across case and Unicode normalisation when their stems match, except
+two files whose whole names differ only in case; `case-collision` reports names that are one on
+Windows and macOS. It is off in `recommended` and on in `strict`.
+**Why:** whether `Foo.ts` and `foo.ts` are one file depends on the disk, and the answer must not
+depend on the machine it runs on: so they are counted as Linux keeps them, and named as a problem
+for the others. A new rule on in `recommended` would be a breaking change (see below).
+
 ## Presets carry their sources
 
 **Decided:** a preset has `sources`, and the conventions that contradict the tool win: Vue's flat
@@ -120,6 +142,12 @@ documentation names an exact version, and the Action runs the version it was rel
 **Why:** presets are detected, so a repository with no configuration changes behaviour on update
 without touching anything, and the ones that run the tool in CI find out when their build turns red.
 This is how ESLint treats `eslint:recommended`.
+How names are read is part of this. A suppression remembers the folder, the rule and the group's
+key, so a change in how a name is split or grouped changes keys: `getURLs` used to be `get ur ls`,
+`IProfile` was in the group `i` and is now in `profile`, `UsersController` joins the key `user`, a
+type letter or a version is read differently. A group can also grow (`modals` now joins `modal_*`), and a suppression whose number grew fails. Such a change is released as a fix when it only removes
+false positives; its suppressions become stale and `--prune-suppressions` drops them. When it makes a
+new group appear, it is breaking like any other.
 **Discarded:** starting at 0.x, where breaking changes go out in minors that `@0` lets in; recommending
 `@latest` in CI; relying on `init` alone, since a preset's contents
 change between versions even when its name is written down.

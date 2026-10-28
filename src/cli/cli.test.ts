@@ -212,12 +212,35 @@ describe('the command', () => {
         assert.equal((await cli(root, ['explain', 'nowhere'])).code, 2);
     });
 
+    it('explains what is not reported, and which companion joins IProfile and MProfile (Marta, 13-10)', async () => {
+        const root = repository({
+            'src/user-a.ts': '',
+            'src/user-b.ts': '',
+            'src/user-c.ts': '',
+            'src/user-d.ts': '',
+            'src/user-e.ts': '',
+            'other/IProfile.ts': '',
+            'other/MProfile.ts': '',
+            'other/main.ts': '',
+        });
+        const whole = await cli(root, ['explain', 'src']);
+        assert.match(whole.out, /Not reported, and why\n {2}prefix-groups {2}"user" .*every module of the folder/u);
+        const profile = await cli(root, ['explain', 'other']);
+        assert.match(
+            profile.out,
+            /IProfile, MProfile {2}· profile: .*naming\.companions \["\^\(\?:I\|M\)\(\?=\\\\p\{Lu\}\)"\]/u,
+        );
+    });
+
     it('prints the configuration in effect, for the repository and for one folder', async () => {
         const root = repository(render);
         const whole = JSON.parse((await cli(root, ['print-config'])).out) as { layers: string[] };
         assert.deepEqual(whole.layers, ['preset "recommended"', '(the command line)']);
         const one = JSON.parse((await cli(root, ['print-config', '.'])).out) as { rules: Record<string, unknown> };
-        assert.deepEqual(one.rules['max-files'], ['error', { max: 40, count: 'modules', dotfiles: false, hint: '' }]);
+        assert.deepEqual(one.rules['max-files'], [
+            'error',
+            { max: 40, count: 'modules', dotfiles: false, filesPerModule: 0, hint: '' },
+        ]);
     });
 
     it('lists presets and rules', async () => {

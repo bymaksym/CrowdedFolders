@@ -6,7 +6,7 @@ const GOARCH = '386|amd64|arm|arm64|loong64|mips|mipsle|mips64|mips64le|ppc64|pp
 
 export const go: Preset = {
     description:
-        "Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo. Go's own guidance: \"There is no 'one type, one file' convention\"; net/http has 17 files and the go command 34.",
+        "Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo, and does not count doc.go, the package comment. Go's own guidance: \"There is no 'one type, one file' convention\"; net/http has 17 files and the go command 34.",
     sources: [
         { title: 'Go: organizing a Go module', url: 'https://go.dev/doc/modules/layout' },
         { title: 'Google Go style: package size', url: 'https://google.github.io/styleguide/go/best-practices' },
@@ -17,7 +17,8 @@ export const go: Preset = {
     config: {
         extends: ['recommended'],
         exclude: ['testdata', '*.pb.go', '*_string.go', 'zz_generated.*'],
-        naming: { companions: ['_test$', `_(${GOOS})$`, `_(${GOARCH})$`] },
+        // doc.go holds the package comment: it describes the folder, it is not one more file in it.
+        naming: { companions: ['_test$', `_(${GOOS})$`, `_(${GOARCH})$`], folderFiles: ['doc.go'] },
         rules: {
             'max-files': [
                 'error',

@@ -81,6 +81,8 @@ describe('mergeLayer', () => {
             companions: ['_test$'],
             ignoreLeadingWords: ['i'],
             groupNumericPrefixes: true,
+            folderFiles: [],
+            folderCompanions: [],
         });
         assert.equal(merged.suppressions, 'a.json');
         assert.deepEqual(merged.layers, ['preset "x"', 'mine.json']);

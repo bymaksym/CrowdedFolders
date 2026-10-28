@@ -16,7 +16,9 @@ render/
 `render-*` files are in `render/`, the prefix has nothing left to do.
 
 - A module named exactly like the folder (`render/render.ts`) is its main file, and is fine.
-- A plural folder accepts the singular: `users/user-list.ts` repeats "user".
+- A plural folder accepts the singular: `users/user-list.ts`, `categories/category-list.ts` and
+  `children/child-row.ts` repeat it; `news/new-a.ts` does not.
+- A folder that glues its words is repeated too: `dayplan/DayPlanList.kt` → `dayplan/List.kt`.
 - `--moves` suggests the shorter name in the file's own convention: `render-json.ts` → `json.ts`,
   `RenderText.cs` → `Text.cs`, `render_json_test.go` → `json_test.go`.
 

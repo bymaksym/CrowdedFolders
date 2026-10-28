@@ -14,6 +14,10 @@ export interface NamingConfig {
     readonly ignoreLeadingWords?: readonly string[];
     /** Whether `0001_x` and `2024-01-01-x` group by their number. Default: false. */
     readonly groupNumericPrefixes?: boolean;
+    /** Globs of file names that describe their folder and are not counted: `package-info.java`, `__init__.py`. */
+    readonly folderFiles?: readonly string[];
+    /** Endings that make a file go with the sibling folder of that name, uncounted: Unity's `.meta`. */
+    readonly folderCompanions?: readonly string[];
 }
 
 /** Settings for some folders only. Every override says why: it is a silence, and silences carry their reason. */
@@ -96,6 +100,8 @@ export interface NamingState {
     readonly companions: readonly string[];
     readonly ignoreLeadingWords: readonly string[];
     readonly groupNumericPrefixes: boolean;
+    readonly folderFiles: readonly string[];
+    readonly folderCompanions: readonly string[];
 }
 
 export interface OverrideState {
@@ -123,7 +129,13 @@ export interface ResolvedConfig {
 export const EMPTY_CONFIG: ResolvedConfig = {
     include: [],
     exclude: [],
-    naming: { companions: [], ignoreLeadingWords: [], groupNumericPrefixes: false },
+    naming: {
+        companions: [],
+        ignoreLeadingWords: [],
+        groupNumericPrefixes: false,
+        folderFiles: [],
+        folderCompanions: [],
+    },
     rules: {},
     overrides: [],
     layers: [],

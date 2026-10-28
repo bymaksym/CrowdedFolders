@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 
 import { mergeLayer } from '../config/merge.ts';
 import { type Config, EMPTY_CONFIG } from '../config/types.ts';
-import { type Finding, runEngine } from '../engine.ts';
+import { validateConfig } from '../config/validate.ts';
+import { explainFolder, type Finding, runEngine } from '../engine.ts';
+import { BUILT_IN_PRESETS } from '../presets/index.ts';
 import { BUILT_IN_RULES } from './index.ts';
 
 /** Runs the built-in rules over a list of paths with one configuration layer. */
@@ -108,7 +110,11 @@ describe('prefix-groups', () => {
             's/IOrderView.cs',
             's/Program.cs',
         ];
-        assert.equal(findings(interfaces, { rules: { 'prefix-groups': ['error', { min: 3 }] } })[0]?.key, 'i');
+        // A single capital glued to a capitalised word is a type letter, without configuring it.
+        assert.deepEqual(
+            findings(interfaces, { rules: { 'prefix-groups': ['error', { min: 3 }] } }).map(finding => finding.key),
+            ['order'],
+        );
         const read = findings(interfaces, {
             naming: { ignoreLeadingWords: ['i'] },
             rules: { 'prefix-groups': ['error', { min: 3 }] },
@@ -226,5 +232,282 @@ describe('max-folders and single-file-folders', () => {
                 ['c/d', 'warn'],
             ],
         );
+    });
+});
+
+/** What `explain` would list as not reported in one folder. */
+function notesOf(files: readonly string[], config: Config, folder: string): string[] {
+    const resolved = mergeLayer(EMPTY_CONFIG, config, 'test', true);
+    return (explainFolder({ files, config: resolved, rules: BUILT_IN_RULES }, folder)?.notes ?? []).map(
+        note => `${note.rule} ${note.message}`,
+    );
+}
+
+const named = (folder: string, names: readonly string[]): string[] => names.map(name => `${folder}/${name}`);
+
+describe('prefix-groups: false positives of the field', () => {
+    const prefixGroups: Config = {
+        rules: { 'max-files': ['error', { max: 20, count: 'modules' }], 'prefix-groups': 'error' },
+    };
+
+    it('does not propose a folder for a group that is nearly the whole folder (domain/catalog/interfaces, 92 of 93)', () => {
+        const files = named('domain/catalog/interfaces', [
+            ...Array.from({ length: 92 }, (_, index) => `IExtAssetType${index}.ts`),
+            'index.ts',
+        ]);
+        const result = findings(files, prefixGroups);
+        assert.deepEqual(
+            result.map(finding => finding.rule),
+            ['max-files'],
+        );
+        assert.match(notesOf(files, prefixGroups, 'domain/catalog/interfaces')[0] ?? '', /92 of the folder's 93/u);
+    });
+
+    it('does not propose a folder that would be over max-files on its own', () => {
+        const files = named('a', [
+            ...Array.from({ length: 25 }, (_, index) => `user-x${index}.ts`),
+            ...Array.from({ length: 10 }, (_, index) => `other${index}.ts`),
+        ]);
+        assert.deepEqual(
+            findings(files, prefixGroups).map(finding => finding.rule),
+            ['max-files'],
+        );
+        assert.match(notesOf(files, prefixGroups, 'a').join('\n'), /over max-files' limit of 20 on its own/u);
+    });
+
+    it('stays linear with one prefix shared by many files (Tomás: 30 000 took 3.9 s)', () => {
+        const files = named(
+            'big',
+            Array.from({ length: 30_000 }, (_, index) => `user-${index}.ts`),
+        );
+        const started = performance.now();
+        findings([...files, 'big/other.ts'], { rules: { 'prefix-groups': 'error' } });
+        assert.ok(performance.now() - started < 3000);
+    });
+
+    it('groups the plural with the singular: UsersController, UserGroups, UserRoles, UserSettings (Kenji)', () => {
+        const files = named('src', [
+            'UsersController.kt',
+            'UserGroups.kt',
+            'UserRoles.kt',
+            'UserSettings.kt',
+            'Main.kt',
+        ]);
+        const [finding] = findings(files, prefixGroups);
+        assert.equal(finding?.key, 'user');
+        assert.equal(finding?.measured, 4);
+    });
+
+    it('does not read plural acronyms as two words: four IDs* are not a folder i/ (Tomás)', () => {
+        const files = named('src', ['IDsCache.ts', 'IDsFilter.ts', 'IDsMap.ts', 'IDsSet.ts', 'getURLs.ts', 'APIs.ts']);
+        assert.deepEqual(
+            findings(files, prefixGroups).map(finding => finding.key),
+            ['ids'],
+        );
+    });
+
+    it('reads II18nKey and MI18nKey as one group of 12, not three of 4 (Sofía)', () => {
+        const names = ['Key', 'Value', 'Text', 'Label', 'Title', 'Hint'].flatMap(rest => [
+            `II18n${rest}.ts`,
+            `MI18n${rest}.ts`,
+        ]);
+        const files = named('src', [...names, 'a.ts', 'b.ts', 'c.ts']);
+        const result = findings(files, prefixGroups);
+        assert.deepEqual(
+            result.map(finding => [finding.key, finding.measured]),
+            [['i18n', 12]],
+        );
+    });
+
+    it('reads four OAuth* as oauth, not o (Tomás)', () => {
+        const files = named('src', ['OAuthClient.ts', 'OAuthToken.ts', 'OAuthScope.ts', 'OAuthFlow.ts', 'main.ts']);
+        assert.deepEqual(
+            findings(files, prefixGroups).map(finding => finding.key),
+            ['oauth'],
+        );
+    });
+
+    it('counts each release of a folder of versions (docs/releases: v1.0.0.md … v1.25.1.md)', () => {
+        const files = named(
+            'docs/releases',
+            Array.from({ length: 26 }, (_, index) => `v1.${index}.1.md`),
+        );
+        const [finding] = findings(files, prefixGroups);
+        assert.equal(finding?.rule, 'max-files');
+        assert.equal(finding?.measured, 26);
+    });
+
+    it('takes app_fil.arb and app_ckb.arb for translations (Tomás)', () => {
+        const files = named('lib/l10n2', ['app_fil.arb', 'app_ckb.arb', 'app_en.arb', 'app_es.arb', 'other.dart']);
+        assert.deepEqual(findings(files, prefixGroups), []);
+        const latin = named('res', [
+            'strings_es-419.json',
+            'strings_en.json',
+            'strings_fr.json',
+            'strings.json',
+            'x.json',
+        ]);
+        assert.deepEqual(findings(latin, prefixGroups), []);
+    });
+
+    it('takes the prefix of a folder that glues its words: feature/dayplan/ with DayPlanList (waypack)', () => {
+        const folder = 'app/src/main/java/dev/bymaksym/waypack/feature/dayplan';
+        const files = named(folder, [
+            'DayPlanList.kt',
+            'DayPlanOverlay.kt',
+            'DayPlanRow.kt',
+            'DayPlanScreen.kt',
+            'DayPlanSheets.kt',
+            'DayPlanViewModel.kt',
+            'DayQuantity.kt',
+            'DayTimelineGutter.kt',
+            'TimelineEntry.kt',
+        ]);
+        // Three more files, so that the group is not most of the folder: the path alone is the reason.
+        const more = [...files, ...named(folder, ['Alpha.kt', 'Beta.kt', 'Gamma.kt'])];
+        assert.deepEqual(findings(more, prefixGroups), []);
+        assert.match(notesOf(more, prefixGroups, folder).join('\n'), /"day" .*restates the folder's path/u);
+    });
+
+    it('lists in explain why a group is not reported', () => {
+        const files = named('cli/render', [
+            'render-json.ts',
+            'render-text.ts',
+            'render-sarif.ts',
+            'render-pr.ts',
+            'main.ts',
+        ]);
+        assert.match(notesOf(files, prefixGroups, 'cli/render').join('\n'), /restates the folder's path/u);
+        const few = named('x', ['user-a.ts', 'user-b.ts', 'user-c.ts', 'other.ts', 'more.ts']);
+        assert.match(notesOf(few, prefixGroups, 'x').join('\n'), /3 modules, and 4 make a group/u);
+        const ignored = named('y', ['get-a.ts', 'get-b.ts', 'get-c.ts', 'get-d.ts', 'other.ts']);
+        assert.match(
+            notesOf(ignored, { rules: { 'prefix-groups': ['error', { ignore: ['get'] }] } }, 'y').join('\n'),
+            /in prefix-groups' ignore/u,
+        );
+    });
+
+    it('with words "auto", proposes the longer prefix (laboral-time-server)', () => {
+        const files = named('src/main/java/x', [
+            ...['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map(letter => `RegistroHorario${letter}.java`),
+            'RegistroUsuarioConRol.java',
+            'Main.java',
+            'Other.java',
+        ]);
+        const [finding] = findings(files, { rules: { 'prefix-groups': ['error', { words: 'auto' }] } });
+        assert.equal(finding?.key, 'registro-horario');
+        assert.equal(finding?.measured, 8);
+    });
+
+    it('names the real file in the message: IUserRepository.cs (Kenji)', () => {
+        const files = named('Repos', [
+            'IUserRepository.cs',
+            'IUserStore.cs',
+            'IUserView.cs',
+            'UserMapper.cs',
+            'A.cs',
+            'B.cs',
+        ]);
+        const [finding] = findings(files, {
+            naming: { companions: ['^I(?=[A-Z])'] },
+            rules: { 'prefix-groups': 'error' },
+        });
+        assert.match(finding?.message ?? '', /IUserRepository\.cs/u);
+    });
+});
+
+describe('options that can never match', () => {
+    const problems = (config: Config): string[] =>
+        validateConfig(config, BUILT_IN_RULES, []).map(problem => `${problem.at}: ${problem.message}`);
+
+    it('suggests the written form of an ignore entry: render_json is render-json (Tomás)', () => {
+        const [problem = ''] = problems({ rules: { 'prefix-groups': ['error', { ignore: ['render_json'] }] } });
+        assert.match(problem, /did you mean "render-json"/u);
+        assert.deepEqual(problems({ rules: { 'prefix-groups': ['error', { ignore: ['render-json', 'Test'] }] } }), []);
+    });
+
+    it('says that useState is two leading words (Tomás)', () => {
+        const [problem = ''] = problems({ naming: { ignoreLeadingWords: ['useState'] } });
+        assert.match(problem, /reads as "use", "state" — did you mean "use"/u);
+        assert.deepEqual(problems({ naming: { ignoreLeadingWords: ['I', 'i18n', '!bp'] } }), []);
+    });
+});
+
+describe('redundant-prefix: the plural of the folder (Tomás)', () => {
+    const strict: Config = { rules: { 'redundant-prefix': 'error' } };
+
+    it('reads categories/category-list.ts, classes/class-*, children/child-*, statuses/status-* as repeating', () => {
+        const files = [
+            ...named('categories', ['category-list.ts', 'category-card.ts']),
+            ...named('classes', ['class-a.ts', 'class-b.ts']),
+            ...named('children', ['child-row.ts', 'child-card.ts']),
+            ...named('statuses', ['status-a.ts', 'status-b.ts']),
+        ];
+        const result = findings(files, strict);
+        assert.deepEqual(
+            result.map(finding => finding.folder),
+            ['categories', 'children', 'classes', 'statuses'],
+        );
+        assert.deepEqual(result[0]?.moves[0], { from: 'categories/category-card.ts', to: 'categories/card.ts' });
+    });
+
+    it('does not read news/new-a.ts as repeating', () => {
+        assert.deepEqual(findings(named('news', ['new-a.ts', 'new-b.ts']), strict), []);
+    });
+
+    it('reads a folder that glues its words: dayplan/DayPlanList.kt', () => {
+        const [finding] = findings(named('dayplan', ['DayPlanList.kt', 'DayPlanRow.kt', 'Other.kt']), strict);
+        assert.equal(finding?.measured, 2);
+        assert.deepEqual(finding?.moves[0], { from: 'dayplan/DayPlanList.kt', to: 'dayplan/List.kt' });
+    });
+});
+
+describe('case-collision', () => {
+    const on: Config = { rules: { 'case-collision': 'error' } };
+
+    it('reports names that are one on Windows and macOS: src/Components and src/components (Irina)', () => {
+        const result = findings(
+            ['src/Components/a.ts', 'src/components/b.ts', 'src/Foo.ts', 'src/foo.ts', 'src/bar.ts'],
+            on,
+        );
+        assert.deepEqual(
+            result.map(finding => [finding.folder, finding.key]),
+            [
+                ['src', 'components'],
+                ['src', 'foo.ts'],
+            ],
+        );
+    });
+
+    it('reports café written in NFC and in NFD', () => {
+        const [finding] = findings(['docs/café/a.md', 'docs/café/b.md'], on);
+        assert.match(finding?.message ?? '', /written two ways in Unicode/u);
+    });
+
+    it('is off in recommended', () => {
+        assert.equal(BUILT_IN_PRESETS['recommended']?.config.rules?.['case-collision'], 'off');
+    });
+});
+
+describe('max-files: what is not counted', () => {
+    it('leaves out the files that describe the folder: 20 classes and package-info.java are 20 (Kenji)', () => {
+        const files = [...Array.from({ length: 20 }, (_, index) => `pkg/Class${index}.java`), 'pkg/package-info.java'];
+        const config = (folderFiles: string[]): Config => ({
+            naming: { folderFiles },
+            rules: { 'max-files': ['error', { max: 20, count: 'modules' }] },
+        });
+        assert.equal(findings(files, config([])).length, 1);
+        assert.equal(findings(files, config(['package-info.java'])).length, 0);
+    });
+
+    it('counts a module of many files once for every filesPerModule: 25 View+X.swift (Lucía)', () => {
+        const files = Array.from({ length: 25 }, (_, index) => `App/Extensions/View+X${index}.swift`);
+        const config = (filesPerModule: number): Config => ({
+            naming: { companions: [String.raw`\+.+$`] },
+            rules: { 'max-files': ['error', { max: 4, count: 'modules', filesPerModule }] },
+        });
+        assert.equal(findings(files, config(0)).length, 0);
+        assert.equal(findings(files, config(5))[0]?.measured, 5);
+        assert.match(notesOf(files, config(0), 'App/Extensions').join('\n'), /25 files counted as one module/u);
     });
 });
