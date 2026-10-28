@@ -7,6 +7,7 @@ import { after, describe, it } from 'node:test';
 import { HELP } from './help.ts';
 import type { Io } from './io.ts';
 import { run } from './main.ts';
+import { dependenciesOf, warnIfTruncated } from './session.ts';
 
 const roots: string[] = [];
 after(() => {
@@ -212,6 +213,48 @@ describe('the command', () => {
             exclude: string[];
         };
         assert.deepEqual(config.exclude, ['!/addons', 'addons/gut', 'addons/my_plugin']);
+    });
+
+    it('detects NestJS in a package of a monorepo with 62 manifests, however deep it is', async () => {
+        const packages = Object.fromEntries(
+            Array.from({ length: 61 }, (_, index) => [
+                `packages/p${String(index).padStart(2, '0')}/package.json`,
+                '{}',
+            ]),
+        );
+        const root = repository({
+            ...packages,
+            'services/backend/core/api/package.json': JSON.stringify({ dependencies: { '@nestjs/core': '^11.0.0' } }),
+            'services/backend/core/api/src/main.ts': '',
+        });
+        const ran = await cli(root, ['init']);
+        assert.equal(ran.code, 0, ran.err);
+        const config = JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as {
+            extends: string[];
+        };
+        assert.deepEqual(config.extends, ['recommended', 'nestjs']);
+        assert.equal(ran.err, '');
+    });
+
+    it('says how many package.json files detection left unread when it has to stop', () => {
+        const files = ['package.json', 'a/package.json', 'a/b/package.json', 'a/b/c/package.json'];
+        const root = repository(Object.fromEntries(files.map(path => [path, '{}'])));
+        assert.equal(dependenciesOf(root, files).skipped, 0);
+        assert.equal(dependenciesOf(root, files, 3).skipped, 1);
+        let warned = '';
+        warnIfTruncated(dependenciesOf(root, files, 3), {
+            cwd: root,
+            env: {},
+            stdoutIsTTY: false,
+            write: () => {
+                // Nothing is written to standard output.
+            },
+            error: text => {
+                warned += text;
+            },
+            readStdin: () => Promise.resolve(''),
+        });
+        assert.match(warned, /left 1 unread/u);
     });
 
     it('explains a folder: modules, groups, rules and problems', async () => {

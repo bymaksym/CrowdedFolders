@@ -8,7 +8,7 @@ import { CONFIG_NAMES, findConfig } from '../../node/config-file.ts';
 import { loadConfig } from '../../node/load-config.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, writeFileAtomic } from '../io.ts';
-import { dependenciesOf, type Session } from '../session.ts';
+import { dependenciesOf, type Session, warnIfTruncated } from '../session.ts';
 
 /**
  * Writes `crowded-folders.config.json` at the root with the presets that fit the repository, then
@@ -24,10 +24,14 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         existing !== undefined && existing.path.endsWith('.json') && basename(existing.path) !== 'package.json';
     const path = isReuse ? existing.path : join(session.root, CONFIG_NAMES[0]);
 
-    const detections: Detection[] =
-        args.presets.length > 0
-            ? args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }))
-            : detectPresets(session.files, dependenciesOf(session.root, session.files), BUILT_IN_PRESETS);
+    let detections: Detection[];
+    if (args.presets.length > 0) {
+        detections = args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }));
+    } else {
+        const manifests = dependenciesOf(session.root, session.files);
+        warnIfTruncated(manifests, io);
+        detections = detectPresets(session.files, manifests.names, BUILT_IN_PRESETS);
+    }
     const presets = [...new Set(detections.map(detection => detection.preset))];
     // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
     // written down so that they can be read and changed.
