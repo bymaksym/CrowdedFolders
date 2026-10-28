@@ -46,11 +46,20 @@
             "types": "./dist/index.d.ts",
             "default": "./dist/index.js"
         },
+        "./engine": {
+            "types": "./dist/engine.d.ts",
+            "default": "./dist/engine.js"
+        },
+        "./testing": {
+            "types": "./dist/testing.d.ts",
+            "default": "./dist/testing.js"
+        },
         "./schema.json": "./schema.json",
         "./report.schema.json": "./report.schema.json",
         "./package.json": "./package.json"
     },
     "types": "./dist/index.d.ts",
+    "sideEffects": false,
     "bin": {
         "crowded-folders": "bin/crowded-folders.js"
     },
