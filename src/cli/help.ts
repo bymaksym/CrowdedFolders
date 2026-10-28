@@ -15,6 +15,8 @@ Usage
   crowded-folders rules [name]            list the rules and their options
   crowded-folders print-config [folder]   print the configuration in effect
   crowded-folders overrides               list every override and what it covers
+  crowded-folders tree [folder]           the folders as a tree, each with how
+                                          near it is to its limit
   crowded-folders <command> --help        one command's options, and an example
 
 Where it looks (paths given to options start from the current folder)
@@ -44,7 +46,10 @@ Where it looks (paths given to options start from the current folder)
 What it prints
   -f, --format <format>    text (default), json, sarif, github (annotations),
                            markdown, gitlab (Code Quality), checkstyle, azure
-                           (Azure Pipelines), auto (github, azure or text, by
+                           (Azure Pipelines), html (one file: a zoomable map of
+                           the folders), badge (a shields.io endpoint: the
+                           share of folders within the limit), tree (the
+                           folders as a tree), auto (github, azure or text, by
                            the CI it runs in). Repeat it to write several
                            reports in one run, each to its own file: -f github
                            -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY
@@ -55,6 +60,10 @@ What it prints
                            annotations per kind (default 9: GitHub shows 10)
       --no-files           json: leave the files and moves out of each finding
       --stats              json: also list every folder with its numbers
+      --depth <n|all>      tree: levels shown below the folder (default 3); a
+                           folded line counts the folders under it
+      --over, --near       tree: only the folders over their limit, or those
+                           and the ones at 60 % of it or more
       --group-by <what>    text: group by folder (default), project or owner
       --owner <owner>      only the problems of this CODEOWNERS owner
                            (@org/team); repeatable
@@ -183,6 +192,17 @@ With a folder: the rules, naming and overrides that apply there, each value
 with where it comes from.
   -c, --config <file>  --root <dir>  -p, --preset <name>  --stdin  --no-git
 Example: crowded-folders print-config src/components`,
+    tree: `crowded-folders tree [folder] [options]
+
+Shows the folders as a tree. Each has its modules over its limit, a bar and a
+word (ok, near the limit, over the limit): colour is never the only signal.
+Folders under --depth are folded into their parent, which counts them and says
+how many are over. It reports and does not fail (exit 0).
+  --depth <n|all>     levels shown (default 3)
+  --over, --near      only the folders over their limit, or near it as well
+  -f, --format <f>    tree (default), or html: one file with a zoomable map
+Example: crowded-folders tree src --near
+A map to open or attach: crowded-folders tree -f html=map.html`,
     overrides: `crowded-folders overrides [options]
 
 Lists every override in effect: where it comes from, the folders it covers and

@@ -591,7 +591,7 @@ describe('folders on the command line', () => {
     it('counts what was checked, not the whole repository', async () => {
         const root = repository(tree);
         const ran = await cli(root, ['src/lib']);
-        assert.match(ran.out, /\(1 folder and 2 files checked\)/u);
+        assert.match(ran.out, /\(1 folder and 2 files checked; /u);
     });
 
     it(

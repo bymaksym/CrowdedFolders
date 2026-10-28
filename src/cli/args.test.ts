@@ -42,7 +42,7 @@ describe('the options of each command', () => {
     it('refuses an option the command would ignore, and says which commands take it', () => {
         assert.equal(
             usageOf('explain', 'src', '-f', 'json'),
-            '--format does not apply to explain; it applies to check, overrides',
+            '--format does not apply to explain; it applies to check, overrides, tree',
         );
         assert.match(usageOf('explain', 'src', '-o', 'x.txt'), /^--output does not apply to explain/u);
         assert.match(usageOf('rules', '--suppress-all'), /^--suppress-all does not apply to rules/u);

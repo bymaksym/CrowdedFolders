@@ -1,7 +1,10 @@
 import { appendFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { formatBadge } from '../../core/report/formats/badge.ts';
+import { formatHtml } from '../../core/report/formats/html.ts';
 import { formatMovesJson, formatMovesScript } from '../../core/report/formats/moves.ts';
+import { formatTreeText } from '../../core/report/formats/tree.ts';
 import {
     formatAzure,
     formatCheckstyle,
@@ -87,7 +90,7 @@ function render(
 ): string {
     switch (format) {
         case 'json': {
-            return formatJson(report, { files: args.files });
+            return formatJson(report, { files: args.files, folders: args.stats });
         }
         case 'sarif': {
             return formatSarif(report);
@@ -106,6 +109,22 @@ function render(
         }
         case 'markdown': {
             return formatMarkdown(report, args.maxFindings === undefined ? {} : { maxFindings: args.maxFindings });
+        }
+        case 'html': {
+            return formatHtml(report);
+        }
+        case 'badge': {
+            return formatBadge(report);
+        }
+        case 'tree': {
+            return formatTreeText(report, {
+                color: text.color,
+                symbols: text.symbols,
+                depth: args.depth,
+                only: args.only,
+                command: text.command,
+                width: text.width,
+            });
         }
         case 'text': {
             return formatText(report, {

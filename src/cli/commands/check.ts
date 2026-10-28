@@ -15,7 +15,7 @@ import {
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
-import { addedByFolder, buildReport, enrichFindings, wantsAnchors } from '../report/build.ts';
+import { addedByFolder, buildReport, enrichFindings, tinyFilesOf, wantsAnchors } from '../report/build.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
 import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
@@ -57,7 +57,7 @@ export function check(args: Args, io: Io, session: Session): number {
         config,
         rules: session.loaded.rules,
         ...(only && { only }),
-        stats: args.stats || wantsClosest(args, io),
+        stats: wantsStats(args, io),
     });
 
     // The folders this run judges: those asked for (or the root's, when it sits inside the
@@ -140,6 +140,8 @@ export function check(args: Args, io: Io, session: Session): number {
         suppressionsPath,
         suppressionFile: store.locate,
         hiddenWarnings,
+        closest: wantsClosest(args, io),
+        ...(wantsSizes(args, io) && { tinyFiles: tinyFilesOf(reported, session, io) }),
         ...(knownOnBase && { knownOnBase }),
         ...(annotationBase && { addedFiles: addedSince(annotationBase, files) }),
         ...(annotationBase && {
@@ -166,6 +168,22 @@ export function check(args: Args, io: Io, session: Session): number {
         io.error(`${plural(warnings, 'warning')}, over --max-warnings ${args.maxWarnings ?? 0}.\n`);
     }
     return exitCodeOf(report);
+}
+
+/** The formats that show the folders (the tree, the map, the badge) or the health figure of the summary. */
+const WITH_STATS = new Set(['text', 'tree', 'html', 'badge']);
+
+/**
+ * Whether the numbers of every folder are needed: for `--stats`, and for the formats that show the folders or
+ * the share of them within their limit, the summary of the text included.
+ */
+function wantsStats(args: Args, io: Io): boolean {
+    return args.stats || args.outputs.some(spec => WITH_STATS.has(resolveFormat(spec.format, io.env)));
+}
+
+/** Whether a report that shows a folder over its limit has somewhere to say that its files are tiny. */
+function wantsSizes(args: Args, io: Io): boolean {
+    return args.outputs.some(spec => ['text', 'tree', 'html'].includes(resolveFormat(spec.format, io.env)));
 }
 
 /**

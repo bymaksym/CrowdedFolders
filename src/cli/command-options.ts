@@ -26,6 +26,7 @@ const COMMAND_OPTIONS: Readonly<Record<Exclude<Command, 'check'>, readonly strin
     presets: ['config', 'root', 'no-code'],
     rules: ['config', 'root', 'no-code'],
     overrides: [...REPOSITORY_OPTIONS, 'format'],
+    tree: [...REPOSITORY_OPTIONS, 'format', 'output', 'depth', 'over', 'near', 'color', 'no-color'],
 };
 
 const SHARED_OPTIONS = new Set(['help', 'version']);

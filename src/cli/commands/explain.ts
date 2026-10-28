@@ -5,6 +5,7 @@ import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
 import { plural } from '../../core/plural.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
+import { describeComparison } from '../../core/report/tree/trial.ts';
 import type { Args } from '../args.ts';
 import { type Io, wantsSymbols } from '../io.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
@@ -32,6 +33,7 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
     const { folder: view, rules, overrides, findings, notes } = explanation;
     const lines: string[] = [
         `${view.path === '.' ? '. (the root)' : `${view.path}/`}  ${plural(view.files.length, 'file')}, ${plural(view.modules.length, 'module')}, ${plural(view.folders.length, 'subfolder')}`,
+        ...compared(view.modules.length),
         '',
         'Overrides that apply',
     ];
@@ -211,4 +213,10 @@ async function notChecked(folder: string, session: Session): Promise<string[]> {
         lines.push(`  ${count === under.length ? `all ${plural(count, 'file')}` : plural(count, 'file')}: ${reason}`);
     }
     return lines;
+}
+
+/** How big the folder is among the folders of the field trial, as a line of its own; nothing when there are no modules. */
+function compared(modules: number): string[] {
+    const sentence = describeComparison(modules);
+    return sentence === undefined ? [] : [`  ${sentence}`];
 }

@@ -55,6 +55,11 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             case 'overrides': {
                 return overrides(args, io, session);
             }
+            case 'tree': {
+                // It shows the folders and does not judge them: the exit code is for `check`.
+                check(args, io, session);
+                return 0;
+            }
             case 'print-config': {
                 return await printConfig(args, io, session);
             }
