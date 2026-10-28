@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
-import type { ResolvedConfig } from '../core/config/types.ts';
+import type { ResolvedConfig, RuleSetting } from '../core/config/types.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
@@ -366,9 +366,24 @@ function checkSelection(context: {
             }
         }
     }
+    if (asksForDotfiles(config) && config.exclude.includes('.*')) {
+        notices.push(
+            `max-files counts dot-files (dotfiles: true), but ".*" in exclude (from recommended) leaves every dot-file and dot-folder out before any rule sees them: add "!.*" and ".*/" to exclude to leave out only the dot-folders.`,
+        );
+    }
     if (noRuleIsOn(config)) {
         notices.push(`no rule is on in ${origin}, so nothing is checked: missing "extends": ["recommended"]?`);
     }
+}
+
+/** Whether `max-files` is set to count dot-files, for the whole tree or in an override. */
+function asksForDotfiles(config: ResolvedConfig): boolean {
+    const inOverride = config.overrides.some(override => {
+        const setting: RuleSetting | undefined = override.rules['max-files'];
+        const options = typeof setting === 'string' ? undefined : setting?.[1];
+        return options?.['dotfiles'] === true;
+    });
+    return config.rules['max-files']?.options['dotfiles'] === true || inOverride;
 }
 
 function noRuleIsOn(config: ResolvedConfig): boolean {

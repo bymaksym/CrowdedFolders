@@ -112,6 +112,18 @@ describe('PathMatcher', () => {
             assert.equal(matcher.matchesSelfOrAncestor(path), matchesSelfOrAncestor(path, globs), path);
         }
         assert.equal(new PathMatcher([]).matchesSelfOrAncestor('a/b'), false);
+        // A final "/" matches the folders above a file, not the file: ".*/" is .github/, not .eslintrc.
+        const folders = [compileGlob('.*/')];
+        const onlyFolders = new PathMatcher(folders);
+        for (const [path, expected] of [
+            ['.github/workflows/ci.yml', true],
+            ['.eslintrc', false],
+            ['src/.env', false],
+            ['src/.cache/x', true],
+        ] as const) {
+            assert.equal(onlyFolders.matchesSelfOrAncestor(path), expected, path);
+            assert.equal(matchesSelfOrAncestor(path, folders), expected, path);
+        }
     });
 
     it('files a glob under the folders it spells out, or the name it starts with after **/', () => {

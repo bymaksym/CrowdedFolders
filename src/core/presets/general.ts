@@ -110,7 +110,8 @@ export const recommended: Preset = {
             'newsfragments',
             // Folders whose name starts with a dot belong to the tool that reads them (.github,
             // .changeset, .vscode), and their layout is that tool's: GitHub, for one, only reads
-            // workflows directly inside .github/workflows.
+            // workflows directly inside .github/workflows. It leaves out dot-files too (.eslintrc,
+            // .env): to count them with max-files dotfiles, replace it with ".*/", the folders only.
             '.*',
             MEDIA,
             // Fastlane reads one folder per language and one file per field, and nothing deeper.

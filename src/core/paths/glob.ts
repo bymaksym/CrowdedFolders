@@ -29,11 +29,17 @@ export interface Glob {
     readonly name: string | undefined;
     /** Whether only the last segment of a path decides (`*.png`, `node_modules`). */
     readonly lastSegment: boolean;
+    /**
+     * Written with a final `/` (`.*\/`), as in `.gitignore`: in `exclude` and `include` it matches
+     * the folders above a file, never the file itself. `.*\/` leaves out `.github/`, not `.eslintrc`.
+     */
+    readonly folderOnly: boolean;
 }
 
 const GLOB_CHARS = /[*?[\]{}]/u;
 
 export function compileGlob(pattern: string): Glob {
+    const folderOnly = pattern.length > 1 && pattern.endsWith('/');
     const isRooted = pattern.startsWith('/') || pattern.startsWith('./');
     const trimmed = trimSlashes(pattern.startsWith('./') ? pattern.slice(2) : pattern);
     const anchored = isRooted || trimmed.includes('/') ? trimmed : `**/${trimmed}`;
@@ -51,6 +57,7 @@ export function compileGlob(pattern: string): Glob {
             segment,
             name,
             lastSegment: true,
+            folderOnly,
         };
     }
     // A final `/**` takes the folder itself too, as minimatch and picomatch read it: `src/generated/**`
@@ -64,6 +71,7 @@ export function compileGlob(pattern: string): Glob {
         segment,
         name: undefined,
         lastSegment: isOneSegment,
+        folderOnly,
     };
 }
 
@@ -101,7 +109,7 @@ export function matchesSelfOrAncestor(path: string, globs: readonly Glob[]): boo
             return true;
         }
     }
-    return globs.some(glob => glob.test(path));
+    return globs.some(glob => !glob.folderOnly && glob.test(path));
 }
 
 /**
@@ -116,9 +124,14 @@ export class PathMatcher {
     private readonly patterns: readonly Glob[];
     private readonly folders = new Map<string, boolean>();
     private readonly segments = new Map<string, boolean>();
+    /** The same without the patterns that only match folders: what a file itself is tested with. */
+    private readonly forFiles: PathMatcher;
     readonly isEmpty: boolean;
 
     constructor(globs: readonly Glob[]) {
+        this.forFiles = globs.some(glob => glob.folderOnly)
+            ? new PathMatcher(globs.filter(glob => !glob.folderOnly))
+            : this;
         this.names = new Set(globs.map(glob => glob.name).filter(name => name !== undefined));
         this.segmentPatterns = globs.filter(glob => glob.name === undefined && glob.lastSegment);
         this.patterns = globs.filter(glob => glob.name === undefined && !glob.lastSegment);
@@ -149,7 +162,7 @@ export class PathMatcher {
             return false;
         }
         const slash = path.lastIndexOf('/');
-        return (slash !== -1 && this.folderMatches(path.slice(0, slash))) || this.test(path);
+        return (slash !== -1 && this.folderMatches(path.slice(0, slash))) || this.forFiles.test(path);
     }
 
     /** Whether a folder or one above it matches, remembered for every folder on the way. */

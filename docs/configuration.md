@@ -66,7 +66,7 @@ A folder holds at most `max` files (or modules): past that it is scrolled, not r
 | `filesPerModule` | integer | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
 | `hint` | string | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
 | `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
-| `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. |
+| `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"]. |
 
 ### `prefix-groups`
 

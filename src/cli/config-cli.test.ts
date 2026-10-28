@@ -217,3 +217,51 @@ describe('crowded-folders overrides', () => {
         );
     });
 });
+
+describe('dot-files', () => {
+    // Irina: 25 files at the root, 21 of them dot-files, counted as 4 even with dotfiles: true.
+    const root25 = (): Record<string, string> => ({
+        ...Object.fromEntries(
+            Array.from({ length: 21 }, (_, index) => [`.tool${String.fromCodePoint(97 + index)}rc`, '']),
+        ),
+        'a.ts': '',
+        'b.ts': '',
+        'c.ts': '',
+        '.github/workflows/ci.yml': '',
+    });
+
+    it('says that dotfiles: true sees nothing while recommended excludes ".*"', async () => {
+        const root = repository({
+            ...root25(),
+            'crowded-folders.config.json': JSON.stringify({
+                extends: ['recommended'],
+                rules: { 'max-files': ['error', { max: 10, dotfiles: true }] },
+            }),
+        });
+        const ran = await cli(root, ['--no-git']);
+        assert.equal(ran.code, 0);
+        assert.match(ran.err, /dotfiles: true\), but "\.\*" in exclude .* add "!\.\*" and "\.\*\/" to exclude/u);
+    });
+
+    it('counts the dot-files with ".*/" in place of ".*": dot-folders only', async () => {
+        const root = repository({
+            ...root25(),
+            'crowded-folders.config.json': JSON.stringify({
+                extends: ['recommended'],
+                exclude: ['!.*', '.*/'],
+                overrides: [
+                    {
+                        folders: ['.'],
+                        reason: 'the root counts its tool settings',
+                        rules: { 'max-files': ['error', { max: 10, dotfiles: true }] },
+                    },
+                ],
+            }),
+        });
+        const ran = await cli(root, ['--no-git']);
+        assert.equal(ran.code, 1, ran.err);
+        // 21 dot-files, 3 modules and the configuration: .github/ is still left out.
+        assert.match(ran.out, /25 modules, over the limit of 10/u);
+        assert.doesNotMatch(ran.out, /\.github/u);
+    });
+});

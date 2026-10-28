@@ -158,6 +158,7 @@ so.
 | `src/app/**`  | `src/app` and everything under it, as minimatch reads it                    |
 | `*.{png,svg}` | either extension                                                            |
 | `[!_]*`       | names not starting with `_`                                                 |
+| `.*/`         | in `exclude` and `include`, folders only: `.github/`, not `.eslintrc`       |
 
 `exclude` and `include` match a path or any folder above it: excluding `fixtures` leaves out
 everything inside, and `"include": ["src"]` takes everything under `src`. An `include` that takes no
@@ -165,6 +166,10 @@ file is an error, and an entry of your `exclude` or `include` that matches no fi
 
 `"!x"` in `exclude` takes out an `x` inherited from a preset; it is not a gitignore negation and brings
 no file back. One that removes nothing is a warning.
+
+`recommended` excludes `.*`: dot-folders (`.github`, `.vscode`) and dot-files (`.eslintrc`, `.env`) alike,
+so no rule sees a dot-file. To count them with `max-files`' `dotfiles: true`, leave out only the folders:
+`"exclude": ["!.*", ".*/"]`. A run with `dotfiles: true` and `.*` still in `exclude` says so.
 
 ## Naming: telling the tool how your files are named
 
