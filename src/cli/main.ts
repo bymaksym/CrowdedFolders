@@ -1,4 +1,5 @@
 import { FileListError } from '../core/paths/input.ts';
+import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
@@ -9,12 +10,13 @@ import { listPresets, listRules, printConfig } from './commands/lists.ts';
 import { HELP } from './help.ts';
 import { type Io, processIo } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
-import { openSession } from './session.ts';
+import { openSession, type Session } from './session.ts';
 import { TOOL } from './tool.ts';
 
 /** Runs the command and returns its exit code: 0 clean, 1 problems, 2 the input was wrong or it broke. */
 export async function run(argv: readonly string[], io: Io = processIo()): Promise<number> {
     let args: Args | undefined;
+    let session: Session | undefined;
     try {
         args = parseCommandLine(argv);
         if (args.help) {
@@ -26,12 +28,12 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             return 0;
         }
         if (args.command === 'presets') {
-            return listPresets(io);
+            return await listPresets(args, io);
         }
         if (args.command === 'rules') {
-            return listRules(io);
+            return await listRules(args, io);
         }
-        const session = await openSession(args, io);
+        session = await openSession(args, io);
         for (const notice of session.notices) {
             io.error(`crowded-folders: ${notice}
 `);
@@ -50,12 +52,18 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
                 return check(args, io, session);
             }
         }
-    } catch (error) {
+    } catch (error_) {
+        // A plugin's rule that broke is the plugin's to fix: its message says whose it is.
+        const error = error_ instanceof RuleError ? attributeRuleError(error_, session?.loaded.plugins ?? []) : error_;
         if (args) {
             writeFailureReports(args, io, error);
         }
         if (error instanceof UsageError) {
             io.error(`crowded-folders: ${error.message}\nRun crowded-folders --help for the options.\n`);
+            return 2;
+        }
+        if (error instanceof RuleError && error.rule.includes('/')) {
+            io.error(`crowded-folders: ${error.message}\n`);
             return 2;
         }
         if (error instanceof ConfigError || error instanceof GitError || error instanceof FileListError) {
