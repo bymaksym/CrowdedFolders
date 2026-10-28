@@ -88,35 +88,57 @@ export function applySetting(current: RuleState | undefined, setting: RuleSettin
         return { severity: setting, options: previous.options };
     }
     const [severity, options] = setting;
-    return { severity, options: options ? mergeOptions(previous.options, options) : previous.options };
+    return {
+        severity,
+        options: options ? mergeOptions(previous.options, options, { keepNegations: true }) : previous.options,
+    };
 }
 
+/**
+ * Lays options over others, lists accumulating. A rule's state is the options set so far, without
+ * its defaults, which are laid under it last: so a `"!x"` that removes nothing yet is kept there
+ * (`keepNegations`) and still takes `x` out of the rule's defaults — `names: ["!utils"]` used
+ * to leave the default `utils` in.
+ */
 export function mergeOptions(
     base: Readonly<Record<string, unknown>>,
     layer: Readonly<Record<string, unknown>>,
+    { keepNegations = false }: { readonly keepNegations?: boolean } = {},
 ): Record<string, unknown> {
     const merged: Record<string, unknown> = { ...base };
     for (const [key, value] of Object.entries(layer)) {
         const previous = merged[key];
         merged[key] =
             Array.isArray(value) && (Array.isArray(previous) || previous === undefined)
-                ? mergeList((previous as unknown[] | undefined) ?? [], value)
+                ? mergeList((previous as unknown[] | undefined) ?? [], value, { keepNegations })
                 : value;
     }
     return merged;
 }
 
-/** Appends without repeating; `"!x"` removes `x`. */
-export function mergeList<T>(base: readonly T[], layer: readonly T[] | undefined): T[] {
+/**
+ * Appends without repeating; `"!x"` removes `x`. With `keepNegations`, a `"!x"` that finds no
+ * `x` stays in the list, to remove it from what is laid under later; a later `"x"` replaces it.
+ */
+export function mergeList<T>(
+    base: readonly T[],
+    layer: readonly T[] | undefined,
+    { keepNegations = false }: { readonly keepNegations?: boolean } = {},
+): T[] {
     const result = [...base];
     for (const item of layer ?? []) {
         if (typeof item === 'string' && item.startsWith('!')) {
-            const removed = item.slice(1);
-            const index = (result as readonly unknown[]).indexOf(removed);
+            const index = (result as readonly unknown[]).indexOf(item.slice(1));
             if (index !== -1) {
                 result.splice(index, 1);
+            } else if (keepNegations && !result.includes(item)) {
+                result.push(item);
             }
             continue;
+        }
+        const negation = typeof item === 'string' ? (result as readonly unknown[]).indexOf(`!${item}`) : -1;
+        if (negation !== -1) {
+            result.splice(negation, 1);
         }
         if (!result.includes(item)) {
             result.push(item);

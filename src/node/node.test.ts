@@ -67,6 +67,27 @@ describe('plugins', () => {
         );
     });
 
+    it('takes "!utils" out of the default names of a plugin rule (the API agent: utils was still reported)', async () => {
+        const root = withPlugin({});
+        const loaded = await loadConfig(
+            {
+                plugins: ['crowded-folders-plugin-example'],
+                rules: { 'example/generic-names': ['warn', { names: ['!utils'] }] },
+            },
+            'test.json',
+            root,
+        );
+        const result = runEngine({
+            files: ['src/utils/a.ts', 'src/helpers/b.ts'],
+            config: loaded.config,
+            rules: loaded.rules,
+        });
+        assert.deepEqual(
+            result.findings.filter(finding => finding.rule === 'example/generic-names').map(finding => finding.folder),
+            ['src/helpers'],
+        );
+    });
+
     it('validates the options of a plugin rule against its schema', async () => {
         const root = withPlugin({});
         await rejects(

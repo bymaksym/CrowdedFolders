@@ -5,7 +5,7 @@ import { BUILT_IN_PRESETS } from '../presets/index.ts';
 import { BUILT_IN_RULES } from '../rules/index.ts';
 import { validate } from './json-schema.ts';
 import { duplicateKeys, parseJsonc, stripJsonc } from './jsonc.ts';
-import { applySetting, mergeLayer, mergeList } from './merge.ts';
+import { applySetting, mergeLayer, mergeList, mergeOptions } from './merge.ts';
 import { configSchema } from './schema.ts';
 import { globFromAbove, globUnder } from './scope.ts';
 import { EMPTY_CONFIG } from './types.ts';
@@ -61,6 +61,16 @@ describe('mergeList', () => {
 });
 
 describe('applySetting', () => {
+    it('takes "!x" out of the rule\'s own defaults too (names: ["!utils"] kept utils)', () => {
+        const state = applySetting(applySetting(undefined, 'error'), ['error', { names: ['!utils', 'misc'] }]);
+        assert.deepEqual(state.options, { names: ['!utils', 'misc'] });
+        const defaults = { names: ['utils', 'helpers'] };
+        assert.deepEqual(mergeOptions(defaults, state.options), { names: ['helpers', 'misc'] });
+        // A later layer that puts it back wins, and an "!x" nothing has is dropped at the end.
+        const back = applySetting(state, ['error', { names: ['utils', '!nothing'] }]);
+        assert.deepEqual(mergeOptions(defaults, back.options), { names: ['utils', 'helpers', 'misc'] });
+    });
+
     it('keeps options under a bare severity, and merges them under a tuple', () => {
         const first = applySetting(undefined, ['error', { max: 10, ignore: ['use'] }]);
         assert.deepEqual(applySetting(first, 'warn'), { severity: 'warn', options: { max: 10, ignore: ['use'] } });
