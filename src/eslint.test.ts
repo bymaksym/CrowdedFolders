@@ -54,13 +54,16 @@ function eslintIn(root: string, options: object = {}): ESLint {
 }
 
 describe('crowded-folders/folder, run by ESLint', () => {
-    it('reports the render group once, at line 1 of the first file of the folder', async () => {
+    it('reports the render group once, at line 1 of the first file of the folder ESLint lints', async () => {
         const root = crowded();
         const results = await eslintIn(root).lintFiles(['cli/*.js', 'ok/*.js']);
         const reported = results.filter(result => result.messages.length > 0);
         assert.equal(reported.length, 1);
         const [result] = reported;
-        assert.equal(result?.filePath, join(root, 'cli', 'main.js'));
+        // ESLint reads the files at once and lints them as they arrive: which one is first is not known
+        // (cli/render-pr.js on one run, cli/main.js on another). It is one file of the folder, and only one.
+        assert.ok(result);
+        assert.equal(dirname(result.filePath), join(root, 'cli'));
         assert.equal(result.messages.length, 1);
         const [message] = result.messages;
         assert.equal(message?.ruleId, 'crowded-folders/folder');
