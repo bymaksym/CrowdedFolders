@@ -65,6 +65,18 @@ can quietly climb back is not a ceiling.
 **Discarded:** a baseline that only stops new folders (an old folder could double); warnings instead
 of errors (warnings are read for a week).
 
+## A change is compared by names, not by `git diff`
+
+**Decided:** `--since`, `--changed` and `--new-since` read the base's file names with `git ls-tree` and
+compare them with the run's own list; what was added or removed reshapes its folder, and files that left
+one folder for another with the same names mark it as moved.
+**Why:** the run's list already has the untracked files `git diff` leaves out, and the comparison is the
+same with `--stdin`; names are all the check reads, so the base needs no checkout and a clone of depth 1
+is enough. A run over some folders judges only their suppressions: it says nothing about the rest.
+**Discarded:** `git diff --name-status -M`, whose content-based renames the check does not need; and
+pruning, with folders, everything the run did not see — which emptied the file on the recipe this
+documentation gave.
+
 ## Presets carry their sources
 
 **Decided:** a preset has `sources`, and the conventions that contradict the tool win: Vue's flat

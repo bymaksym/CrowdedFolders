@@ -101,9 +101,13 @@ suppression remembers.
 ## 8. Suppressions and the exit code
 
 Findings covered by a suppression are dropped if they did not grow; suppressions that nothing needs, or
-that remember more than is measured, fail the run until pruned ([adopting.md](adopting.md)). The exit
-code is `1` for any error or stale suppression, or more warnings than `--max-warnings`; `2` for a
-configuration or command-line problem, which never looks like a clean run.
+that remember more than is measured, fail the run until pruned ([adopting.md](adopting.md)). A run over
+some folders (`crowded-folders src/lib`, `--since`) looks only at the suppressions of the folders it
+checked. With `--new-since <ref>`, the same check runs over the base's file names (`git ls-tree`), and a
+finding the base already had, as big or bigger, does not fail. The suppressions file and the `--output`
+file are never among the files. The exit code is `1` for any error or stale suppression, or more
+warnings than `--max-warnings`; `2` for a configuration or command-line problem, which never looks like a
+clean run. The text summary is written from the same decision, so its mark always matches the code.
 
 ## What it never does
 

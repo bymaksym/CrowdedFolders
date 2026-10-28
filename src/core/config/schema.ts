@@ -135,7 +135,7 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                 type: 'string',
                 minLength: 1,
                 description:
-                    'The suppressions file, relative to this configuration. Default: crowded-folders-suppressions.json.',
+                    'The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or "per-project": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project.',
             },
         },
     };

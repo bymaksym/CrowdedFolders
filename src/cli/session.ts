@@ -420,7 +420,7 @@ function foldersOf(files: readonly string[]): Set<string> {
 }
 
 /** A path inside `root`, relative to it and `/`-separated (`.` for the root itself); `undefined` outside it. */
-function within(root: string, path: string): string | undefined {
+export function within(root: string, path: string): string | undefined {
     const inside = relative(root, path);
     if (inside === '') {
         return '.';
@@ -440,7 +440,7 @@ function shown(cwd: string, path: string): string {
     return inside ?? path;
 }
 
-function isCi(env: Readonly<Record<string, string | undefined>>): boolean {
+export function isCi(env: Readonly<Record<string, string | undefined>>): boolean {
     const value = env['CI']?.trim().toLowerCase();
     return value !== undefined && value !== '' && value !== '0' && value !== 'false';
 }
