@@ -1,10 +1,10 @@
 import { limitOf, plainMessage } from './describe.ts';
 import { type Report, totalsOf } from './report.ts';
 
-export { type AnnotationOptions, formatAzure, formatGithub } from './formats/annotations.ts';
+export { formatAzure, formatGithub } from './formats/annotations.ts';
 export { formatCheckstyle } from './formats/checkstyle.ts';
 export { formatGitlab } from './formats/gitlab.ts';
-export { formatMarkdown, type MarkdownOptions } from './formats/markdown.ts';
+export { formatMarkdown } from './formats/markdown.ts';
 export { formatSarif } from './formats/sarif.ts';
 
 /** The version of the JSON shape. A field added keeps it; a field renamed or removed raises it. */
