@@ -13,11 +13,10 @@ import type { Session } from '../session.ts';
  * absolute, `undefined` for standard output.
  */
 export function outputPathsOf(args: Args, session: Session): (string | undefined)[] {
-    return args.outputs.map(({ format, target }) => {
+    return args.outputs.map(({ target, option }) => {
         if (target === undefined) {
             return;
         }
-        const option = args.output === target ? `--output ${target}` : `--format ${format}=${target}`;
         return reportPathOf(option, target, args, session);
     });
 }

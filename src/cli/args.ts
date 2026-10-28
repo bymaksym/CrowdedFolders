@@ -1,5 +1,8 @@
 import { parseArgs } from 'node:util';
 
+import { closest } from '../core/paths/suggest.ts';
+import { HELP } from './help.ts';
+
 export const COMMANDS = ['check', 'init', 'explain', 'presets', 'rules', 'print-config'] as const;
 export type Command = (typeof COMMANDS)[number];
 
@@ -23,10 +26,17 @@ export type Grouping = (typeof GROUPINGS)[number];
 export interface OutputSpec {
     readonly format: Format;
     readonly target: string | undefined;
+    /**
+     * The words that asked for this report, for the message that names it: `--output x` or
+     * `--format json=x`. Remembered from the command line so that an error never names the other form.
+     */
+    readonly option: string;
 }
 
 export interface Args {
     readonly command: Command;
+    /** Whether the command was written (`check` is the one that is not). */
+    readonly commandGiven: boolean;
     readonly paths: readonly string[];
     readonly config: string | undefined;
     readonly root: string | undefined;
@@ -51,6 +61,11 @@ export interface Args {
     readonly git: boolean;
     /** `--require-git`: stop when git cannot list the files. `undefined` when not given: on when CI is set. */
     readonly requireGit: boolean | undefined;
+    /**
+     * `--tracked-only`: count only the files git tracks, not the ones it would add (a file a previous CI
+     * step left behind). `--no-tracked-only` is `false`; `undefined` when neither is given: on when CI is set.
+     */
+    readonly trackedOnly: boolean | undefined;
     readonly maxWarnings: number | undefined;
     readonly quiet: boolean;
     readonly moves: boolean;
@@ -75,14 +90,40 @@ export class UsageError extends Error {
     override readonly name = 'UsageError';
 }
 
-/** Reads the command line. Anything it does not know is an error, never ignored. */
+/** The options every command that reads a repository takes: where it is and how its files are listed. */
+const REPOSITORY_OPTIONS = ['config', 'root', 'preset', 'stdin', 'no-git', 'require-git', 'tracked-only'] as const;
+
+/**
+ * The options each command takes besides `--help` and `--version`. Anything else is a usage error:
+ * an option a command ignores is a flag that looks like it did something (`explain -f json` answering in
+ * text, `rules --suppress-all` doing nothing). `check` takes all of them.
+ */
+const COMMAND_OPTIONS: Readonly<Record<Exclude<Command, 'check'>, readonly string[]>> = {
+    init: [...REPOSITORY_OPTIONS, 'force'],
+    explain: REPOSITORY_OPTIONS,
+    'print-config': REPOSITORY_OPTIONS,
+    presets: [],
+    rules: [],
+};
+
+const SHARED_OPTIONS = new Set(['help', 'version']);
+
+function takes(command: Command, option: string): boolean {
+    return command === 'check' || SHARED_OPTIONS.has(option) || COMMAND_OPTIONS[command].includes(option);
+}
+
+/** The long name an option error of Node's names (`-c, --config <value>`, `--stdin`, `-q`). */
+const OPTION_IN_MESSAGE = /[Oo]ption '(?:-\w, )?(-[\w-]+)/u;
+
+/** Reads the command line. Anything it does not know, repeat or cannot use is an error, never ignored. */
 export function parseCommandLine(argv: readonly string[]): Args {
     let parsed;
     try {
         parsed = parseArgs({
-            args: [...argv],
+            args: joinNegativeOne(argv),
             allowPositionals: true,
             strict: true,
+            tokens: true,
             options: {
                 config: { type: 'string', short: 'c' },
                 root: { type: 'string' },
@@ -98,6 +139,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 stdin: { type: 'boolean' },
                 'no-git': { type: 'boolean' },
                 'require-git': { type: 'boolean' },
+                'tracked-only': { type: 'boolean' },
+                'no-tracked-only': { type: 'boolean' },
                 'max-warnings': { type: 'string' },
                 quiet: { type: 'boolean', short: 'q' },
                 moves: { type: 'boolean' },
@@ -117,14 +160,18 @@ export function parseCommandLine(argv: readonly string[]): Args {
             },
         });
     } catch (error) {
-        throw new UsageError((error as Error).message);
+        throw new UsageError(usageMessageOf(error as Error));
     }
-    const { values, positionals } = parsed;
+    const { values, positionals, tokens } = parsed;
+    refuseRepeated(tokens);
 
     const [first, ...rest] = positionals;
     const isCommand = (COMMANDS as readonly string[]).includes(first ?? '');
     const command: Command = isCommand ? (first as Command) : 'check';
     const paths = isCommand ? rest : positionals;
+    if (!values.help && !values.version) {
+        refuseOptionsOfOtherCommands(command, tokens);
+    }
 
     const outputs = outputsOf(values.format ?? [], values.output);
     const groupBy = values['group-by'] ?? 'folder';
@@ -132,13 +179,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
         throw new UsageError(`--group-by must be one of ${GROUPINGS.join(', ')}, not "${groupBy}"`);
     }
     const maxFindings = wholeNumber('--max-findings', values['max-findings'], 1);
-    let maxWarnings: number | undefined;
-    if (values['max-warnings'] !== undefined) {
-        maxWarnings = Number(values['max-warnings']);
-        if (!Number.isSafeInteger(maxWarnings) || maxWarnings < 0) {
-            throw new UsageError(`--max-warnings must be a whole number of 0 or more, not "${values['max-warnings']}"`);
-        }
-    }
+    const maxWarnings = maxWarningsOf(values['max-warnings']);
     if (values.color && values['no-color']) {
         throw new UsageError('--color and --no-color cannot both be given');
     }
@@ -150,6 +191,14 @@ export function parseCommandLine(argv: readonly string[]): Args {
     if (values.stdin && values['no-git']) {
         throw new UsageError(
             '--stdin and --no-git cannot both be given: with --stdin the files come from standard input',
+        );
+    }
+    if (values['tracked-only'] && values['no-tracked-only']) {
+        throw new UsageError('--tracked-only and --no-tracked-only cannot both be given');
+    }
+    if (values['tracked-only'] && (values['no-git'] || values.stdin)) {
+        throw new UsageError(
+            `--tracked-only and ${values.stdin ? '--stdin' : '--no-git'} cannot both be given: tracked files are what git lists`,
         );
     }
     if (values['require-git'] && (values['no-git'] || values.stdin)) {
@@ -188,6 +237,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
 
     return {
         command,
+        commandGiven: isCommand,
         paths,
         config: values.config,
         root: values.root,
@@ -204,6 +254,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
         stdin: values.stdin ?? false,
         git: !(values['no-git'] ?? false),
         requireGit: values['require-git'],
+        trackedOnly: values['no-tracked-only'] ? false : values['tracked-only'],
         maxWarnings,
         quiet: values.quiet ?? false,
         moves: values.moves ?? false,
@@ -240,10 +291,14 @@ function outputsOf(formats: readonly string[], output: string | undefined): Outp
         if (target !== undefined) {
             refuseFolder(`--format ${value}`, target);
         }
-        return { format: format as Format, target: target === '-' ? undefined : target };
+        return {
+            format: format as Format,
+            target: target === '-' ? undefined : target,
+            option: target === undefined ? `--format ${format}` : `--format ${value}`,
+        };
     });
     if (specs.length === 0) {
-        specs.push({ format: 'text', target: undefined });
+        specs.push({ format: 'text', target: undefined, option: '--format text' });
     }
     if (output !== undefined) {
         refuseFolder(`--output ${output}`, output);
@@ -253,7 +308,7 @@ function outputsOf(formats: readonly string[], output: string | undefined): Outp
                 '--output goes with one --format that has no file of its own; with several, name each file: -f sarif=out.sarif -f markdown=summary.md',
             );
         }
-        specs[0] = { format: only.format, target: output };
+        specs[0] = { format: only.format, target: output, option: `--output ${output}` };
     }
     if (specs.filter(spec => spec.target === undefined).length > 1) {
         throw new UsageError(
@@ -281,4 +336,81 @@ function wholeNumber(option: string, value: string | undefined, minimum: number)
         throw new UsageError(`${option} must be a whole number of ${minimum} or more, not "${value}"`);
     }
     return number;
+}
+
+/** The options that may be given more than once; every other is an error the second time. */
+const REPEATABLE = new Set(['preset', 'format', 'owner', 'suppress-rule']);
+
+type Tokens = NonNullable<ReturnType<typeof parseArgs>['tokens']>;
+
+/** `-f json -f sarif` used to keep the last one without a word; so did `-c a -c b`. */
+function refuseRepeated(tokens: Tokens): void {
+    const seen = new Set<string>();
+    for (const token of tokens) {
+        if (token.kind !== 'option' || REPEATABLE.has(token.name)) {
+            continue;
+        }
+        if (seen.has(token.name)) {
+            throw new UsageError(`--${token.name} is given more than once, and it takes one value`);
+        }
+        seen.add(token.name);
+    }
+}
+
+/** An option the command does not take is not ignored: `explain -f json` answered in text, `rules --suppress-all` did nothing. */
+function refuseOptionsOfOtherCommands(command: Command, tokens: Tokens): void {
+    for (const token of tokens) {
+        if (token.kind !== 'option' || takes(command, token.name)) {
+            continue;
+        }
+        const where = COMMANDS.filter(other => takes(other, token.name));
+        throw new UsageError(
+            `--${token.name} does not apply to ${command}${where.length === 0 ? '' : `; it applies to ${where.join(', ')}`}`,
+        );
+    }
+}
+
+/**
+ * `--max-warnings` is a whole number, or -1 for no limit (as in ESLint). `Number()` took `0x10`, `1e3`,
+ * ` 5` and the empty string (as 0); a limit is read as written.
+ */
+function maxWarningsOf(value: string | undefined): number | undefined {
+    if (value === undefined || value === '-1') {
+        return undefined;
+    }
+    if (!/^\d+$/u.test(value) || !Number.isSafeInteger(Number(value))) {
+        throw new UsageError(`--max-warnings must be a whole number of 0 or more, or -1 for no limit, not "${value}"`);
+    }
+    return Number(value);
+}
+
+/** `--max-warnings -1` is two words to Node, which takes `-1` for an option: make it `--max-warnings=-1`. */
+function joinNegativeOne(argv: readonly string[]): string[] {
+    const joined: string[] = [];
+    for (const [index, word] of argv.entries()) {
+        if (word === '-1' && argv[index - 1] === '--max-warnings') {
+            joined[joined.length - 1] = '--max-warnings=-1';
+        } else {
+            joined.push(word);
+        }
+    }
+    return joined;
+}
+
+/** Node's own words for a bad option are long, quote badly and suggest nothing: say it in one line. */
+function usageMessageOf(error: Error): string {
+    const code = (error as Error & { code?: string }).code;
+    const named = OPTION_IN_MESSAGE.exec(error.message)?.[1];
+    if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION' && named !== undefined) {
+        const long = named.startsWith('--') ? named.slice(2) : undefined;
+        const candidates = new Set(HELP.match(/(?<=--)[a-z][a-z-]*/gu));
+        const guess = long === undefined ? undefined : closest(long, candidates);
+        return `unknown option ${named}${guess === undefined ? '' : `; did you mean --${guess}?`}`;
+    }
+    if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && named !== undefined) {
+        return error.message.includes('does not take an argument')
+            ? `${named} takes no value`
+            : `${named} needs a value; if the value starts with "-", write it ${named}=<value>`;
+    }
+    return error.message;
 }

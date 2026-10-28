@@ -314,7 +314,7 @@ describe('the command', () => {
         for (const args of [
             ['--nope'],
             ['--format', 'xml'],
-            ['--max-warnings', '-1'],
+            ['--max-warnings', '-2'],
             ['explain'],
             ['--stdin', '--no-git'],
             ['--color', '--no-color'],

@@ -67,7 +67,12 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         only = read.under === undefined ? only : [joinScope(scope, read.under)];
         fileSource = 'standard input';
     } else {
-        const list = listFiles(root, { git: args.git, requireGit: args.requireGit ?? isCi(io.env), env: io.env });
+        const list = listFiles(root, {
+            git: args.git,
+            requireGit: args.requireGit ?? isCi(io.env),
+            trackedOnly: args.trackedOnly ?? isCi(io.env),
+            env: io.env,
+        });
         listed = [...list.files];
         fileSource = list.source === 'git' ? 'git' : 'the disk';
         if (list.notice !== undefined) {

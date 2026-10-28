@@ -6,7 +6,7 @@ import { check } from './commands/check.ts';
 import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
-import { HELP } from './help.ts';
+import { COMMAND_HELP, HELP } from './help.ts';
 import { type Io, processIo } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
 import { openSession } from './session.ts';
@@ -18,7 +18,12 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
     try {
         args = parseCommandLine(argv);
         if (args.help) {
-            io.write(HELP);
+            io.write(
+                args.commandGiven
+                    ? `${COMMAND_HELP[args.command]}
+`
+                    : HELP,
+            );
             return 0;
         }
         if (args.version) {
