@@ -53,6 +53,13 @@ export function detectPresets(
     presets: Readonly<Record<string, Preset>>,
 ): Detection[] {
     const candidates = files.filter(path => isEvidence(path)).toSorted((a, b) => depthOf(a) - depthOf(b));
+    // Nor inside a folder `recommended` leaves out, which every run applies: the CMakeLists.txt in
+    // Android's `.cxx` CMake cache is not a C++ project. A pattern that names a dot folder itself
+    // (`.vitepress/config.ts`) still finds its file there.
+    const leftOutByAll = (presets['recommended']?.config.exclude ?? []).map(compileGlob);
+    const kept = new Set(
+        candidates.filter(path => parentOf(path) === '.' || !matchesSelfOrAncestor(parentOf(path), leftOutByAll)),
+    );
     const found: { readonly preset: string; readonly evidence: string; readonly files: readonly string[] }[] = [];
     for (const [name, preset] of Object.entries(presets)) {
         const detect = preset.detect;
@@ -66,7 +73,9 @@ export function detectPresets(
             continue;
         }
         const globs = (detect.files ?? []).map(compileGlob);
-        const matching = globs.length === 0 ? [] : candidates.filter(path => globs.some(glob => glob.test(path)));
+        const matching = candidates.filter(path =>
+            globs.some(glob => (kept.has(path) || namesDotFolder(glob)) && glob.test(path)),
+        );
         if (matching.length > 0) {
             found.push({ preset: name, evidence: matching[0] ?? '', files: matching });
         }
@@ -144,6 +153,10 @@ function anchoredExcludes(name: string, presets: Readonly<Record<string, Preset>
     return anchoredPatterns(name, presets).map(pattern =>
         compileGlob(base === '.' ? `/${pattern}` : `${base}/${pattern}`),
     );
+}
+
+function namesDotFolder(glob: Glob): boolean {
+    return glob.source.startsWith('.') || glob.source.includes('/.');
 }
 
 function depthOf(path: string): number {
