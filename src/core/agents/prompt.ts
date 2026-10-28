@@ -1,7 +1,7 @@
-import type { Finding } from './engine.ts';
-import { compareText } from './naming/modules.ts';
-import { plural, shownOf } from './plural.ts';
-import { commandsOf, type MoveGroup, moveGroups, referencesLine } from './report/formats/moves.ts';
+import type { Finding } from '../engine.ts';
+import { compareText } from '../naming/modules.ts';
+import { plural, shownOf } from '../plural.ts';
+import { commandsOf, type MoveGroup, moveGroups, referencesLine } from '../report/formats/moves.ts';
 
 export interface PromptGroup {
     /** The words the modules start with: `render`. */

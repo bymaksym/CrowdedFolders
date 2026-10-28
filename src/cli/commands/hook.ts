@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { hookResponse, readHookRequest } from '../../core/agents.ts';
+import { hookResponse, readHookRequest } from '../../core/agents/kit.ts';
 import { type Args, parseCommandLine } from '../args.ts';
 import type { Io } from '../io.ts';
 import { openSession } from '../session.ts';

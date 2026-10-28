@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { mergeLayer } from './config/merge.ts';
-import { type Config, EMPTY_CONFIG } from './config/types.ts';
-import { BUILT_IN_RULES } from './rules/index.ts';
+import { mergeLayer } from '../config/merge.ts';
+import { type Config, EMPTY_CONFIG } from '../config/types.ts';
+import { BUILT_IN_RULES } from '../rules/index.ts';
 import { whereSummary, whereWouldGo } from './where.ts';
 
 const resolve = (config: Config) => mergeLayer(EMPTY_CONFIG, config, 'test', true);

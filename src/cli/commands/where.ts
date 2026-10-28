@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { whereDetails, type WhereResult, whereSummary, whereWouldGo } from '../../core/agents/where.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
-import { whereDetails, type WhereResult, whereSummary, whereWouldGo } from '../../core/where.ts';
 import { isIgnoredByGit } from '../../node/files.ts';
 import type { Args } from '../args.ts';
 import { type Io, wantsSymbols } from '../io.ts';

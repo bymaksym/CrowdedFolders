@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 
+import { type WhereResult, whereWouldGo } from '../core/agents/where.ts';
 import { foldersOf } from '../core/changes.ts';
 import type { Config, Plugin, Preset, ResolvedConfig } from '../core/config/types.ts';
 import { ConfigError } from '../core/config/validate.ts';
@@ -10,7 +11,6 @@ import { exitCodeOf } from '../core/report/report.ts';
 import { attributeRuleError, RuleError, ruleShapeProblem } from '../core/rules/guard.ts';
 import type { Rule } from '../core/rules/rule.ts';
 import { applySuppressions, PER_PROJECT, type StaleSuppression } from '../core/suppressions.ts';
-import { type WhereResult, whereWouldGo } from '../core/where.ts';
 import { locate } from './config/file.ts';
 import { listFiles } from './files.ts';
 import { loadConfig, loadConfigFile, type LoadedConfig } from './load-config.ts';

@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
-import { mergeAgentsMd, mergeClaudeSettings, type Merged, unifiedDiff } from '../../core/agents.ts';
+import { mergeAgentsMd, mergeClaudeSettings, type Merged, unifiedDiff } from '../../core/agents/kit.ts';
 import { gitRootOf, realPath } from '../../node/config/file.ts';
 import type { Args } from '../args.ts';
 import { type Io, writeFileAtomic } from '../io.ts';

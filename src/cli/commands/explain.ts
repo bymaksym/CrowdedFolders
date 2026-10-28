@@ -1,10 +1,10 @@
+import { reorganisationPrompt } from '../../core/agents/prompt.ts';
 import { explainFolder, type Finding } from '../../core/engine.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
 import { compareText, type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
 import { plural } from '../../core/plural.ts';
-import { reorganisationPrompt } from '../../core/prompt.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
 import type { Args } from '../args.ts';
 import { type Io, wantsSymbols } from '../io.ts';

@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { HOOK_COMMAND, HOOK_TIMEOUT, HOOK_TOOLS } from './core/agents.ts';
+import { HOOK_COMMAND, HOOK_TIMEOUT, HOOK_TOOLS } from './core/agents/kit.ts';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const read = (path: string): string => readFileSync(join(ROOT, path), 'utf8');

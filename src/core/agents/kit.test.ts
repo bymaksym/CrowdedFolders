@@ -12,7 +12,7 @@ import {
     mergeClaudeSettings,
     readHookRequest,
     unifiedDiff,
-} from './agents.ts';
+} from './kit.ts';
 import type { WhereResult } from './where.ts';
 
 /** The JSON Claude Code sends a PreToolUse hook for Write (docs: code.claude.com/docs/en/hooks). */

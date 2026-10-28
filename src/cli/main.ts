@@ -1,4 +1,4 @@
-import { AgentsKitError } from '../core/agents.ts';
+import { AgentsKitError } from '../core/agents/kit.ts';
 import { FileListError } from '../core/paths/input.ts';
 import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
 import { describeConfigError } from '../node/config/error.ts';

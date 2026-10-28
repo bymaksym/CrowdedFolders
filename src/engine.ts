@@ -7,6 +7,16 @@ import type { Config, Plugin, Preset } from './core/config/types.ts';
 import { type Detection, detectPresets as detectFromFiles } from './core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from './core/presets/index.ts';
 
+export {
+    type WhereCandidate,
+    type WhereChange,
+    type WhereEffect,
+    type WhereGroup,
+    type WhereInput,
+    type WhereResult,
+    whereSummary,
+    whereWouldGo,
+} from './core/agents/where.ts';
 export { mergeLayer } from './core/config/merge.ts';
 export { type Resolution, resolveConfig, type ResolveOptions } from './core/config/resolve.ts';
 export { configSchema } from './core/config/schema.ts';
@@ -43,16 +53,6 @@ export {
     type TreeContext,
     type TreeProblem,
 } from './core/rules/rule.ts';
-export {
-    type WhereCandidate,
-    type WhereChange,
-    type WhereEffect,
-    type WhereGroup,
-    type WhereInput,
-    type WhereResult,
-    whereSummary,
-    whereWouldGo,
-} from './core/where.ts';
 
 /** Types a configuration file written in JavaScript: `export default defineConfig({ … })`. */
 export function defineConfig(config: Config): Config {

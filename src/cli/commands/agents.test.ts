@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { AGENTS_END, AGENTS_START } from '../../core/agents.ts';
+import { AGENTS_END, AGENTS_START } from '../../core/agents/kit.ts';
 import { cleanUpAfterTests, cli, repository } from '../test-support/harness.ts';
 
 cleanUpAfterTests();

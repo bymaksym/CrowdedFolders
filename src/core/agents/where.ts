@@ -1,11 +1,11 @@
-import { foldersOf } from './changes.ts';
-import type { ResolvedConfig } from './config/types.ts';
-import { explainFolder, type Finding, runEngine, selectFiles } from './engine.ts';
-import { groupModules, MAX_KEY_WORDS } from './naming/groups.ts';
-import { compareText, shownName } from './naming/modules.ts';
-import { baseName, joinPath, parentOf } from './paths/tree.ts';
-import { existingFolder, folderNameFor } from './rules/moves.ts';
-import type { Move, Rule } from './rules/rule.ts';
+import { foldersOf } from '../changes.ts';
+import type { ResolvedConfig } from '../config/types.ts';
+import { explainFolder, type Finding, runEngine, selectFiles } from '../engine.ts';
+import { groupModules, MAX_KEY_WORDS } from '../naming/groups.ts';
+import { compareText, shownName } from '../naming/modules.ts';
+import { baseName, joinPath, parentOf } from '../paths/tree.ts';
+import { existingFolder, folderNameFor } from '../rules/moves.ts';
+import type { Move, Rule } from '../rules/rule.ts';
 
 export interface WhereInput {
     /** The files that exist, relative to the root. */
