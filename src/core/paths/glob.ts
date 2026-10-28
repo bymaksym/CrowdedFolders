@@ -275,7 +275,7 @@ function escapeClass(body: string): string {
     return out;
 }
 
-function trimSlashes(pattern: string): string {
+export function trimSlashes(pattern: string): string {
     let start = 0;
     let end = pattern.length;
     while (start < end && pattern[start] === '/') start++;

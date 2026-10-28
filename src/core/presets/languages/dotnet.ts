@@ -18,6 +18,10 @@ export const dotnet: Preset = {
         },
     ],
     detect: { files: ['*.csproj', '*.fsproj', '*.vbproj', '*.sln', '*.slnx'] },
+    keeps: {
+        'redundant-prefix':
+            'a namespace is a feature and its types say what they are (Users/UserService): a type is used by its name, without its namespace',
+    },
     config: {
         extends: ['recommended'],
         exclude: ['bin', 'obj', 'Migrations', 'wwwroot/lib', 'Properties', '.vs'],
@@ -44,6 +48,8 @@ export const dotnet: Preset = {
                 },
             ],
             'prefix-groups': ['error', { hint: 'In C# a folder is a namespace (IDE0130).', hintFor: ['*.{cs,fs,vb}'] }],
+            // Kept off under strict: Users/UserService is the idiom, not a repetition.
+            'redundant-prefix': 'off',
         },
     },
 };

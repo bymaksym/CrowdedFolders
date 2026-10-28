@@ -162,6 +162,7 @@ interface CompiledOverride {
     readonly state: OverrideState;
     readonly globs: readonly Glob[];
     readonly withFiles: readonly Glob[];
+    readonly within: readonly Glob[];
     used: boolean;
 }
 
@@ -228,6 +229,7 @@ class FolderContext {
             state,
             globs: state.folders.map(compileGlob),
             withFiles: state.withFiles.map(compileGlob),
+            within: state.within.map(compileGlob),
             used: false,
         }));
         this.index = new OverrideIndex(this.overrides);
@@ -244,6 +246,7 @@ class FolderContext {
         for (const override of this.index.candidatesFor(entry.path)) {
             if (
                 override.globs.every(glob => !glob.test(entry.path)) ||
+                (override.within.length > 0 && override.within.every(glob => !glob.test(entry.path))) ||
                 (override.withFiles.length > 0 &&
                     entry.files.every(file => override.withFiles.every(glob => !glob.test(file))))
             ) {

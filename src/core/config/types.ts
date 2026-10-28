@@ -29,6 +29,12 @@ export interface OverrideConfig {
      * that hold one of these files directly. It is how "the root of a package" is said: the folder with a package.json.
      */
     readonly withFiles?: readonly string[];
+    /**
+     * Presets applied to these folders only, before the override's own settings: `java` under
+     * `server/**`, `angular` under `web/**`. Their root-anchored patterns start at each folder of
+     * `folders` (`/target` is `server/target`), their names at any depth below it.
+     */
+    readonly extends?: readonly string[];
     readonly reason: string;
     /** `YYYY-MM-DD`: after it, the override is reported as `config/expired-override` (it still applies). */
     readonly expires?: string;
@@ -43,6 +49,12 @@ export interface OverrideConfig {
 /** What a configuration file holds. Every field is optional. */
 export interface Config {
     readonly $schema?: string;
+    /**
+     * `false`: this is the configuration of a package inside a repository whose own configuration is
+     * above. Checked from the top, it applies to this folder; checked from here, the top's is used,
+     * with its root and suppressions. Default: true.
+     */
+    readonly root?: boolean;
     /** Built-in presets (`recommended`, `react`), plugin presets (`namespace/name`), packages or files. */
     readonly extends?: readonly string[];
     /** Packages or files that export a plugin. */
@@ -74,6 +86,16 @@ export interface Preset {
     readonly config: Config;
     /** When `init` (or a run without configuration) proposes it. */
     readonly detect?: Detect;
+    /**
+     * A preset that tightens the others (`strict`): applied after the other presets of the same
+     * `extends`, wherever it is listed, so that `["strict", "go"]` and `["go", "strict"]` agree.
+     */
+    readonly tightens?: boolean;
+    /**
+     * Rules this preset sets as its ecosystem needs them, with why: a preset that `tightens` leaves
+     * them as they are (`java` keeps `redundant-prefix` off: `user/UserService` is how Java names it).
+     */
+    readonly keeps?: Readonly<Record<string, string>>;
 }
 
 /** A preset applies to a repository when any of these is found in it. */
@@ -128,6 +150,11 @@ export interface OverrideState {
     /** The file or preset it was written in: stale overrides are only reported for the user's own files. */
     readonly origin: string;
     readonly own: boolean;
+    /**
+     * Globs the folder must match too: the folders of the override, or of the package configuration,
+     * that brought this one in with a preset. Empty for an override written for the whole tree.
+     */
+    readonly within: readonly string[];
 }
 
 /** A configuration with every `extends` applied, ready for the engine. */

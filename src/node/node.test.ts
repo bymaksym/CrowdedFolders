@@ -132,8 +132,33 @@ describe('extends', () => {
         await rejects(loadConfig({ extends: ['./a.json'] }, join(root, 'mine.json'), root), /extends itself/u);
         await rejects(
             loadConfig({ extends: ['recomended'] }, 'mine.json', root),
-            /is not a preset \(known: recommended/u,
+            /"recomended" is not a preset; did you mean "recommended"\? \(known: recommended/u,
         );
+    });
+
+    it('suggests the preset for a misspelled name and never says to install it (Zaporeak: "recomended")', async () => {
+        const root = folder({});
+        await assert.rejects(loadConfig({ extends: ['recomended'] }, 'mine.json', root), (error: unknown) => {
+            assert.ok(error instanceof ConfigError);
+            assert.doesNotMatch(error.message, /install/u);
+            return true;
+        });
+        // A plain name close to no preset is still looked for as a package, without "install it".
+        await assert.rejects(loadConfig({ extends: ['acme-folders'] }, 'mine.json', root), (error: unknown) => {
+            assert.ok(error instanceof ConfigError);
+            assert.match(error.message, /is not a preset \(known: .*\), nor a package installed where/u);
+            assert.doesNotMatch(error.message, /install it/u);
+            return true;
+        });
+        await rejects(loadConfig({ extends: ['@acme/folders'] }, 'mine.json', root), /install it as a devDependency/u);
+    });
+
+    it('warns when a preset listed later was already applied by one before it ("angular", "recommended")', async () => {
+        const loaded = await loadConfig({ extends: ['angular', 'recommended'] }, 'mine.json', folder({}));
+        assert.equal(loaded.warnings.length, 1);
+        assert.match(loaded.warnings[0] ?? '', /"recommended" in extends was already applied by an entry before it/u);
+        const quiet = await loadConfig({ extends: ['recommended', 'angular', 'react'] }, 'mine.json', folder({}));
+        assert.deepEqual(quiet.warnings, []);
     });
 
     it('reads a configuration written in JavaScript, as an object or a function', async () => {

@@ -13,6 +13,7 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | Setting | Type | What it does |
 | --- | --- | --- |
 | `$schema` | string | This schema, for editors. |
+| `root` | boolean | false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true. |
 | `extends` | see below[] | Presets and configurations applied before this one, in order; later ones win. |
 | `plugins` | string[] | Packages or files whose default export is a plugin: more rules and presets. |
 | `include` | string[] | Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git. |
@@ -38,6 +39,7 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | --- | --- | --- |
 | `folders` | string[] | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
 | `withFiles` | string[] | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
+| `extends` | see below[] | Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration. |
 | `reason` | string | Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
 | `expires` | string | A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review. |
 | `owner` | string | Who answers for it (a person or a team, such as @org/team): shown with it. |

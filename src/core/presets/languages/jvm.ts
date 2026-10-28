@@ -40,6 +40,10 @@ export const java: Preset = {
         },
     ],
     detect: { files: ['pom.xml', 'build.gradle', 'build.gradle.kts', 'settings.gradle', 'settings.gradle.kts'] },
+    keeps: {
+        'redundant-prefix':
+            'a package is a feature and its classes say what they are (user/UserService, user/UserRepository): the name of the class is what imports and stack traces show',
+    },
     config: {
         extends: ['recommended'],
         // Anchored to the manifest that owns them (init and detection rebase these for each module):
@@ -79,6 +83,8 @@ export const java: Preset = {
                 'error',
                 { hint: 'A folder is a package: they would be the package of that feature.', hintFor: JVM_FILES },
             ],
+            // Kept off under strict: user/UserService is the idiom, not a repetition.
+            'redundant-prefix': 'off',
         },
     },
 };

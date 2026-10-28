@@ -53,6 +53,12 @@ export function findConfig(startDir: string): FoundConfig | undefined {
     }
 }
 
+/** Whether reading a configuration file runs it: anything but JSON and package.json. */
+export function isCode(path: string): boolean {
+    const extension = extname(path);
+    return extension !== '.json' && extension !== '.jsonc';
+}
+
 export function projectDirOf(path: string): string {
     const dir = dirname(path);
     return basename(dir) === '.config' ? dirname(dir) : dir;

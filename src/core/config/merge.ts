@@ -3,6 +3,7 @@ import type {
     Config,
     NamingConfig,
     NamingState,
+    OverrideConfig,
     OverrideState,
     ResolvedConfig,
     RuleSetting,
@@ -25,18 +26,7 @@ export function mergeLayer(base: ResolvedConfig, layer: Config, origin: string, 
     }
     const overrides: OverrideState[] = [
         ...base.overrides,
-        ...(layer.overrides ?? []).map(override => ({
-            folders: override.folders,
-            withFiles: override.withFiles ?? [],
-            reason: override.reason.trim(),
-            expires: override.expires,
-            owner: override.owner,
-            ticket: override.ticket,
-            rules: override.rules ?? {},
-            naming: override.naming ?? {},
-            origin,
-            own,
-        })),
+        ...(layer.overrides ?? []).map(override => overrideState(override, origin, own)),
     ];
     return {
         include: mergeList(base.include, layer.include),
@@ -46,6 +36,33 @@ export function mergeLayer(base: ResolvedConfig, layer: Config, origin: string, 
         overrides,
         layers: [...base.layers, origin],
         suppressions: layer.suppressions ?? base.suppressions,
+    };
+}
+
+/**
+ * An override as the engine reads it. Its `extends` is not here: the loader applies those presets
+ * to its folders before it, as overrides of their own.
+ */
+export function overrideState(
+    override: Pick<
+        OverrideConfig,
+        'expires' | 'folders' | 'naming' | 'owner' | 'reason' | 'rules' | 'ticket' | 'withFiles'
+    >,
+    origin: string,
+    own: boolean,
+): OverrideState {
+    return {
+        folders: override.folders,
+        withFiles: override.withFiles ?? [],
+        reason: override.reason.trim(),
+        expires: override.expires,
+        owner: override.owner,
+        ticket: override.ticket,
+        rules: override.rules ?? {},
+        naming: override.naming ?? {},
+        origin,
+        own,
+        within: [],
     };
 }
 

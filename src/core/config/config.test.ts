@@ -7,6 +7,7 @@ import { validate } from './json-schema.ts';
 import { duplicateKeys, parseJsonc, stripJsonc } from './jsonc.ts';
 import { applySetting, mergeLayer, mergeList } from './merge.ts';
 import { configSchema } from './schema.ts';
+import { globFromAbove, globUnder } from './scope.ts';
 import { EMPTY_CONFIG } from './types.ts';
 import { validateConfig } from './validate.ts';
 
@@ -246,5 +247,31 @@ describe('configSchema', () => {
             Object.keys(BUILT_IN_RULES).toSorted((a, b) => a.localeCompare(b)),
         );
         assert.deepEqual(validate({ rules: { 'max-files': ['error', { max: 3 }] } }, schema), []);
+    });
+});
+
+describe('globUnder', () => {
+    it('reads the globs of a preset applied under a folder from that folder (react under web/**)', () => {
+        assert.equal(globUnder('web', 'public'), 'web/**/public');
+        assert.equal(globUnder('server', '/target'), 'server/target');
+        assert.equal(globUnder('server', '**/src/test'), 'server/**/src/test');
+        assert.equal(globUnder('apps/*', 'src/app/**'), 'apps/*/src/app/**');
+        assert.equal(globUnder('web', '.'), 'web');
+        assert.equal(globUnder('web', '!dist'), '!web/**/dist');
+        assert.equal(globUnder('', '/target'), '/target');
+    });
+});
+
+describe('globFromAbove', () => {
+    it('reads the globs of a base.json at the top from a package below it (Daniel)', () => {
+        assert.deepEqual(globFromAbove('packages/a', 'packages/*/src/**'), { kind: 'glob', glob: 'src/**' });
+        assert.deepEqual(globFromAbove('packages/a', 'packages/a/legacy'), { kind: 'glob', glob: '/legacy' });
+        assert.deepEqual(globFromAbove('packages/a', 'packages/b/**'), { kind: 'outside' });
+        assert.deepEqual(globFromAbove('packages/a', 'packages/**/gen'), { kind: 'glob', glob: '**/gen' });
+        assert.deepEqual(globFromAbove('packages/a', 'generated'), { kind: 'glob', glob: 'generated' });
+        assert.deepEqual(globFromAbove('packages/a', '/packages'), { kind: 'base' });
+        assert.deepEqual(globFromAbove('packages/a', 'packages/a'), { kind: 'base' });
+        assert.deepEqual(globFromAbove('packages/a', '.'), { kind: 'outside' });
+        assert.deepEqual(globFromAbove('packages/a', '!packages/a/x'), { kind: 'glob', glob: '!/x' });
     });
 });

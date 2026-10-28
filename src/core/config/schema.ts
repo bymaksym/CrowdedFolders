@@ -97,6 +97,11 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
         additionalProperties: false,
         properties: {
             $schema: { type: 'string', description: 'This schema, for editors.' },
+            root: {
+                type: 'boolean',
+                description:
+                    'false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true.',
+            },
             extends: {
                 type: 'array',
                 items: {
@@ -145,6 +150,21 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                             items: { type: 'string', minLength: 1 },
                             description:
                                 'Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders".',
+                        },
+                        extends: {
+                            type: 'array',
+                            items: {
+                                anyOf: [
+                                    { enum: presets, description: 'A built-in preset.' },
+                                    {
+                                        type: 'string',
+                                        minLength: 1,
+                                        description: 'A plugin preset ("namespace/name").',
+                                    },
+                                ],
+                            },
+                            description:
+                                'Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration.',
                         },
                         reason: {
                             type: 'string',

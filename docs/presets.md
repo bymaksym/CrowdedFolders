@@ -74,7 +74,7 @@ Sources:
 
 ## strict
 
-Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. An opinion, not a measurement: use it when you want the tree tidier than most.
+Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. It tightens the presets it is combined with, wherever it is listed (go then strict and strict then go are the same), and leaves alone what a preset keeps: java and dotnet keep redundant-prefix off, go's main.go and Cargo's lib.rs stay allowed alone in a folder. An opinion, not a measurement: use it when you want the tree tidier than most.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":12,"count":"modules"}`
@@ -263,6 +263,7 @@ Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classe
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
 - **`prefix-groups`:** `error` `{"hint":"A folder is a package: they would be the package of that feature.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
+- **`redundant-prefix`:** `off`
 - **Companions:** `Impl$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
 - **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
@@ -300,6 +301,7 @@ C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an int
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"]}`
 - **`prefix-groups`:** `error` `{"hint":"In C# a folder is a namespace (IDE0130).","hintFor":["*.{cs,fs,vb}"]}`
+- **`redundant-prefix`:** `off`
 - **Companions:** `^I(?=[A-Z])`
 - **Leading words skipped:** `i`, `fake`, `mock`, `stub`, `spy`, `dummy`
 - **Left out:** `bin`, `obj`, `Migrations`, `wwwroot/lib`, `Properties`, `.vs`
