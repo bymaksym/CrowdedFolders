@@ -92,6 +92,9 @@ so.
             "folders": ["src/generated/**", "src/legacy"],
             "reason": "Generated from the OpenAPI spec; its shape is the generator's.",
             "rules": { "max-files": "off", "prefix-groups": "off" },
+            "owner": "@acme/api",
+            "ticket": "API-142",
+            "expires": "2027-06-30",
         },
         {
             "folders": ["packages/*/src/components"],
@@ -106,7 +109,14 @@ so.
 - `folders` are globs matched against **folder** paths relative to the root (the root is `.`).
 - `withFiles` (optional) narrows the override to the folders that hold one of those files directly: `"folders": ["**"], "withFiles": ["package.json"]` is the root of every package, which is how `recommended` gives it the limit of the root of the repository.
 - `reason` is required, and is shown by `crowded-folders explain`. An override is a silence; a silence
-  without a reason cannot be reviewed, and nobody knows a year later whether it still holds.
+  without a reason cannot be reviewed, and nobody knows a year later whether it still holds. It is
+  trimmed and needs at least 10 characters (an opinion: enough for "generated from the spec", not for
+  "x" or "legacy").
+- `expires` (`YYYY-MM-DD`, UTC), `owner` and `ticket` (optional) say when to look again, who answers for
+  it and where its removal is tracked. Past `expires` the override still applies — a date must not turn
+  a build red on its own — and the run warns `config/expired-override`, naming the owner and the ticket.
+- `folders` and `withFiles` take no `"!"`: an override applies to every folder its globs match, so name
+  the folders it is for.
 - Overrides apply in order, after the global settings; several can match one folder.
 - An override in your configuration that matches no folder is reported as a warning
   (`config/unused-override`), so they are removed when the folder is.
@@ -180,7 +190,11 @@ One configuration at the root checks the whole repository, and overrides target 
 {
     "extends": ["recommended"],
     "overrides": [
-        { "folders": ["apps/web", "apps/web/**"], "reason": "React app", "naming": { "ignoreLeadingWords": ["use"] } },
+        {
+            "folders": ["apps/web", "apps/web/**"],
+            "reason": "The React app: its hooks start with use",
+            "naming": { "ignoreLeadingWords": ["use"] },
+        },
         {
             "folders": ["services/**"],
             "reason": "Go services",

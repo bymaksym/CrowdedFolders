@@ -1,3 +1,5 @@
+import { suggest } from '../paths/suggest.ts';
+
 /**
  * The part of JSON Schema (draft-07) this package writes, and a validator for exactly that part.
  *
@@ -69,7 +71,17 @@ function check(value: unknown, schema: JsonSchema, at: string, problems: SchemaP
     }
     if (schema.enum && !schema.enum.includes(value)) {
         const options = schema.enum.map(option => JSON.stringify(option)).join(', ');
-        problems.push({ at: label(at), message: `must be one of ${options}, not ${JSON.stringify(value)}` });
+        const meant =
+            typeof value === 'string'
+                ? suggest(
+                      value,
+                      schema.enum.filter(option => typeof option === 'string'),
+                  )
+                : undefined;
+        problems.push({
+            at: label(at),
+            message: `must be one of ${options}, not ${JSON.stringify(value)}${meant === undefined ? '' : `; did you mean "${meant}"?`}`,
+        });
         return;
     }
     if (typeof value === 'number') {
@@ -163,7 +175,7 @@ function checkObject(
             check(item, known, where, problems);
         } else if (schema.additionalProperties === false) {
             const names = Object.keys(schema.properties ?? {});
-            const close = names.find(name => isCloseTo(name, key));
+            const close = names.find(name => isCloseTo(name, key)) ?? suggest(key, names);
             problems.push({
                 at: label(where),
                 message: close

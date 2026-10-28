@@ -5,6 +5,7 @@ import { hidePaths, safe } from './sanitize.ts';
 /** The rule id a stale suppression is reported under, in the formats that have rule ids. */
 export const STALE_SUPPRESSION_RULE = 'config/stale-suppression';
 export const UNUSED_OVERRIDE_RULE = 'config/unused-override';
+export const EXPIRED_OVERRIDE_RULE = 'config/expired-override';
 
 /** The `config/*` rules the tool reports itself, so that every id in a report has a descriptor. */
 export const CONFIG_RULES: readonly ReportRule[] = [
@@ -12,6 +13,12 @@ export const CONFIG_RULES: readonly ReportRule[] = [
         id: UNUSED_OVERRIDE_RULE,
         description:
             'An override in the configuration matches no folder: it does nothing, so either its globs are wrong or it is left over.',
+        url: undefined,
+    },
+    {
+        id: EXPIRED_OVERRIDE_RULE,
+        description:
+            'An override is past the date in its "expires": it still applies, and is due for review. Renew the date, or remove it.',
         url: undefined,
     },
     {

@@ -38,7 +38,10 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | --- | --- | --- |
 | `folders` | string[] | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
 | `withFiles` | string[] | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
-| `reason` | string | Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
+| `reason` | string | Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
+| `expires` | string | A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review. |
+| `owner` | string | Who answers for it (a person or a team, such as @org/team): shown with it. |
+| `ticket` | string | Where the work that removes it is tracked (an issue number or a link): shown with it. |
 | `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
 | `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
 

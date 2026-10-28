@@ -18,6 +18,8 @@ export const WHEN_IT_FIRES: Readonly<Record<string, string>> = {
         'Two files or folders of one folder have names that differ only in case or in Unicode normalisation (`Components/` and `components/`). Windows and macOS keep one of them: git cannot check both out there. Rename one, or join them.',
     'config/unused-override':
         'An override in the configuration matches no folder. Fix its globs, or remove it: an override that does nothing hides a mistake.',
+    'config/expired-override':
+        'An override is past the date in its "expires" (YYYY-MM-DD). It still applies, so nothing breaks on that day; the warning asks its owner to look again: renew "expires" if the reason still holds, or remove the override and fix the folders.',
     'config/stale-suppression':
         'A suppression records a problem that is fixed or smaller now. Run `crowded-folders --prune-suppressions` and commit the file: it only ever shrinks.',
 };

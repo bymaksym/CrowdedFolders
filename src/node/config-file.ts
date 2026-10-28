@@ -2,7 +2,8 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 
 import { isObject } from '../core/config/json-schema.ts';
-import { parseJsonc } from '../core/config/jsonc.ts';
+import { duplicateKeys, parseJsonc } from '../core/config/jsonc.ts';
+import { ConfigError } from '../core/config/validate.ts';
 import { importDefault } from './modules.ts';
 
 /** The names a configuration can have, in the order they are looked for in each folder. */
@@ -60,16 +61,22 @@ export function projectDirOf(path: string): string {
 /** Reads a configuration file of any supported kind and returns what it holds, not yet checked. */
 export async function readConfigFile(path: string): Promise<unknown> {
     if (basename(path) === 'package.json') {
-        const manifest = parseJsonc(readFileSync(path, 'utf8'));
+        const text = readFileSync(path, 'utf8');
+        const manifest = parseJsonc(text);
+        refuseDuplicates(path, text, `[${JSON.stringify(PACKAGE_KEY)}]`);
         return isObject(manifest) ? manifest[PACKAGE_KEY] : undefined;
     }
     const extension = extname(path);
     if (extension === '.json' || extension === '.jsonc') {
+        const text = readFileSync(path, 'utf8');
+        let value: unknown;
         try {
-            return parseJsonc(readFileSync(path, 'utf8'));
+            value = parseJsonc(text);
         } catch (error) {
             throw new Error(`${path} is not valid JSON: ${(error as Error).message}`, { cause: error });
         }
+        refuseDuplicates(path, text, '');
+        return value;
     }
     const value = await importDefault(path);
     return typeof value === 'function' ? await (value as () => unknown)() : value;
@@ -140,6 +147,30 @@ export function gitRootOf(dir: string): string | undefined {
             return undefined;
         }
     }
+}
+
+/**
+ * A key written twice: JSON keeps the second in silence, so two `"rules"` lose the first. `within` is
+ * the part of the file that is the configuration (the key of package.json), empty for all of it.
+ */
+function refuseDuplicates(path: string, text: string, within: string): void {
+    const duplicates = duplicateKeys(text).filter(
+        duplicate =>
+            within === '' ||
+            duplicate.at === within ||
+            duplicate.at.startsWith(`${within}.`) ||
+            duplicate.at.startsWith(`${within}[`),
+    );
+    if (duplicates.length === 0) {
+        return;
+    }
+    throw new ConfigError(
+        path,
+        duplicates.map(({ at, key, lines }) => ({
+            at: at === '' ? JSON.stringify(key) : `${at}.${key}`,
+            message: `is written twice (lines ${lines[0]} and ${lines[1]}), and only the second would be read: keep one`,
+        })),
+    );
 }
 
 function hasPackageKey(manifest: string): boolean {

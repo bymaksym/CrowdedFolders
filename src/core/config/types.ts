@@ -30,6 +30,12 @@ export interface OverrideConfig {
      */
     readonly withFiles?: readonly string[];
     readonly reason: string;
+    /** `YYYY-MM-DD`: after it, the override is reported as `config/expired-override` (it still applies). */
+    readonly expires?: string;
+    /** Who answers for it: a person or a team. */
+    readonly owner?: string;
+    /** Where the work that removes it is tracked. */
+    readonly ticket?: string;
     readonly rules?: Readonly<Record<string, RuleSetting>>;
     readonly naming?: NamingConfig;
 }
@@ -112,7 +118,11 @@ export interface NamingState {
 export interface OverrideState {
     readonly folders: readonly string[];
     readonly withFiles: readonly string[];
+    /** Trimmed. */
     readonly reason: string;
+    readonly expires: string | undefined;
+    readonly owner: string | undefined;
+    readonly ticket: string | undefined;
     readonly rules: Readonly<Record<string, RuleSetting>>;
     readonly naming: NamingConfig;
     /** The file or preset it was written in: stale overrides are only reported for the user's own files. */

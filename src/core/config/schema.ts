@@ -3,6 +3,12 @@ import type { JsonSchema } from './json-schema.ts';
 
 export const SCHEMA_URL = 'https://unpkg.com/crowded-folders/schema.json';
 
+/**
+ * How long a reason has to be once trimmed. An opinion, not a measurement: long enough to say why
+ * ("generated from the OpenAPI spec"), too long for a placeholder ("x", "ok", "legacy").
+ */
+export const MIN_REASON_LENGTH = 10;
+
 const SEVERITY: JsonSchema = {
     enum: ['error', 'warn', 'off'],
     description: '"error" fails the run, "warn" reports without failing, "off" does not run the rule.',
@@ -142,9 +148,26 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                         },
                         reason: {
                             type: 'string',
+                            minLength: MIN_REASON_LENGTH,
+                            description: `Why these folders are different, in at least ${MIN_REASON_LENGTH} characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed.`,
+                        },
+                        expires: {
+                            type: 'string',
+                            pattern: String.raw`^\d{4}-\d{2}-\d{2}$`,
+                            description:
+                                'A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review.',
+                            examples: ['2027-03-31'],
+                        },
+                        owner: {
+                            type: 'string',
+                            minLength: 1,
+                            description: 'Who answers for it (a person or a team, such as @org/team): shown with it.',
+                        },
+                        ticket: {
+                            type: 'string',
                             minLength: 1,
                             description:
-                                'Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed.',
+                                'Where the work that removes it is tracked (an issue number or a link): shown with it.',
                         },
                         rules: rulesProperty,
                         naming: NAMING,

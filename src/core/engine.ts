@@ -46,6 +46,8 @@ export interface EngineInput {
     readonly only?: readonly string[];
     /** Also return the numbers of every folder reported on. */
     readonly stats?: boolean;
+    /** `YYYY-MM-DD`, what `expires` of an override is compared with. Default: today, in UTC. */
+    readonly today?: string;
 }
 
 export interface EngineResult {
@@ -110,6 +112,8 @@ export function runEngine(input: EngineInput): EngineResult {
     if (!only) {
         findings.push(...context.unusedOverrideFindings());
     }
+    // An expired override is due wherever it applies: a run over some folders reports the ones it used.
+    findings.push(...context.expiredOverrideFindings(input.today ?? todayInUtc(), only === undefined));
     return {
         findings: sortFindings(findings),
         folderCount,
@@ -337,6 +341,39 @@ class FolderContext {
             }));
     }
 
+    /**
+     * The overrides of the user's own files whose `expires` is before `today`. They still apply (a
+     * date must not turn a build red on its own), and say they are due: renew the date, or remove them.
+     */
+    expiredOverrideFindings(today: string, wholeTree: boolean): Finding[] {
+        return this.overrides
+            .filter(
+                override =>
+                    override.state.own &&
+                    override.state.expires !== undefined &&
+                    override.state.expires < today &&
+                    (wholeTree || override.used),
+            )
+            .map(({ state }) => {
+                const who = [
+                    state.owner === undefined ? undefined : `owner ${state.owner}`,
+                    state.ticket === undefined ? undefined : `ticket ${state.ticket}`,
+                ].filter(part => part !== undefined);
+                return {
+                    rule: 'config/expired-override',
+                    severity: 'warn' as const,
+                    folder: '.',
+                    message: `The override for ${state.folders.map(glob => `"${glob}"`).join(', ')} in ${state.origin} expired on ${state.expires ?? ''}${who.length > 0 ? ` (${who.join(', ')})` : ''}: "${state.reason}". It still applies: review it, then renew "expires" or remove it.`,
+                    key: state.folders.join(','),
+                    measured: 1,
+                    limit: 0,
+                    files: [],
+                    moves: [],
+                    url: undefined,
+                };
+            });
+    }
+
     private compileNaming(state: NamingState): Naming {
         const id = JSON.stringify(state);
         const cached = this.namingCache.get(id);
@@ -353,6 +390,10 @@ class FolderContext {
         this.namingCache.set(id, naming);
         return naming;
     }
+}
+
+function todayInUtc(): string {
+    return new Date().toISOString().slice(0, 10);
 }
 
 /** The file paths, read the way the command reads them (`./a`, `a\b`); a path outside the root is an error. */

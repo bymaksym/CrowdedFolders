@@ -162,6 +162,20 @@ describe('extends', () => {
             /crowded-folders\.config\.json is not valid JSON/u,
         );
     });
+
+    it('refuses a key written twice, which JSON would keep the second of in silence (Irina: "rules" twice)', async () => {
+        const root = folder({
+            'crowded-folders.config.json':
+                '{\n  "rules": { "max-files": "error" },\n  "rules": { "max-files": "off" }\n}',
+            'package.json': '{ "name": "a", "name": "b", "crowded-folders": { "extends": ["go"], "extends": [] } }',
+        });
+        await rejects(
+            readConfigFile(join(root, 'crowded-folders.config.json')),
+            /"rules": is written twice \(lines 2 and 3\), and only the second would be read/u,
+        );
+        // In package.json only the configuration's key is ours to judge.
+        await rejects(readConfigFile(join(root, 'package.json')), /\["crowded-folders"\]\.extends: is written twice/u);
+    });
 });
 
 describe('resolveSpecifier', () => {

@@ -33,6 +33,14 @@ export function explain(args: Args, io: Io, session: Session): number {
     }
     for (const override of overrides) {
         lines.push(`  ${override.folders.join(', ')}  (${override.origin})`, `    ${override.reason}`);
+        const about = [
+            override.owner === undefined ? undefined : `owner ${override.owner}`,
+            override.ticket === undefined ? undefined : `ticket ${override.ticket}`,
+            override.expires === undefined ? undefined : `expires ${override.expires}`,
+        ].filter(part => part !== undefined);
+        if (about.length > 0) {
+            lines.push(`    ${about.join(', ')}`);
+        }
     }
 
     lines.push(

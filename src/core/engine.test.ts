@@ -98,6 +98,43 @@ describe('runEngine', () => {
         );
     });
 
+    it('reports an override past its expires as config/expired-override, and still applies it (Daniel)', () => {
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 5 }] },
+            overrides: [
+                {
+                    folders: ['src/legacy'],
+                    reason: 'being rewritten in v3',
+                    expires: '2026-06-30',
+                    owner: '@acme/web',
+                    ticket: 'WEB-12',
+                    rules: { 'max-files': 'off' },
+                },
+            ],
+        });
+        const before = runEngine({ files: crowded, config, rules: BUILT_IN_RULES, today: '2026-06-30' });
+        assert.deepEqual(before.findings, []);
+        const after = runEngine({ files: crowded, config, rules: BUILT_IN_RULES, today: '2026-07-01' });
+        assert.deepEqual(
+            after.findings.map(finding => [finding.rule, finding.severity, finding.message]),
+            [
+                [
+                    'config/expired-override',
+                    'warn',
+                    'The override for "src/legacy" in layer 0 expired on 2026-06-30 (owner @acme/web, ticket WEB-12): "being rewritten in v3". It still applies: review it, then renew "expires" or remove it.',
+                ],
+            ],
+        );
+        const elsewhere = runEngine({
+            files: [...crowded, 'lib/a.ts'],
+            config,
+            rules: BUILT_IN_RULES,
+            today: '2027-01-01',
+            only: ['lib'],
+        });
+        assert.deepEqual(elsewhere.findings, []);
+    });
+
     it('reports an override of the own configuration that matches no folder', () => {
         const config = resolve({
             rules: { 'max-files': ['error', { max: 50 }] },
