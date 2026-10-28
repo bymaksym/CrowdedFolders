@@ -21,9 +21,12 @@ The prefix is doing the job a directory should. Once they are in `cli/render/`, 
    is `render-json`).
 2. Its **words**, in any convention: `render-json`, `render_json`, `renderJson` and `RenderJson` are all
    `render`, `json`. Acronyms end where the next word starts: `HTTPServer` is `http`, `server`.
-3. Leading words that say nothing are skipped (`naming.ignoreLeadingWords`): `use` of React hooks,
-   `i` of C# interfaces, `bp` of Unreal blueprints.
-4. The first word (or the first `words` words) is the group.
+3. A type letter is skipped (`I` of `IUserService`, `T` of `TProps`), and so are the leading words
+   that say nothing (`naming.ignoreLeadingWords`): `use` of React hooks, `bp` of Unreal blueprints.
+4. The first word (or the first `words` words) is the group, singular and plural as one word
+   (`UsersController` is with `UserGroups`). With `words: "auto"` the key grows while one longer
+   key keeps `min` modules and more than half of the group: eight `RegistroHorario*` and one
+   `RegistroUsuarioConRol` are `registro-horario`.
 
 Modules, not files, are counted: `render-json.ts` and `render-json.spec.ts` are one.
 
@@ -32,23 +35,27 @@ Modules, not files, are counted: `render-json.ts` and `render-json.spec.ts` are 
 | Case                                                                     | Example                                                                                                        | Why                                                                                     |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | The prefix is the folder's name, or a folder's above it (plural allowed) | `render/render-json.ts`, `hooks/hook-x.ts`, `ColorPicker/ColorInput.tsx`, `toolbar/testing/toolbar-harness.ts` | They are already where they belong.                                                     |
-| Every module of the folder shares it                                     | `tooling/check-a`, `check-b`, `check-c`, `check-d` and nothing else                                            | Moving everything down one level only adds a level; maybe rename the folder.            |
+| The folder glues the words                                               | `feature/dayplan/DayPlanList.kt`                                                                               | `dayplan` is `day` and `plan` written as a package name.                                |
+| Every module of the folder shares it, or 85 % of them                    | `tooling/check-a` … `check-d` and nothing else; 92 of 93 `IExtAsset*`                                          | Moving everything down one level only adds a level; maybe rename the folder.            |
+| The group alone would be over `max-files`                                | 25 `user-*` with a limit of 20                                                                                 | The new folder would be as crowded; group by more words.                                |
 | The prefix is in `ignore`                                                | `test`, `tests`, `spec`, `get`, `set`, `is`, `has`, `can`, `should` in `recommended`                           | `GetAlbum`, `IsPlayed`, `test_parser` are not about "get", "is" or "test".              |
 | The name starts with a number                                            | `0001_initial.py`, `2024-01-01-post.md`                                                                        | Numbers order things; they do not group them. `naming.groupNumericPrefixes` changes it. |
 | The rest of each name is a language                                      | `README-ja`, `README-ko`, `README-ru`, `README-zh` (bat); `strings_ar` … `strings_zh` (localsend)              | One document in several languages is not a family of topics.                            |
 | Every module is the prefix, a number and a title                         | `ADR-001-Use-EFCore-In-Application-Layer`, `ADR-002-…` (CleanArchitecture)                                     | A numbered series is kept flat and in order, like migrations.                           |
 | Fewer than `min`                                                         | three `user-*` modules                                                                                         | Three is a coincidence; four is a family with a name.                                   |
 
-Each case was a false positive found in the [field trial](../field-trial.md).
+Each case was a false positive found in the [field trial](../field-trial.md) or in use.
+`crowded-folders explain <folder>` lists, under "Not reported, and why", every group of two or more
+that was left out and which of these cases it is.
 
 ## Options
 
-| Option   | Default                                                                         |                                                                                                             |
-| -------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `min`    | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7). |
-| `words`  | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups.             |
-| `ignore` | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`.                                                |
-| `hint`   | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                |
+| Option   | Default                                                                         |                                                                                                                                                          |
+| -------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `min`    | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).                                              |
+| `words`  | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups; `"auto"` takes the longest that keeps the group.         |
+| `ignore` | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`. An entry that can never match (`render_json`) stops the configuration, with the form meant. |
+| `hint`   | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                                                             |
 
 ## Where a folder is not free
 
