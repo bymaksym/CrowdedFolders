@@ -101,7 +101,10 @@ const { kept } = linter.lint({ only: ['src/features/cart'], suppressions: true }
 
 It takes the options of `lint()` but `suppressions` (`files` there only says what presets are detected
 from, when there is no configuration). `linter.lint({ files?, suppressions?, only? })` is synchronous
-and returns what `lint()` returns; `only` checks the folders equal to or under those paths. The linter
+and returns what `lint()` returns; `only` checks the folders equal to or under those paths.
+`linter.where(paths, { files? })` says what a file that does not exist yet would do to its folder
+(`effect`: `creates`, `worsens`, `fixes`, `neutral`, `exists` or `unchecked`, with the `changes` and the
+`candidates` folders): [agents.md](agents.md#where-would-this-file-make-it-worse). The linter
 also has `root`, `configFile`, `presets`, `detected`, `config`, `rules`, `plugins` and `presetsByName`.
 
 What was read when it was made stays as it was: the configuration, its plugins and the detected
@@ -133,6 +136,7 @@ const result = runEngine({ files, ...resolveConfig({ extends: ['react'] }) });
 | `runEngine({ files, config, rules, only? })`            | Runs the rules over a list of paths with a resolved configuration.                                                                                                                                                                                         |
 | `detectPresets(files, { dependencies?, presets? })`     | Which presets fit, from the paths and the dependency names: what a run without a configuration uses.                                                                                                                                                       |
 | `explainFolder(input, path)`                            | What `crowded-folders explain` shows, as data.                                                                                                                                                                                                             |
+| `whereWouldGo({ files, config, rules, path })`          | What `crowded-folders where` answers for one new file, as data; `whereSummary(result)` is its first line.                                                                                                                                                  |
 | `mergeLayer(base, config, origin, own)`                 | Lays a configuration over another (`extends` is the caller's job; `resolveConfig` does it).                                                                                                                                                                |
 | `splitWords`, `stemOf`, `modulesOf`, `groupKeyOf`       | How names are read ([how-it-works.md](how-it-works.md)).                                                                                                                                                                                                   |
 | `ConfigError`, `RuleError`, `FileListError`             | As above.                                                                                                                                                                                                                                                  |
