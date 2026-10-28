@@ -14,7 +14,7 @@
         },
         {
             "folders": ["docs"],
-            "reason": "Each guide is linked by its path from the README, the help, error messages and released versions: moving one breaks links already out. 15 is an opinion, two over the 13 guides there are today.",
+            "reason": "Each guide is linked by its path from the README, the help, error messages and released versions: moving one breaks links already out. 15 is an opinion, one over the 14 guides there are today.",
             "rules": { "max-files": ["error", { "max": 15 }] }
         }
     ]

@@ -6,6 +6,8 @@ import { plainMessage, staleReason } from './describe.ts';
 import { moveLines, quoteSh } from './formats/moves.ts';
 import { exitCodeOf, isOverMaxWarnings, plural, type Report, totalsOf } from './report.ts';
 import { safe } from './sanitize.ts';
+import { describeHealth, healthOf } from './tree/folder-tree.ts';
+import { describeTiny } from './tree/tiny.ts';
 
 export interface TextOptions {
     readonly color: boolean;
@@ -83,6 +85,10 @@ export function formatText(report: Report, options: TextOptions): string {
                 `  ${mark}  ${paint('dim', rule)}  ${where}${first}`,
                 ...more.map(line => `${' '.repeat(hanging)}${line}`),
             );
+            const tiny = options.quiet ? undefined : report.tinyFiles?.[finding.folder];
+            if (tiny !== undefined && finding.rule === 'max-files') {
+                lines.push(`${' '.repeat(4 + words.error.length)}${paint('dim', say(`note: ${describeTiny(tiny)}`))}`);
+            }
             if (options.moves) {
                 lines.push(
                     ...moveLines(report, finding).map(
@@ -166,6 +172,10 @@ function pushSummary(
     const say = (text: string): string => (symbols ? text : asciiProse(text));
 
     const details = [`${plural(report.folderCount, 'folder')} and ${plural(report.fileCount, 'file')} checked`];
+    const health = healthOf(report.folderStats ?? []);
+    if (health !== undefined) {
+        details.push(describeHealth(health));
+    }
     if (report.suppressedCount > 0) {
         details.push(`${plural(report.suppressedCount, 'problem')} suppressed`);
     }

@@ -9,10 +9,12 @@ import { projectFolders, projectOf } from '../../core/report/context/projects.ts
 import { CONFIG_RULES } from '../../core/report/describe.ts';
 import { referencesKey } from '../../core/report/formats/moves.ts';
 import type { Report, ReportFinding, RunInfo } from '../../core/report/report.ts';
+import { type TinyFiles, tinyFilesOf as tinyFilesOfFolder } from '../../core/report/tree/tiny.ts';
 import { relativeTo, type StaleSuppression } from '../../core/suppressions.ts';
 import { readCodeowners } from '../../node/codeowners.ts';
 import { gitRootOf } from '../../node/config/file.ts';
 import { filesNaming } from '../../node/references.ts';
+import { committedSizes } from '../../node/sizes.ts';
 import { type Args, type Format, UsageError } from '../args.ts';
 import type { Io } from '../io.ts';
 import type { Session } from '../session.ts';
@@ -85,6 +87,10 @@ export interface BuildInput {
     readonly change?: Report['change'];
     /** With `--compare-config`. */
     readonly configChange?: Report['configChange'];
+    /** Whether a clean run says which folders are nearest their limit (a terminal reading the text). */
+    readonly closest: boolean;
+    /** Folders whose files are mostly tiny, when the sizes were read. */
+    readonly tinyFiles?: Report['tinyFiles'];
 }
 
 /** Everything the output formats need to know about a run. */
@@ -117,8 +123,9 @@ export function buildReport(input: BuildInput): Report {
         ...(input.addedFiles && { addedFiles: input.addedFiles }),
         ...(input.addedByFolder && { addedByFolder: input.addedByFolder }),
         hide: hiddenFolders([session.root, session.base], io),
-        ...(result.folderStats && args.stats && { folderStats: result.folderStats }),
-        ...(input.findings.length === 0 && { closest: closestToLimit(result.folderStats) }),
+        ...(result.folderStats && { folderStats: result.folderStats }),
+        ...(input.closest && input.findings.length === 0 && { closest: closestToLimit(result.folderStats) }),
+        ...(input.tinyFiles && { tinyFiles: input.tinyFiles }),
         hiddenWarnings: input.hiddenWarnings,
         ...(args.maxWarnings !== undefined && { maxWarnings: args.maxWarnings }),
         ...(input.knownOnBase && { knownOnBase: input.knownOnBase }),
@@ -143,6 +150,34 @@ export function referencesOf(findings: readonly Finding[], session: Session): Re
     return Object.fromEntries(filesNaming(session.base, session.files, groups));
 }
 
+/**
+ * The folders over their `max-files` limit whose files are mostly tiny, from the sizes git has at `HEAD`
+ * (`git ls-tree -l`: metadata only, no file is read). Without git there are no sizes and no note.
+ */
+export function tinyFilesOf(findings: readonly Finding[], session: Session, io: Io): Report['tinyFiles'] {
+    const wanted = findings.filter(finding => finding.rule === 'max-files');
+    if (wanted.length === 0 || session.fileSource !== 'git') {
+        return undefined;
+    }
+    const sizes = committedSizes(session.root, io.env);
+    if (sizes === undefined) {
+        return undefined;
+    }
+    // The sizes are by path from the root of the run; the files of a finding start at the report's base.
+    const cut = session.scope === '.' ? 0 : session.scope.length + 1;
+    const found: Record<string, TinyFiles> = {};
+    for (const finding of wanted) {
+        const tiny = tinyFilesOfFolder(
+            finding.files.map(file => file.slice(cut)),
+            sizes,
+        );
+        if (tiny !== undefined) {
+            found[finding.folder] = tiny;
+        }
+    }
+    return Object.keys(found).length === 0 ? undefined : found;
+}
+
 /** How many folders a clean run names as the nearest to their limit, and how near is worth naming. */
 const CLOSEST_SHOWN = 3;
 const CLOSEST_FROM = 0.6;
@@ -152,7 +187,7 @@ function closestToLimit(stats: EngineResult['folderStats']): NonNullable<Report[
     const items: { folder: string; count: number; limit: number }[] = [];
     for (const stat of stats ?? []) {
         if (stat.limit !== null && stat.limit > 0) {
-            items.push({ folder: stat.path, count: stat.modules, limit: stat.limit });
+            items.push({ folder: stat.path, count: stat.used, limit: stat.limit });
         }
     }
     return items

@@ -72,6 +72,11 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             case 'history': {
                 return history(args, io, session);
             }
+            case 'tree': {
+                // It shows the folders and does not judge them: the exit code is for `check`.
+                await check(args, io, session);
+                return 0;
+            }
             case 'print-config': {
                 return await printConfig(args, io, session);
             }

@@ -1,9 +1,15 @@
 import { parseArgs } from 'node:util';
 
-import { closest } from '../core/paths/suggest.ts';
-import { joinNegativeOne, maxWarningsOf, refuseAgentMisuse, refuseFolder, wholeNumber } from './args-values.ts';
+import {
+    joinNegativeOne,
+    maxWarningsOf,
+    refuseAgentMisuse,
+    refuseFolder,
+    usageMessageOf,
+    wholeNumber,
+    withMovesValue,
+} from './args-values.ts';
 import { optionNotTaken } from './command-options.ts';
-import { HELP } from './help.ts';
 import { UsageError } from './usage-error.ts';
 
 export const COMMANDS = [
@@ -17,6 +23,7 @@ export const COMMANDS = [
     'print-config',
     'overrides',
     'history',
+    'tree',
 ] as const;
 export type Command = (typeof COMMANDS)[number];
 
@@ -29,6 +36,9 @@ export const FORMATS = [
     'gitlab',
     'checkstyle',
     'azure',
+    'html',
+    'badge',
+    'tree',
     'auto',
 ] as const;
 export type Format = (typeof FORMATS)[number];
@@ -76,6 +86,10 @@ export interface Args {
     readonly files: boolean;
     /** `--stats`: the JSON also lists every folder with its numbers. */
     readonly stats: boolean;
+    /** `tree`: how many levels below the folder are shown. */
+    readonly depth: number;
+    /** `tree --over` or `--near`: only the folders over their limit, or near it too. */
+    readonly only: 'near' | 'over' | undefined;
     readonly groupBy: Grouping;
     /** `--owner`: only the problems of these CODEOWNERS owners. */
     readonly owners: readonly string[];
@@ -128,8 +142,6 @@ export interface Args {
 export { UsageError } from './usage-error.ts';
 
 /** The options every command that reads a repository takes: where it is and how its files are listed. */
-/** The long name an option error of Node's names (`-c, --config <value>`, `--stdin`, `-q`). */
-const OPTION_IN_MESSAGE = /[Oo]ption '(?:-\w, )?(-[\w-]+)/u;
 
 /** Reads the command line. Anything it does not know, repeat or cannot use is an error, never ignored. */
 export function parseCommandLine(argv: readonly string[]): Args {
@@ -152,6 +164,9 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 'max-findings': { type: 'string' },
                 'no-files': { type: 'boolean' },
                 stats: { type: 'boolean' },
+                depth: { type: 'string' },
+                over: { type: 'boolean' },
+                near: { type: 'boolean' },
                 'group-by': { type: 'string' },
                 owner: { type: 'string', multiple: true },
                 base: { type: 'string' },
@@ -202,7 +217,17 @@ export function parseCommandLine(argv: readonly string[]): Args {
     }
 
     const movesScript = moveScriptOf(values.moves);
-    const outputs = outputsOf(values.format ?? [], values.output, movesScript !== undefined);
+    const outputs = outputsOf(
+        values.format ?? [],
+        values.output,
+        movesScript !== undefined,
+        command === 'tree' ? 'tree' : 'text',
+    );
+    if (values.over && values.near) {
+        throw new UsageError(
+            '--over and --near cannot both be given: --near already shows the folders over their limit',
+        );
+    }
     const groupBy = values['group-by'] ?? 'folder';
     if (!(GROUPINGS as readonly string[]).includes(groupBy)) {
         throw new UsageError(`--group-by must be one of ${GROUPINGS.join(', ')}, not "${groupBy}"`);
@@ -304,6 +329,8 @@ export function parseCommandLine(argv: readonly string[]): Args {
         maxFindings,
         files: !(values['no-files'] ?? false),
         stats: values.stats ?? false,
+        depth: depthOf(values.depth),
+        only: values.over ? 'over' : values.near ? 'near' : undefined,
         groupBy: groupBy as Grouping,
         owners: values.owner ?? [],
         base: values.base,
@@ -340,7 +367,12 @@ export function parseCommandLine(argv: readonly string[]): Args {
  * Reads `-f` and `-o`. `-f github -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY` writes three
  * reports in one run; `-f sarif -o out.sarif` still works. Only one report can go to standard output.
  */
-function outputsOf(formats: readonly string[], output: string | undefined, movesToStdout: boolean): OutputSpec[] {
+function outputsOf(
+    formats: readonly string[],
+    output: string | undefined,
+    movesToStdout: boolean,
+    defaultFormat: Format,
+): OutputSpec[] {
     const specs: OutputSpec[] = formats.map(value => {
         const equals = value.indexOf('=');
         const format = equals === -1 ? value : value.slice(0, equals);
@@ -361,7 +393,7 @@ function outputsOf(formats: readonly string[], output: string | undefined, moves
         };
     });
     if (specs.length === 0 && !(movesToStdout && output === undefined)) {
-        specs.push({ format: 'text', target: undefined, option: '--format text' });
+        specs.push({ format: defaultFormat, target: undefined, option: `--format ${defaultFormat}` });
     }
     if (output !== undefined) {
         refuseFolder(`--output ${output}`, output);
@@ -386,16 +418,6 @@ function outputsOf(formats: readonly string[], output: string | undefined, moves
     return specs;
 }
 
-/**
- * `--moves` alone prints the moves in the report, and `--moves=sh` only the moves: the parser has no
- * option that may go without its value, so a bare `--moves` is read as `--moves=`. Arguments after
- * `--` are left alone.
- */
-function withMovesValue(argv: readonly string[]): string[] {
-    const end = argv.indexOf('--');
-    return argv.map((arg, index) => (arg === '--moves' && (end === -1 || index < end) ? '--moves=' : arg));
-}
-
 function moveScriptOf(value: string | undefined): MoveScript | undefined {
     if (value === undefined || value === '') {
         return undefined;
@@ -404,6 +426,17 @@ function moveScriptOf(value: string | undefined): MoveScript | undefined {
         throw new UsageError(`--moves takes no value, or one of ${MOVE_SCRIPTS.join(', ')}, not "${value}"`);
     }
     return value as MoveScript;
+}
+
+/** How deep `tree` goes by default: the folders a person looks at first, with what is below them counted. */
+export const DEFAULT_TREE_DEPTH = 3;
+
+/** `--depth 2`, or `--depth all`: a whole number of levels, read as written. */
+function depthOf(value: string | undefined): number {
+    if (value === undefined) {
+        return DEFAULT_TREE_DEPTH;
+    }
+    return value === 'all' ? Number.MAX_SAFE_INTEGER : (wholeNumber('--depth', value, 0) ?? DEFAULT_TREE_DEPTH);
 }
 
 /** The options that may be given more than once; every other is an error the second time. */
@@ -423,22 +456,4 @@ function refuseRepeated(tokens: Tokens): void {
         }
         seen.add(token.name);
     }
-}
-
-/** Node's own words for a bad option are long, quote badly and suggest nothing: say it in one line. */
-function usageMessageOf(error: Error): string {
-    const code = (error as Error & { code?: string }).code;
-    const named = OPTION_IN_MESSAGE.exec(error.message)?.[1];
-    if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION' && named !== undefined) {
-        const long = named.startsWith('--') ? named.slice(2) : undefined;
-        const candidates = new Set(HELP.match(/(?<=--)[a-z][a-z-]*/gu));
-        const guess = long === undefined ? undefined : closest(long, candidates);
-        return `unknown option ${named}${guess === undefined ? '' : `; did you mean --${guess}?`}`;
-    }
-    if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && named !== undefined) {
-        return error.message.includes('does not take an argument')
-            ? `${named} takes no value`
-            : `${named} needs a value; if the value starts with "-", write it ${named}=<value>`;
-    }
-    return error.message;
 }

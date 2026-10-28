@@ -4,6 +4,7 @@ export type { FolderStat } from '../engine.ts';
 import type { Improvement } from '../changes.ts';
 import type { ConfigChange } from '../config/compare.ts';
 import type { StaleSuppression } from '../suppressions.ts';
+import type { TinyFiles } from './tree/tiny.ts';
 
 /** A finding with what the report adds to it: the project it belongs to and who owns it. */
 export interface ReportFinding extends Finding {
@@ -68,6 +69,11 @@ export interface Report {
     readonly hide?: readonly { readonly dir: string; readonly as: string }[];
     /** Every folder with its numbers (`--stats`). */
     readonly folderStats?: readonly FolderStat[];
+    /**
+     * Folders over their limit whose files are mostly tiny, from the sizes git records (never from the
+     * content). A note beside the finding, not a finding.
+     */
+    readonly tinyFiles?: Readonly<Record<string, TinyFiles>>;
     /** Warnings `--quiet` left out of `findings`; they still count for `--max-warnings`. */
     readonly hiddenWarnings?: number;
     /** `--max-warnings`, when given. */

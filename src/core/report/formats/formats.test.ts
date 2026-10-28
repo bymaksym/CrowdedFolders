@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { Script } from 'node:vm';
 
 import { type JsonSchema, validate } from '../../config/json-schema.ts';
 import type { Finding } from '../../engine.ts';
+import type { FolderStat } from '../../findings.ts';
 import { formatAzure, formatCheckstyle, formatGithub, formatGitlab, formatJson, formatMarkdown } from '../machine.ts';
 import { prefixGroup, report, tooManyFiles, tooManyFolders, unusedOverride } from '../test-support/fixtures.ts';
+import { formatBadge } from './badge.ts';
+import { formatHtml } from './html.ts';
 import { commandsOf, formatMovesScript, quotePwsh, quoteSh } from './moves.ts';
+import { formatTreeText } from './tree.ts';
 
 const schema = JSON.parse(
     readFileSync(new URL('../../../../report.schema.json', import.meta.url), 'utf8'),
@@ -310,8 +315,8 @@ describe('json', () => {
                 root: '.',
             },
             folderStats: [
-                { path: 'src', modules: 3, files: 4, subfolders: 1, limit: 20 },
-                { path: '.', modules: 1, files: 1, subfolders: 1, limit: null },
+                { path: 'src', modules: 3, files: 4, subfolders: 1, limit: 20, unit: 'modules', used: 3 },
+                { path: '.', modules: 1, files: 1, subfolders: 1, limit: null, unit: 'modules', used: 1 },
             ],
         });
 
@@ -363,7 +368,15 @@ describe('json', () => {
 
     it('lists every folder with its numbers when asked', () => {
         const json = JSON.parse(formatJson(rich())) as { folders: unknown[] };
-        assert.deepEqual(json.folders[0], { path: 'src', modules: 3, files: 4, subfolders: 1, limit: 20 });
+        assert.deepEqual(json.folders[0], {
+            path: 'src',
+            modules: 3,
+            files: 4,
+            subfolders: 1,
+            limit: 20,
+            unit: 'modules',
+            used: 3,
+        });
         assert.equal('folders' in (JSON.parse(formatJson(report([]))) as object), false);
     });
 
@@ -404,5 +417,139 @@ describe('the moves as commands', () => {
         const renames = { ...prefixGroup, moves: [{ from: 'render/render-json.ts', to: 'render/json.ts' }] };
         assert.equal(formatMovesScript({ findings: [renames] }, 'sh').includes('mkdir'), false);
         assert.equal(formatMovesScript({ findings: [tooManyFiles] }, 'sh'), '');
+    });
+});
+
+const folder = (path: string, used: number, limit: number | null): FolderStat => ({
+    path,
+    modules: used,
+    files: used,
+    subfolders: 0,
+    limit,
+    unit: 'modules',
+    used,
+});
+
+const FOLDERS = [folder('.', 2, 40), folder('src', 25, 20), folder('src/a', 13, 20), folder('docs', 1, 20)];
+
+describe('the badge', () => {
+    it('is a shields.io endpoint with the share of folders within the limit', () => {
+        const badge = JSON.parse(formatBadge({ folderStats: FOLDERS })) as Record<string, unknown>;
+        assert.deepEqual(badge, { schemaVersion: 1, label: 'folders within limit', message: '75%', color: 'yellow' });
+        const clean = JSON.parse(formatBadge({ folderStats: [folder('.', 1, 20)] })) as {
+            message: string;
+            color: string;
+        };
+        assert.deepEqual([clean.message, clean.color], ['100%', 'brightgreen']);
+    });
+
+    it('is grey and says n/a when no folder has a limit', () => {
+        const badge = JSON.parse(formatBadge({ folderStats: [folder('.', 1, null)] })) as {
+            message: string;
+            color: string;
+        };
+        assert.deepEqual([badge.message, badge.color], ['n/a', 'lightgrey']);
+        assert.equal((JSON.parse(formatBadge({})) as { message: string }).message, 'n/a');
+    });
+});
+
+describe('the tree', () => {
+    const options = { color: false, symbols: false, depth: 9, only: undefined } as const;
+
+    it('says each level in words, with the count, a bar and the health figure', () => {
+        const out = formatTreeText({ folderStats: FOLDERS }, options);
+        assert.match(out, /^\. +2\/40 +#.{9} +ok$/mu);
+        assert.match(out, /\|- docs\/ +1\/20 .* ok$/mu);
+        assert.match(out, / src\/ +25\/20 +##########\+ +over the limit$/mu);
+        assert.match(out, / a\/ +13\/20 .* near the limit$/mu);
+        assert.match(out, /4 folders; 75 % of folders within the limit \(3\/4\); 1 over the limit; 1 near it\./u);
+        assert.doesNotMatch(out, /[├└│█]/u);
+        assert.equal(out.includes(String.fromCodePoint(27)), false);
+    });
+
+    it('paints on a terminal, with symbols, and still says the words', () => {
+        const out = formatTreeText({ folderStats: FOLDERS }, { ...options, color: true, symbols: true });
+        assert.ok(out.includes(`${String.fromCodePoint(27)}[31m`));
+        assert.match(out, /over the limit/u);
+        assert.match(out, /├─ docs\//u);
+        assert.match(out, /└─ src\//u);
+    });
+
+    it('folds under the depth, filters, and compares the biggest with the field trial', () => {
+        const folded = formatTreeText({ folderStats: FOLDERS }, { ...options, depth: 1 });
+        assert.match(folded, /src\/ .*\(1 folder below: 1 near\)/u);
+        assert.doesNotMatch(folded, / a\//u);
+        const over = formatTreeText({ folderStats: FOLDERS }, { ...options, only: 'over' });
+        assert.doesNotMatch(over, /docs/u);
+        assert.match(
+            over,
+            /The biggest, src: 25 modules: bigger than \d+ % of the folders of \d+ open-source repositories \(n=[\d,]+\)\./u,
+        );
+        assert.match(formatTreeText({}, options), /^No folders to show\./u);
+    });
+
+    it('notes tiny files under the folder over its limit', () => {
+        const out = formatTreeText(
+            { folderStats: FOLDERS, tinyFiles: { src: { tiny: 20, known: 25, bytes: 200 } } },
+            options,
+        );
+        assert.match(out, /note: 20 of its 25 files are under 200 bytes: maybe they are one file\./u);
+    });
+});
+
+describe('the HTML map', () => {
+    const page = formatHtml(
+        report(
+            [
+                {
+                    ...tooManyFiles,
+                    folder: 'src',
+                    message: '</script><img src=x onerror=alert(1)>',
+                    moves: [{ from: 'src/a.ts', to: 'src/x/a.ts' }],
+                },
+            ],
+            {
+                folderStats: [...FOLDERS, folder('<b>"x"', 3, 20)],
+                run: { presets: [], presetsDetected: false, configFile: null, fileSource: 'git', root: '../up' },
+                tinyFiles: { src: { tiny: 20, known: 25, bytes: 200 } },
+            },
+        ),
+    );
+
+    it('is one file: no address to fetch from, and its data parses', () => {
+        assert.match(page, /^<!doctype html>/u);
+        assert.doesNotMatch(page, /(?:src|href)=["']?(?:https?:)?\/\//u);
+        assert.doesNotMatch(page, /<link|@import|url\(/u);
+        const data = /<script type="application\/json" id="data">(.*?)<\/script>/su.exec(page)?.[1] ?? '';
+        const parsed = JSON.parse(data) as { meta: { root: string }; root: { p: string; c: { p: string }[] } };
+        assert.equal(parsed.root.p, '.');
+        assert.deepEqual(
+            parsed.root.c.map(child => child.p),
+            ['<b>"x"', 'docs', 'src'],
+        );
+        assert.equal(parsed.meta.root, 'the repository');
+    });
+
+    it('cannot be broken out of by a name or a message, and its script is valid JavaScript', () => {
+        assert.equal(page.match(/<\/script>/gu)?.length, 2);
+        assert.doesNotMatch(page, /<img src=x/u);
+        assert.match(page, /\\u003c\/script>/u);
+        assert.match(page, /\u{3C}b>/u);
+        const script = /<script>\n([\s\S]*?)<\/script>/u.exec(page)?.[1] ?? '';
+        assert.ok(script.includes('function layoutTreemap'));
+        assert.doesNotThrow(() => new Script(script));
+    });
+
+    it('has the health figure, a table alternative and a list for a browser without script', () => {
+        assert.match(page, /<div class="big">80<small>%/u);
+        assert.match(page, /id="tab-table"/u);
+        assert.match(page, /<noscript>[\s\S]*<td>src<\/td><td>25\/20<\/td><td>over the limit<\/td>/u);
+        assert.match(page, /prefers-color-scheme: dark/u);
+        assert.match(page, /aria-label=/u);
+        assert.match(page, /20 of its 25 files are under 200 bytes/u);
+    });
+
+    it('works for a run with no folders', () => {
+        assert.match(formatHtml(report([], { folderStats: [] })), /No folder is over or near its limit/u);
     });
 });

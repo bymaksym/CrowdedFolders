@@ -1,4 +1,9 @@
+import { closest } from '../core/paths/suggest.ts';
+import { HELP } from './help.ts';
 import { UsageError } from './usage-error.ts';
+
+/** The long name an option error of Node's names (`-c, --config <value>`, `--stdin`, `-q`). */
+const OPTION_IN_MESSAGE = /[Oo]ption '(?:-\w, )?(-[\w-]+)/u;
 
 export function wholeNumber(option: string, value: string | undefined, minimum: number): number | undefined {
     if (value === undefined) {
@@ -83,4 +88,32 @@ export function refuseAgentMisuse(input: {
     if (command === 'where' && outputs.some(spec => spec.format !== 'text' && spec.format !== 'json')) {
         throw new UsageError('where prints text or json: -f json');
     }
+}
+
+/**
+ * `--moves` alone prints the moves in the report, and `--moves=sh` only the moves: the parser has no
+ * option that may go without its value, so a bare `--moves` is read as `--moves=`. Arguments after
+ * `--` are left alone.
+ */
+export function withMovesValue(argv: readonly string[]): string[] {
+    const end = argv.indexOf('--');
+    return argv.map((arg, index) => (arg === '--moves' && (end === -1 || index < end) ? '--moves=' : arg));
+}
+
+/** Node's own words for a bad option are long, quote badly and suggest nothing: say it in one line. */
+export function usageMessageOf(error: Error): string {
+    const code = (error as Error & { code?: string }).code;
+    const named = OPTION_IN_MESSAGE.exec(error.message)?.[1];
+    if (code === 'ERR_PARSE_ARGS_UNKNOWN_OPTION' && named !== undefined) {
+        const long = named.startsWith('--') ? named.slice(2) : undefined;
+        const candidates = new Set(HELP.match(/(?<=--)[a-z][a-z-]*/gu));
+        const guess = long === undefined ? undefined : closest(long, candidates);
+        return `unknown option ${named}${guess === undefined ? '' : `; did you mean --${guess}?`}`;
+    }
+    if (code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE' && named !== undefined) {
+        return error.message.includes('does not take an argument')
+            ? `${named} takes no value`
+            : `${named} needs a value; if the value starts with "-", write it ${named}=<value>`;
+    }
+    return error.message;
 }

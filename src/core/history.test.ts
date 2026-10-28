@@ -75,7 +75,15 @@ describe('history', () => {
             folders: new Map(
                 Object.entries(sizes).map(([path, modules]) => [
                     path,
-                    { path, modules, files: modules, subfolders: 0, limit: null },
+                    {
+                        path,
+                        modules,
+                        files: modules,
+                        subfolders: 0,
+                        limit: null,
+                        unit: 'modules' as const,
+                        used: modules,
+                    },
                 ]),
             ),
         });

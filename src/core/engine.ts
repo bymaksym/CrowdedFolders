@@ -20,6 +20,7 @@ import { parseMirrors } from './paths/mirrors.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
 import { callRule, frozenCopy, LATE_REPORT, reportProblem, RuleError } from './rules/guard.ts';
 import { BUILT_IN_RULES } from './rules/index.ts';
+import { folderStat } from './rules/max-files.ts';
 import { caseless } from './rules/moves.ts';
 import type { FolderView, Note, Problem, Rule, RuleContext, RuleVisitor, TreeProblem } from './rules/rule.ts';
 import { FolderSettings, type Settings } from './settings.ts';
@@ -252,19 +253,7 @@ class FolderContext {
 
     statsOf(entry: FolderEntry): FolderStat {
         const { naming, rules } = this.settingsFor(entry);
-        const state = rules['max-files'];
-        const rule = this.rules['max-files'];
-        const max =
-            state && rule && state.severity !== 'off'
-                ? mergeOptions(rule.meta.defaultOptions as Record<string, unknown>, state.options)['max']
-                : undefined;
-        return {
-            path: entry.path,
-            modules: this.viewOf(entry, naming, false).modules.length,
-            files: entry.files.length,
-            subfolders: entry.folders.length,
-            limit: typeof max === 'number' ? max : null,
-        };
+        return folderStat(entry, this.viewOf(entry, naming, false), rules['max-files'], this.rules['max-files']);
     }
 
     /** Runs the rules on one folder; with `notes`, also collects what they chose not to report. */

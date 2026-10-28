@@ -202,7 +202,7 @@
             "description": "Every folder with its numbers. Only with --stats.",
             "items": {
                 "type": "object",
-                "required": ["path", "modules", "files", "subfolders", "limit"],
+                "required": ["path", "modules", "files", "subfolders", "limit", "unit", "used"],
                 "properties": {
                     "path": { "type": "string" },
                     "modules": { "type": "integer", "minimum": 0 },
@@ -211,6 +211,15 @@
                     "limit": {
                         "type": ["integer", "null"],
                         "description": "The `max-files` limit in effect for the folder; null when that rule is off there."
+                    },
+                    "unit": {
+                        "enum": ["files", "modules"],
+                        "description": "What `max-files` counts in the folder."
+                    },
+                    "used": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "The number `max-files` compares with the limit, in that unit."
                     }
                 }
             }

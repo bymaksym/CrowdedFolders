@@ -10,7 +10,10 @@
  * .field-trial/ (git-ignored); --refresh downloads them again.
  *
  * Usage:  pnpm run build && node tooling/field-trial.mjs [--refresh] [--only name,name] [--docs]
- * Output: a summary on stdout, .field-trial/results.json, and with --docs docs/field-trial.md.
+ * Output: a summary on stdout, .field-trial/results.json, and with --docs docs/field-trial.md and, when
+ * every repository was measured (no --only), src/core/report/tree/trial-data.ts: how many folders hold
+ * how many modules, which `tree`, `explain` and the HTML map use to say "bigger than 97 % of the folders
+ * of 36 open-source repositories (n=...)".
  */
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -132,6 +135,8 @@ const percentile = (values, p) => {
 
 const only = values.only?.split(',');
 const results = [];
+/** How many folders, over all the repositories, hold exactly k modules: index k. */
+const histogram = /** @type {number[]} */ ([]);
 const chosen = TRIALS.filter(t => !only || only.some(name => t.repo.includes(name)));
 for (const trial of chosen) {
     let list;
@@ -182,6 +187,9 @@ for (const trial of chosen) {
     const naming = { companions: [], ignoreLeadingWords: new Set(), groupNumericPrefixes: false };
     const files = tree.map(folder => folder.files.filter(name => !name.startsWith('.')).length);
     const modules = tree.map(folder => modulesOf(folder.files, naming).length);
+    for (const size of modules) {
+        if (size > 0) histogram[size] = (histogram[size] ?? 0) + 1;
+    }
 
     const count = (/** @type {readonly import('../src/index.ts').Finding[]} */ findings, /** @type {string} */ rule) =>
         findings.filter(finding => finding.rule === rule).length;
@@ -237,6 +245,47 @@ console.log(`\n${results.length} repositories. Details: .field-trial/results.jso
 if (values.docs) {
     writeFileSync(join(process.cwd(), 'docs', 'field-trial.md'), fieldTrialPage(results));
     console.log('Wrote docs/field-trial.md');
+    if (only) {
+        console.log('--only: src/core/report/tree/trial-data.ts is written from a full run only.');
+    } else {
+        writeFileSync(join(process.cwd(), 'src', 'core', 'report', 'tree', 'trial-data.ts'), trialData(results.length));
+        console.log('Wrote src/core/report/tree/trial-data.ts');
+    }
+}
+
+/** A number as the lint wants it written: `17_938`. @param {number} value */
+const grouped = value => String(value).replaceAll(/\B(?=(?:\d{3})+(?!\d))/gu, '_');
+
+/**
+ * The module file `tree` compares folders with: the histogram of folder sizes, written by this tool and
+ * never by hand. A folder with no module is not counted (nothing to compare), so `n` is the folders that
+ * hold at least one.
+ *
+ * @param {number} repos
+ */
+function trialData(repos) {
+    const counts = Array.from({ length: histogram.length }, (_, size) => histogram[size] ?? 0);
+    const folders = counts.reduce((sum, count) => sum + count, 0);
+    return [
+        '// Written by tooling/field-trial.mjs --docs. Do not edit: run it again.',
+        '',
+        '/** How big folders are in the public repositories of the field trial (docs/field-trial.md). */',
+        'export interface FieldTrial {',
+        '    /** The repositories measured. */',
+        '    readonly repos: number;',
+        '    /** The folders measured, with at least one module, after `recommended` leaves out what is not yours to arrange. */',
+        '    readonly folders: number;',
+        '    /** `modules[k]` is how many of those folders hold exactly `k` modules. */',
+        '    readonly modules: readonly number[];',
+        '}',
+        '',
+        'export const FIELD_TRIAL: FieldTrial = {',
+        `    repos: ${repos},`,
+        `    folders: ${grouped(folders)},`,
+        `    modules: [${counts.map(grouped).join(', ')}],`,
+        '};',
+        '',
+    ].join('\n');
 }
 
 /**

@@ -1,5 +1,9 @@
+import { mergeOptions } from '../config/merge.ts';
+import type { RuleState } from '../config/types.ts';
+import type { FolderStat } from '../findings.ts';
 import { shownName } from '../naming/modules.ts';
-import { defineRule, HINT_FOR_SCHEMA, hintText } from './rule.ts';
+import type { FolderEntry } from '../paths/tree.ts';
+import { defineRule, type FolderView, HINT_FOR_SCHEMA, hintText, type Note, type Rule } from './rule.ts';
 
 /** A module of more files than this is pointed out by `explain`: it may be many things counted as one. */
 const LARGE_MODULE = 10;
@@ -48,28 +52,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
         },
     },
     check(folder, { options, report, note }) {
-        // Files that describe the folder or go with a sibling folder are not one more thing in it.
-        const uncounted = new Set(folder.uncounted?.map(entry => entry.file));
-        const counted = folder.files.filter(
-            name => !uncounted.has(name) && (options.dotfiles || !name.startsWith('.')),
-        );
-        let measured = counted.length;
-        if (options.count === 'modules') {
-            measured = 0;
-            for (const module of folder.modules) {
-                const files = module.files.filter(name => options.dotfiles || !name.startsWith('.')).length;
-                if (files === 0) {
-                    continue;
-                }
-                measured += options.filesPerModule > 0 ? Math.ceil(files / options.filesPerModule) : 1;
-                if (note && files > LARGE_MODULE && options.filesPerModule === 0) {
-                    note({
-                        key: module.stem,
-                        message: `${shownName(module)} is ${files} files counted as one module: if they are ${files} things (View+Layout.swift, View+Style.swift…), set max-files' filesPerModule, or narrow naming.companions`,
-                    });
-                }
-            }
-        }
+        const { measured, counted } = measureFolder(folder, options, note);
         if (measured <= options.max) {
             return;
         }
@@ -82,3 +65,61 @@ export const maxFiles = defineRule<MaxFilesOptions>({
         });
     },
 });
+
+/**
+ * What `max-files` counts in a folder, in the unit it is set to: the one measure the rule fails on and
+ * `--stats` reports, so that "over the limit" means the same in both. Files that describe the folder or
+ * go with a sibling folder are not one more thing in it.
+ */
+export function measureFolder(
+    folder: FolderView,
+    options: Pick<MaxFilesOptions, 'count' | 'dotfiles' | 'filesPerModule'>,
+    note?: (note: Note) => void,
+): { readonly measured: number; readonly counted: string[] } {
+    const uncounted = new Set(folder.uncounted?.map(entry => entry.file));
+    const counted = folder.files.filter(name => !uncounted.has(name) && (options.dotfiles || !name.startsWith('.')));
+    if (options.count !== 'modules') {
+        return { measured: counted.length, counted };
+    }
+    let measured = 0;
+    for (const module of folder.modules) {
+        const files = module.files.filter(name => options.dotfiles || !name.startsWith('.')).length;
+        if (files === 0) {
+            continue;
+        }
+        measured += options.filesPerModule > 0 ? Math.ceil(files / options.filesPerModule) : 1;
+        if (note && files > LARGE_MODULE && options.filesPerModule === 0) {
+            note({
+                key: module.stem,
+                message: `${shownName(module)} is ${files} files counted as one module: if they are ${files} things (View+Layout.swift, View+Style.swift…), set max-files' filesPerModule, or narrow naming.companions`,
+            });
+        }
+    }
+    return { measured, counted };
+}
+
+/** The numbers of a folder for `--stats`: what it holds, and what `max-files` makes of it where that rule is on. */
+export function folderStat(
+    entry: FolderEntry,
+    view: FolderView,
+    state: RuleState | undefined,
+    rule: Rule | undefined,
+): FolderStat {
+    const options =
+        state && rule && state.severity !== 'off'
+            ? (mergeOptions(
+                  rule.meta.defaultOptions as Record<string, unknown>,
+                  state.options,
+              ) as unknown as MaxFilesOptions)
+            : undefined;
+    return {
+        path: entry.path,
+        modules: view.modules.length,
+        files: entry.files.length,
+        subfolders: entry.folders.length,
+        limit: typeof options?.max === 'number' ? options.max : null,
+        // What the rule itself counts, so that "over the limit" here is what the rule reports.
+        unit: options?.count === 'files' ? 'files' : 'modules',
+        used: options === undefined ? view.modules.length : measureFolder(view, options).measured,
+    };
+}
