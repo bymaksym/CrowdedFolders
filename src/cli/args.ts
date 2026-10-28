@@ -16,6 +16,8 @@ export interface Args {
     readonly output: string | undefined;
     readonly stdin: boolean;
     readonly git: boolean;
+    /** `--require-git`: stop when git cannot list the files. `undefined` when not given: on when CI is set. */
+    readonly requireGit: boolean | undefined;
     readonly maxWarnings: number | undefined;
     readonly quiet: boolean;
     readonly moves: boolean;
@@ -50,6 +52,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
                 output: { type: 'string', short: 'o' },
                 stdin: { type: 'boolean' },
                 'no-git': { type: 'boolean' },
+                'require-git': { type: 'boolean' },
                 'max-warnings': { type: 'string' },
                 quiet: { type: 'boolean', short: 'q' },
                 moves: { type: 'boolean' },
@@ -99,6 +102,16 @@ export function parseCommandLine(argv: readonly string[]): Args {
             '--stdin and --no-git cannot both be given: with --stdin the files come from standard input',
         );
     }
+    if (values['require-git'] && (values['no-git'] || values.stdin)) {
+        throw new UsageError(
+            `--require-git and ${values.stdin ? '--stdin' : '--no-git'} cannot both be given: one asks git for the files, the other does not`,
+        );
+    }
+    if (values.output !== undefined && (values.output.trim() === '' || /[/\\]$/u.test(values.output))) {
+        throw new UsageError(
+            `--output ${values.output}: give the file to write${values.output.trim() === '' ? '' : `, such as ${values.output}crowded-folders.sarif`}; that is a folder`,
+        );
+    }
     if (command === 'explain' && paths.length !== 1 && !values.help) {
         throw new UsageError('explain takes one folder: crowded-folders explain src/components');
     }
@@ -116,6 +129,7 @@ export function parseCommandLine(argv: readonly string[]): Args {
         output: values.output,
         stdin: values.stdin ?? false,
         git: !(values['no-git'] ?? false),
+        requireGit: values['require-git'],
         maxWarnings,
         quiet: values.quiet ?? false,
         moves: values.moves ?? false,
