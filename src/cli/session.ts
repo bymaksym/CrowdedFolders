@@ -46,7 +46,9 @@ export interface Session {
 export async function openSession(args: Args, io: Io): Promise<Session> {
     const cwd = realPath(io.cwd);
     const configArg = args.config === undefined ? undefined : resolve(cwd, args.config);
-    if (configArg !== undefined && !existsSync(configArg)) {
+    // `init --config x.json` names the file to create: it does not exist yet, and nothing is read from it.
+    const writesConfig = args.command === 'init';
+    if (configArg !== undefined && !writesConfig && !existsSync(configArg)) {
         throw new UsageError(`--config ${args.config ?? ''}: ${configArg} does not exist`);
     }
     const rootArg = args.root === undefined ? undefined : resolve(cwd, args.root);
@@ -56,7 +58,11 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     if (rootArg !== undefined && !statSync(rootArg).isDirectory()) {
         throw new UsageError(`--root ${args.root ?? ''}: ${rootArg} is a file; the root is a folder`);
     }
-    const { configPath, root, base, scope } = locate({ cwd, configPath: configArg, root: rootArg });
+    const { configPath, root, base, scope } = locate({
+        cwd,
+        configPath: writesConfig ? undefined : configArg,
+        root: rootArg,
+    });
     const notices: string[] = [];
 
     let listed: string[];
@@ -84,7 +90,10 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
 
     let loaded: LoadedConfig;
     let detected: Detection[] | undefined;
-    if (configPath === undefined) {
+    if (writesConfig) {
+        // `init` writes the configuration: it needs the files, not what an old one says.
+        loaded = await loadConfig({}, '(init)', base);
+    } else if (configPath === undefined) {
         let presets = args.presets;
         let exclude: string[] = [];
         if (presets.length === 0) {
@@ -109,6 +118,9 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     }
 
     notices.push(...loaded.warnings);
+    if (writesConfig) {
+        return { root, base, scope, cwd, configPath, loaded, files, fileSource, detected, only, notices };
+    }
     checkSelection({ files, loaded, configPath, scope, base, cwd, notices, args });
     if (args.root !== undefined || scope !== '.') {
         const from = scope === '.' ? '' : `; its paths start at ${shown(cwd, base)}, so the report's do too`;

@@ -3,6 +3,16 @@ import type { JsonSchema } from './json-schema.ts';
 
 export const SCHEMA_URL = 'https://unpkg.com/crowded-folders/schema.json';
 
+/**
+ * The schema of the version a configuration was written for: `crowded-folders@1` for 1.x, so that a major
+ * version that renames a setting does not turn every editor red at once. Before 1.0 a minor is the
+ * breaking one (`@0.5`).
+ */
+export function pinnedSchemaUrl(version: string): string {
+    const [major = '0', minor = '0'] = version.split('.', 2);
+    return `https://unpkg.com/crowded-folders@${major === '0' ? `0.${minor}` : major}/schema.json`;
+}
+
 const SEVERITY: JsonSchema = {
     enum: ['error', 'warn', 'off'],
     description: '"error" fails the run, "warn" reports without failing, "off" does not run the rule.',
