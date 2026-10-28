@@ -10,6 +10,7 @@ import { exitCodeOf } from '../core/report/report.ts';
 import { attributeRuleError, RuleError, ruleShapeProblem } from '../core/rules/guard.ts';
 import type { Rule } from '../core/rules/rule.ts';
 import { applySuppressions, PER_PROJECT, type StaleSuppression } from '../core/suppressions.ts';
+import { type WhereResult, whereWouldGo } from '../core/where.ts';
 import { locate } from './config/file.ts';
 import { listFiles } from './files.ts';
 import { loadConfig, loadConfigFile, type LoadedConfig } from './load-config.ts';
@@ -95,6 +96,12 @@ export interface Linter {
     readonly plugins: readonly Plugin[];
     readonly presetsByName: Readonly<Record<string, Preset>>;
     lint(run?: LintRun): LintResult;
+    /**
+     * For each path (relative to the root) of a file that does not exist yet: whether adding it creates,
+     * worsens or leaves as it is a problem in its folder, and where else it could go. Lists the files
+     * again, as `lint` does.
+     */
+    where(paths: readonly string[], run?: Pick<LintRun, 'files'>): WhereResult[];
 }
 
 const ORIGIN = '(the lint() options)';
@@ -154,6 +161,22 @@ async function open(options: LinterOptions): Promise<{ linter: Linter; listed: r
     const presets = detected?.map(detection => detection.preset) ?? presetsOf(loaded.config.layers);
     const { config, rules } = loaded;
 
+    const whereOnce = (paths: readonly string[], run: Pick<LintRun, 'files'> = {}): WhereResult[] => {
+        const own = filesOf(run.files, root);
+        const files = scope === '.' ? own : own.map(file => `${scope}/${file}`);
+        const read = normaliseFileList(paths, root);
+        if (read.problems.length > 0) {
+            throw new FileListError(read.problems);
+        }
+        try {
+            return read.files.map(path =>
+                whereWouldGo({ files, config, rules, path: scope === '.' ? path : `${scope}/${path}` }),
+            );
+        } catch (error) {
+            throw error instanceof RuleError ? attributeRuleError(error, loaded.plugins) : error;
+        }
+    };
+
     const lintOnce = (run: LintRun = {}): LintResult => {
         const own = filesOf(run.files, root);
         const all = scope === '.' ? own : own.map(file => `${scope}/${file}`);
@@ -206,6 +229,7 @@ async function open(options: LinterOptions): Promise<{ linter: Linter; listed: r
         plugins: loaded.plugins,
         presetsByName: loaded.presets,
         lint: lintOnce,
+        where: whereOnce,
     });
     return { linter, listed };
 }

@@ -43,6 +43,16 @@ export {
     type TreeContext,
     type TreeProblem,
 } from './core/rules/rule.ts';
+export {
+    type WhereCandidate,
+    type WhereChange,
+    type WhereEffect,
+    type WhereGroup,
+    type WhereInput,
+    type WhereResult,
+    whereSummary,
+    whereWouldGo,
+} from './core/where.ts';
 
 /** Types a configuration file written in JavaScript: `export default defineConfig({ … })`. */
 export function defineConfig(config: Config): Config {

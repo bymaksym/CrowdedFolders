@@ -216,6 +216,20 @@ describe('createLinter()', () => {
             ['other/cli'],
         );
     });
+
+    it('says what a new file would do to its folder, for the files given and for a path outside the root', async () => {
+        const linter = await createLinter({ cwd: tmpdir(), config: { extends: ['recommended'] } });
+        const [fourth, other] = linter.where(['cli/render-sarif.ts', 'cli/main-two.ts'], {
+            files: [...RENDER.slice(0, 3), 'cli/main.ts'],
+        });
+        assert.equal(fourth?.effect, 'creates');
+        assert.equal(fourth?.changes[0]?.rule, 'prefix-groups');
+        assert.deepEqual(fourth?.candidates, [
+            { folder: 'cli/render', kind: 'move', reason: 'prefix-groups would put it there (the group "render")' },
+        ]);
+        assert.equal(other?.effect, 'neutral');
+        assert.throws(() => linter.where(['../x.ts'], { files: RENDER }), FileListError);
+    });
 });
 
 describe('resolveConfig()', () => {
