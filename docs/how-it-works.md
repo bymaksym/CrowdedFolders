@@ -5,20 +5,39 @@ the step before changing it.
 
 ## 1. The files
 
-The list comes from git: `git ls-files` for tracked files, plus the untracked ones `.gitignore` does not
-hide, minus what was deleted. Submodules are left out (they are another repository). Without git, or
-with `--no-git`, the disk is walked, skipping `.git` and `node_modules`. With `--stdin`, the list is read
-from standard input — which is how the [field trial](field-trial.md) checks a repository without
-downloading it: `git ls-tree -r --name-only HEAD | crowded-folders --stdin`.
+The list comes from git, in one `git ls-files`: tracked files, plus the untracked ones `.gitignore`
+does not hide, minus what was deleted. Submodules are left out (they are another repository), and so is
+an untracked repository inside this one. One call, not four: on Windows each git process costs about a
+tenth of a second.
+
+Inside a repository, a git that fails (missing from the `PATH`, a broken `GIT_DIR`, "dubious
+ownership" in a container) stops the run with exit code 2 and what git said: reading the disk instead
+would count what `.gitignore` hides and look like an ordinary run. Outside a repository the disk is
+walked, and the run says so; with `--require-git`, the default when `CI` is set, that is an error too.
+
+With `--no-git`, or outside a repository, the disk is walked, skipping `.git` and `node_modules`, and
+the `.gitignore` files are read — the root's, the nested ones, and those above the root up to the top
+of its repository — by a small matcher of their own syntax. `.gitattributes` is not read there.
+
+With `--stdin`, the list is read from standard input, one path per line (`\n`, `\r\n` or `\r`) or
+NUL-separated — which is how the [field trial](field-trial.md) checks a repository without downloading
+it: `git ls-tree -r --name-only HEAD | crowded-folders --stdin`. Paths are read from the root; from a
+sub-folder, when more of them exist there (as `git ls-files` prints them), they are read from there and
+only that folder is checked. An absolute path under the root is made relative to it; one elsewhere is
+an error. The same reading applies to `lint({ files })` and `runEngine`.
 
 Files that `.gitattributes` marks as `linguist-generated` or `linguist-vendored` are left out too, as
-git reads them (nested files included): a repository that tells GitHub to fold them in diffs has
-already said nobody arranges them by hand.
+git reads them (nested files included), also for `--stdin` inside a repository: a repository that tells
+GitHub to fold them in diffs has already said nobody arranges them by hand.
+
+Files more than 256 folders deep are left out with a warning: a tree that deep is generated.
 
 _Why git:_ `.gitignore` and `.gitattributes` already say what is generated. Reimplementing them would
 be a second answer to the same question, and the two would differ.
 
-Then `include` and `exclude` apply. `exclude` matches a path or any folder above it.
+Then `include` and `exclude` apply. Both match a path or any folder above it. Given folders
+(`crowded-folders src/app`), only the files under them are kept, before anything else is built, and
+the summary counts what was checked.
 
 ## 2. Folders
 
