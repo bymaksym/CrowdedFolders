@@ -1,3 +1,4 @@
+import { caseCollision } from './case-collision.ts';
 import { maxFiles } from './max-files.ts';
 import { maxFolders } from './max-folders.ts';
 import { prefixGroups } from './prefix-groups.ts';
@@ -12,4 +13,5 @@ export const BUILT_IN_RULES: Readonly<Record<string, Rule>> = {
     'max-folders': maxFolders,
     'redundant-prefix': redundantPrefix,
     'single-file-folders': singleFileFolders,
+    'case-collision': caseCollision,
 };

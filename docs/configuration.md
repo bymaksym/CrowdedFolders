@@ -29,6 +29,8 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | `companions` | string[] | Regular expressions removed from each stem, so that companion files join their module: "_test$" makes foo_test.go part of foo.go; "^test_" makes test_foo.py part of foo.py. |
 | `ignoreLeadingWords` | string[] | Lowercase words skipped at the start of a name before reading what it is about: "i" for C# interfaces (IUserService), "bp" for Unreal blueprints (BP_Door). |
 | `groupNumericPrefixes` | boolean | Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. Default: false. |
+| `folderFiles` | string[] | Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs. |
+| `folderCompanions` | string[] | Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/. |
 
 ## `overrides[]`
 
@@ -55,6 +57,7 @@ A folder holds at most `max` files (or modules): past that it is scrolled, not r
 | --- | --- | --- | --- |
 | `max` | integer | `20` | How many it may hold. |
 | `count` | `"files"` \| `"modules"` | `"files"` | "files" counts every file; "modules" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one). |
+| `filesPerModule` | integer | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
 | `hint` | string | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
 | `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. |
 
@@ -67,7 +70,7 @@ At least `min` modules whose names start with the same word belong in a folder n
 | Option | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `min` | integer | `4` | How many modules sharing a prefix make a group. |
-| `words` | integer | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`. |
+| `words` | see below | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; "auto" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`). |
 | `ignore` | string[] | `[]` | Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`. |
 | `hint` | string | `""` | Added to the message: what making a folder costs in this ecosystem ("In Go a folder is a package: …"). |
 
@@ -96,5 +99,13 @@ Modules inside a folder do not repeat the folder's name: `render/render-json.ts`
 A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.
 
 [More about `single-file-folders`](rules/single-file-folders.md)
+
+No options.
+
+### `case-collision`
+
+Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.
+
+[More about `case-collision`](rules/case-collision.md)
 
 No options.

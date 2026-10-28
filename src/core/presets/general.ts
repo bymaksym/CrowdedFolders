@@ -90,6 +90,9 @@ export const recommended: Preset = {
             'max-folders': 'off',
             'redundant-prefix': 'off',
             'single-file-folders': 'off',
+            // Off: a rule on by default would fail repositories that passed (a breaking change);
+            // strict turns it on.
+            'case-collision': 'off',
         },
         overrides: [
             {
@@ -119,7 +122,7 @@ export const recommended: Preset = {
 /** For a team that wants a tidier tree than the measured median, and to keep it that way. */
 export const strict: Preset = {
     description:
-        "Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, and no folder holding a single file. An opinion, not a measurement: use it when you want the tree tidier than most.",
+        "Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. An opinion, not a measurement: use it when you want the tree tidier than most.",
     sources: [
         {
             title: 'Angular style guide (former LIFT "Flat" rule: sub-folders at seven or more files)',
@@ -134,6 +137,7 @@ export const strict: Preset = {
             'max-folders': ['error', { max: 20 }],
             'redundant-prefix': 'error',
             'single-file-folders': 'warn',
+            'case-collision': 'error',
         },
     },
 };

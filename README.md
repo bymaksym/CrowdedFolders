@@ -48,6 +48,7 @@ crowded-folders counts, and reads names the way people write them.
 | [`redundant-prefix`](docs/rules/redundant-prefix.md)       | off (on in `strict`)   | Modules that repeat their folder's name: `render/render-json.ts` → `render/json.ts`.                                       |
 | [`max-folders`](docs/rules/max-folders.md)                 | off (on in `strict`)   | A folder with too many sub-folders.                                                                                        |
 | [`single-file-folders`](docs/rules/single-file-folders.md) | off (warn in `strict`) | A folder that holds a single file and nothing else.                                                                        |
+| [`case-collision`](docs/rules/case-collision.md)           | off (on in `strict`)   | Names that differ only in case (`Components/`, `components/`): one name on Windows and macOS.                              |
 
 Names are read in every convention — `user-service`, `user_service`, `userService`, `UserService`,
 `HTTPServer` — so `UserService.java`, `user_service.py` and `user-service.ts` all start with `user`.
