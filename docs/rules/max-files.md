@@ -49,3 +49,4 @@ crowd. [`prefix-groups`](prefix-groups.md) usually points at the first folder to
 | `count`    | `"files"` in the rule, `"modules"` in every preset | What is counted.                                                                                             |
 | `dotfiles` | `false`                                            | Whether dot-files count.                                                                                     |
 | `hint`     | `""`                                               | Added to the message: what a folder costs in this ecosystem (presets use it: "In Go a folder is a package"). |
+| `hintFor`  | `[]`                                               | Globs of file names: the hint is added only when the files counted include one (`*.java`). Default: always.  |

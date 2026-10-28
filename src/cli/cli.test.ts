@@ -5,9 +5,11 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 
+import { dependenciesOf } from '../node/manifests.ts';
 import { HELP } from './help.ts';
 import type { Io } from './io.ts';
 import { run } from './main.ts';
+import { warnIfTruncated } from './session.ts';
 
 const roots: string[] = [];
 after(() => {
@@ -203,6 +205,66 @@ describe('the command', () => {
         );
     });
 
+    it('init lists the addons of a Godot project and writes one exclusion for each', async () => {
+        const root = repository({
+            'project.godot': '',
+            'addons/gut/plugin.cfg': '',
+            'addons/gut/gut.gd': '',
+            'addons/my_plugin/plugin.cfg': '',
+            'scenes/main.tscn': '',
+        });
+        const ran = await cli(root, ['init']);
+        assert.equal(ran.code, 0, ran.err);
+        assert.match(ran.out, /addons of the project: gut, my_plugin/u);
+        const config = JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as {
+            exclude: string[];
+        };
+        assert.deepEqual(config.exclude, ['!/addons', 'addons/gut', 'addons/my_plugin']);
+    });
+
+    it('detects NestJS in a package of a monorepo with 62 manifests, however deep it is', async () => {
+        const packages = Object.fromEntries(
+            Array.from({ length: 61 }, (_, index) => [
+                `packages/p${String(index).padStart(2, '0')}/package.json`,
+                '{}',
+            ]),
+        );
+        const root = repository({
+            ...packages,
+            'services/backend/core/api/package.json': JSON.stringify({ dependencies: { '@nestjs/core': '^11.0.0' } }),
+            'services/backend/core/api/src/main.ts': '',
+        });
+        // --no-git: the fixture is not a repository, and the notice that says so is not the point here.
+        const ran = await cli(root, ['init', '--no-git']);
+        assert.equal(ran.code, 0, ran.err);
+        const config = JSON.parse(readFileSync(join(root, 'crowded-folders.config.json'), 'utf8')) as {
+            extends: string[];
+        };
+        assert.deepEqual(config.extends, ['recommended', 'nestjs']);
+        assert.equal(ran.err, '');
+    });
+
+    it('says how many package.json files detection left unread when it has to stop', () => {
+        const files = ['package.json', 'a/package.json', 'a/b/package.json', 'a/b/c/package.json'];
+        const root = repository(Object.fromEntries(files.map(path => [path, '{}'])));
+        assert.equal(dependenciesOf(root, files).skipped, 0);
+        assert.equal(dependenciesOf(root, files, 3).skipped, 1);
+        let warned = '';
+        warnIfTruncated(dependenciesOf(root, files, 3), {
+            cwd: root,
+            env: {},
+            stdoutIsTTY: false,
+            write: () => {
+                // Nothing is written to standard output.
+            },
+            error: text => {
+                warned += text;
+            },
+            readStdin: () => Promise.resolve(''),
+        });
+        assert.match(warned, /left 1 unread/u);
+    });
+
     it('explains a folder: modules, groups, rules and problems', async () => {
         const root = repository(render);
         const ran = await cli(root, ['explain', 'cli']);
@@ -237,10 +299,8 @@ describe('the command', () => {
         const whole = JSON.parse((await cli(root, ['print-config'])).out) as { layers: string[] };
         assert.deepEqual(whole.layers, ['preset "recommended"', '(the command line)']);
         const one = JSON.parse((await cli(root, ['print-config', '.'])).out) as { rules: Record<string, unknown> };
-        assert.deepEqual(one.rules['max-files'], [
-            'error',
-            { max: 40, count: 'modules', dotfiles: false, filesPerModule: 0, hint: '' },
-        ]);
+        const [severity, options] = one.rules['max-files'] as [string, { max: number; count: string }];
+        assert.deepEqual([severity, options.max, options.count], ['error', 40, 'modules']);
     });
 
     it('lists presets and rules', async () => {

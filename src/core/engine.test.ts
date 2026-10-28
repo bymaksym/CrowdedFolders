@@ -24,6 +24,29 @@ describe('selectFiles', () => {
 });
 
 describe('runEngine', () => {
+    it('applies an override with withFiles only to the folders that hold one of those files', () => {
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 5 }] },
+            overrides: [
+                {
+                    folders: ['**'],
+                    withFiles: ['package.json', 'go.mod'],
+                    reason: 'the root of a package holds its tools',
+                    rules: { 'max-files': ['error', { max: 10 }] },
+                },
+            ],
+        });
+        const files = [
+            ...Array.from({ length: 8 }, (_, index) => `apps/shop/f${index}.json`),
+            'apps/shop/package.json',
+            ...Array.from({ length: 8 }, (_, index) => `apps/shop/src/f${index}.ts`),
+        ];
+        assert.deepEqual(
+            runEngine({ files, config, rules: BUILT_IN_RULES }).findings.map(finding => finding.folder),
+            ['apps/shop/src'],
+        );
+    });
+
     it('applies overrides in order, per folder', () => {
         const config = resolve({
             rules: { 'max-files': ['error', { max: 5 }] },

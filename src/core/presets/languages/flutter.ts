@@ -10,6 +10,18 @@ export const flutter: Preset = {
             url: 'https://docs.flutter.dev/app-architecture/case-study',
         },
         {
+            title: 'mockito: "we import the generated library as cat_test.mocks.dart"',
+            url: 'https://pub.dev/packages/mockito',
+        },
+        {
+            title: 'injectable: the generated file is file_name.config.dart',
+            url: 'https://pub.dev/packages/injectable',
+        },
+        {
+            title: 'Flutter: internationalization, one .arb file per language',
+            url: 'https://docs.flutter.dev/ui/accessibility-and-localization/internationalization',
+        },
+        {
             title: "json_serializable: generated code goes in a part file, part 'example.g.dart'",
             url: 'https://pub.dev/packages/json_serializable',
         },
@@ -31,6 +43,16 @@ export const flutter: Preset = {
             '**/lib/generated',
             '*.g.dart',
             '*.freezed.dart',
+            // build_runner generators write next to the source: auto_route, mockito, injectable, the
+            // asset generator, protobuf and chopper. (A hand-written app.config.dart is left out too.)
+            '*.gr.dart',
+            '*.mocks.dart',
+            '*.config.dart',
+            '*.gen.dart',
+            '*.pb*.dart',
+            '*.chopper.dart',
+            // gen-l10n reads one .arb per language, in any folder.
+            '*.arb',
         ],
         naming: { companions: ['_test$'] },
         overrides: [

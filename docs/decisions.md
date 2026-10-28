@@ -17,7 +17,7 @@ appears. And it has to work for Go, Python, Unity and LaTeX repositories, which 
 What `.gitattributes` marks `linguist-generated` or `linguist-vendored` is left out, as git reads it.
 **Why:** `.gitignore` and `.gitattributes` already say what is generated; a second implementation would
 be a second answer.
-`--stdin` lets the field trial check thirty repositories without downloading their contents.
+`--stdin` lets the field trial check dozens of repositories without downloading their contents.
 A git that fails inside a repository is an error, never a quiet fall back to the disk.
 **Discarded:** reimplementing `.gitignore` as the source of the list. Without git (`--no-git`, or no
 repository), a small matcher reads the `.gitignore` files, because walking the disk without them
@@ -42,7 +42,7 @@ folders "crowded" at a quarter of the size. The first dot joins every companion 
 
 ## The limits are measured, or quoted
 
-**Decided:** 20 modules is the median 95th percentile over 30 repositories ([field-trial.md](field-trial.md)).
+**Decided:** 20 modules is about the median 95th percentile (19) over 36 repositories ([field-trial.md](field-trial.md)).
 A preset only changes it when its ecosystem's guide gives a number, and quotes it.
 **Why:** a limit that is an opinion dressed as a standard is ignored at the first disagreement. Eight
 presets had 15 before the trial, with no source; they were removed.

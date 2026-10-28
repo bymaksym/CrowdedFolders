@@ -28,6 +28,7 @@ export const cpp: Preset = {
                 'warn',
                 {
                     min: 5,
+                    hintFor: ['*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}'],
                     hint: "In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.",
                 },
             ],

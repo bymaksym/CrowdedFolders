@@ -1,5 +1,6 @@
 import type { JsonSchema } from '../config/json-schema.ts';
 import type { Module, Naming, Uncounted } from '../naming/modules.ts';
+import { compileGlob } from '../paths/glob.ts';
 import type { FolderEntry } from '../paths/tree.ts';
 
 export type Severity = 'error' | 'off' | 'warn';
@@ -105,4 +106,30 @@ export function defineRule<Options extends object>(rule: Rule<Options>): Rule<Op
 /** Shows a list of names, cut after `max` with how many more there are. */
 export function listNames(names: readonly string[], max = 5): string {
     return names.length <= max ? names.join(', ') : `${names.slice(0, max).join(', ')} and ${names.length - max} more`;
+}
+
+/** The JSON Schema of the `hintFor` option that `max-files` and `prefix-groups` share. */
+export const HINT_FOR_SCHEMA: JsonSchema = {
+    type: 'array',
+    items: { type: 'string', minLength: 1 },
+    description:
+        'Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always.',
+};
+
+/**
+ * The hint of a preset as it ends a message (with the space before it), or nothing when `only` is
+ * given and none of the files is of that kind: "A folder is a package" says nothing about the SQL,
+ * templates and changelogs that sit in a Java project.
+ */
+export function hintText(hint: string, only: readonly string[], files: readonly string[]): string {
+    if (hint === '') {
+        return '';
+    }
+    if (only.length > 0) {
+        const globs = only.map(pattern => compileGlob(pattern));
+        if (files.every(file => globs.every(glob => !glob.test(file)))) {
+            return '';
+        }
+    }
+    return ` ${hint}`;
 }

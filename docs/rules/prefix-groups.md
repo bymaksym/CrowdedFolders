@@ -50,12 +50,13 @@ that was left out and which of these cases it is.
 
 ## Options
 
-| Option   | Default                                                                         |                                                                                                                                                          |
-| -------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `min`    | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).                                              |
-| `words`  | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups; `"auto"` takes the longest that keeps the group.         |
-| `ignore` | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`. An entry that can never match (`render_json`) stops the configuration, with the form meant. |
-| `hint`   | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                                                             |
+| Option    | Default                                                                         |                                                                                                                                                          |
+| --------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `min`     | `4`                                                                             | How many modules make a group. `strict` uses 3; `c-cpp` 5; game presets 15 (Allar's style guide, rule 2.7).                                              |
+| `words`   | `1`                                                                             | How many leading words form the prefix. With 2, `user-list-*` and `user-card-*` are two groups; `"auto"` takes the longest that keeps the group.         |
+| `ignore`  | `[]` (and `test, tests, spec, get, set, is, has, can, should` in `recommended`) | Prefixes that never group, lowercase, words joined with `-`. An entry that can never match (`render_json`) stops the configuration, with the form meant. |
+| `hint`    | `""`                                                                            | Added to the message: what a folder costs in this ecosystem.                                                                                             |
+| `hintFor` | `[]`                                                                            | Globs of file names: the hint is added only when the files of the group include one (`*.java`). Default: always.                                         |
 
 ## Where a folder is not free
 

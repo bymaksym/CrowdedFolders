@@ -13,9 +13,14 @@ export const rust: Preset = {
     detect: { files: ['Cargo.toml'] },
     config: {
         extends: ['recommended'],
-        exclude: ['target'],
+        // Anchored: cargo writes target/ next to the Cargo.toml, and a crate can have a module called target.
+        exclude: ['/target'],
         // mod.rs is the module the folder is (the older layout of foo/mod.rs for foo.rs): not one more file in it.
         naming: { folderFiles: ['mod.rs'] },
+        rules: {
+            // Off here, and strict turns it on keeping this: Cargo requires src/lib.rs or src/main.rs.
+            'single-file-folders': ['off', { allowed: ['lib.rs', 'main.rs'] }],
+        },
         overrides: [
             {
                 folders: ['**/src/bin', '**/examples', '**/benches', '**/tests', '**/tests/**'],

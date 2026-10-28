@@ -1,18 +1,17 @@
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
-import { isObject } from '../core/config/json-schema.ts';
-import { parseJsonc } from '../core/config/jsonc.ts';
 import type { ResolvedConfig } from '../core/config/types.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
-import { type Detection, detectPresets, excludesFor, isEvidence } from '../core/presets/detect.ts';
+import { type Detection, detectPresets, excludesFor } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 import { gitRootOf, locate, projectDirOf, realPath } from '../node/config-file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
+import { dependenciesOf, type Manifests, MAX_MANIFESTS } from '../node/manifests.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
 import type { Io } from './io.ts';
 
@@ -83,7 +82,9 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         let presets = args.presets;
         let exclude: string[] = [];
         if (presets.length === 0) {
-            detected = detectPresets(files, dependenciesOf(base, files), BUILT_IN_PRESETS);
+            const manifests = dependenciesOf(base, files);
+            warnIfTruncated(manifests, io);
+            detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
             presets = detected.map(detection => detection.preset);
             exclude = excludesFor(detected, files, BUILT_IN_PRESETS);
         }
@@ -185,43 +186,13 @@ export function noticeIfOutside(io: Io, session: Session, path: string): void {
     }
 }
 
-/**
- * The dependency names of the repository's package.json files, each with the manifests that declare
- * it, for detecting presets and where they apply.
- */
-export function dependenciesOf(root: string, files: readonly string[]): Map<string, string[]> {
-    const names = new Map<string, string[]>();
-    const manifests = files
-        .filter(
-            path =>
-                (path === 'package.json' || path.endsWith('/package.json')) &&
-                path.split('/').length <= 4 &&
-                isEvidence(path),
-        )
-        .toSorted((a, b) => a.split('/').length - b.split('/').length)
-        .slice(0, 50);
-    for (const manifest of manifests) {
-        try {
-            const value = parseJsonc(readFileSync(join(root, manifest), 'utf8'));
-            if (!isObject(value)) {
-                continue;
-            }
-            for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
-                const dependencies = value[field];
-                if (isObject(dependencies)) {
-                    for (const name of Object.keys(dependencies)) {
-                        const declaring = names.get(name) ?? [];
-                        if (!declaring.includes(manifest)) {
-                            names.set(name, [...declaring, manifest]);
-                        }
-                    }
-                }
-            }
-        } catch {
-            // A package.json that does not parse says nothing about presets.
-        }
+/** Says on standard error when detection did not read every package.json, so that a missing preset is not a mystery. */
+export function warnIfTruncated(manifests: Manifests, io: Io): void {
+    if (manifests.skipped > 0) {
+        io.error(
+            `crowded-folders: read the ${MAX_MANIFESTS} shallowest package.json files to detect presets and left ${manifests.skipped} unread: a preset only declared in those may be missing (pass --preset to add it).\n`,
+        );
     }
-    return names;
 }
 
 /**

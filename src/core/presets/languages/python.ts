@@ -38,14 +38,30 @@ export const python: Preset = {
 
 export const django: Preset = {
     description:
-        "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders).",
+        "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for.",
     sources: [
         { title: 'Django: applications', url: 'https://docs.djangoproject.com/en/5.2/ref/applications/' },
         { title: 'Django: migrations (squashing)', url: 'https://docs.djangoproject.com/en/5.2/topics/migrations/' },
+        {
+            title: 'Django: custom management commands (management/commands/<name>.py, run as manage.py <name>)',
+            url: 'https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/',
+        },
+        {
+            title: 'Django: custom template tags (a templatetags package in the app)',
+            url: 'https://docs.djangoproject.com/en/5.2/howto/custom-template-tags/',
+        },
     ],
     detect: { files: ['manage.py'], dependencies: [] },
     config: {
         extends: ['python'],
-        exclude: ['/static', '/media', '/staticfiles'],
+        // manage.py names the commands by their files, and Django loads template tags by library name.
+        exclude: ['/static', '/media', '/staticfiles', '**/management/commands', '**/templatetags'],
+        overrides: [
+            {
+                folders: ['**/templates/**'],
+                reason: 'ListView looks for orders/templates/orders/order_list.html by default (<app>/<model>_list.html): the name repeats the folder because Django asks for it.',
+                rules: { 'redundant-prefix': 'off' },
+            },
+        ],
     },
 };

@@ -18,10 +18,16 @@ export const terraform: Preset = {
         extends: ['recommended'],
         exclude: ['.terraform'],
         rules: {
-            'max-files': ['error', { max: 25, count: 'modules', hint: 'In Terraform a folder is a module.' }],
+            'max-files': [
+                'error',
+                { max: 25, count: 'modules', hint: 'In Terraform a folder is a module.', hintFor: ['*.tf'] },
+            ],
             'prefix-groups': [
                 'warn',
-                { hint: 'In Terraform a folder is a module: would they be a child module under modules/?' },
+                {
+                    hint: 'In Terraform a folder is a module: would they be a child module under modules/?',
+                    hintFor: ['*.tf'],
+                },
             ],
         },
     },

@@ -1,5 +1,5 @@
 import { shownName } from '../naming/modules.ts';
-import { defineRule } from './rule.ts';
+import { defineRule, HINT_FOR_SCHEMA, hintText } from './rule.ts';
 
 /** A module of more files than this is pointed out by `explain`: it may be many things counted as one. */
 const LARGE_MODULE = 10;
@@ -10,13 +10,14 @@ export interface MaxFilesOptions {
     readonly dotfiles: boolean;
     readonly filesPerModule: number;
     readonly hint: string;
+    readonly hintFor: readonly string[];
 }
 
 export const maxFiles = defineRule<MaxFilesOptions>({
     meta: {
         description: 'A folder holds at most `max` files (or modules): past that it is scrolled, not read.',
         url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/max-files.md',
-        defaultOptions: { max: 20, count: 'files', dotfiles: false, filesPerModule: 0, hint: '' },
+        defaultOptions: { max: 20, count: 'files', dotfiles: false, filesPerModule: 0, hint: '', hintFor: [] },
         options: {
             type: 'object',
             additionalProperties: false,
@@ -37,6 +38,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
                     type: 'string',
                     description: 'Added to the message: how to split in this ecosystem, or what a new folder costs.',
                 },
+                hintFor: HINT_FOR_SCHEMA,
                 dotfiles: {
                     type: 'boolean',
                     description:
@@ -73,7 +75,7 @@ export const maxFiles = defineRule<MaxFilesOptions>({
         }
         const unit = options.count === 'modules' ? 'modules' : 'files';
         report({
-            message: `${measured} ${unit}, over the limit of ${options.max}: split it into folders by what the files are about.${options.hint === '' ? '' : ` ${options.hint}`}`,
+            message: `${measured} ${unit}, over the limit of ${options.max}: split it into folders by what the files are about.${hintText(options.hint, options.hintFor, counted)}`,
             measured,
             limit: options.max,
             files: counted,

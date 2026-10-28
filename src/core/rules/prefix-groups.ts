@@ -3,13 +3,22 @@ import { isLanguageTag } from '../naming/languages.ts';
 import { keyRestatesPath, type Module, shownName } from '../naming/modules.ts';
 import { isNumericWord, splitWords } from '../naming/words.ts';
 import { joinPath } from '../paths/tree.ts';
-import { defineRule, listNames, type Move, type OptionProblem, type RuleContext } from './rule.ts';
+import {
+    defineRule,
+    HINT_FOR_SCHEMA,
+    hintText,
+    listNames,
+    type Move,
+    type OptionProblem,
+    type RuleContext,
+} from './rule.ts';
 
 export interface PrefixGroupsOptions {
     readonly min: number;
     readonly words: GroupWords;
     readonly ignore: readonly string[];
     readonly hint: string;
+    readonly hintFor: readonly string[];
 }
 
 /**
@@ -24,7 +33,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
         description:
             'At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.',
         url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/prefix-groups.md',
-        defaultOptions: { min: 4, words: 1, ignore: [], hint: '' },
+        defaultOptions: { min: 4, words: 1, ignore: [], hint: '', hintFor: [] },
         options: {
             type: 'object',
             additionalProperties: false,
@@ -45,6 +54,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
                     description:
                         'Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`.',
                 },
+                hintFor: HINT_FOR_SCHEMA,
                 hint: {
                     type: 'string',
                     description:
@@ -89,13 +99,14 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
             const moves: Move[] = modules.flatMap(module =>
                 module.files.map(file => ({ from: joinPath(folder.path, file), to: joinPath(target, file) })),
             );
-            const hint = options.hint === '' ? '' : ` ${options.hint}`;
+            const files = modules.flatMap(module => module.files);
+            const hint = hintText(options.hint, options.hintFor, files);
             report({
                 message: `${modules.length} modules start with "${key}" (${listNames(modules.map(shownName))}): they are a folder that was never made — ${target}/.${hint}`,
                 key,
                 measured: modules.length,
                 limit: options.min - 1,
-                files: modules.flatMap(module => module.files),
+                files,
                 moves,
             });
         }

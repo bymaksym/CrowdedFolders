@@ -126,7 +126,7 @@ export function explainFolder(input: EngineInput, path: string): FolderExplanati
         return undefined;
     }
     const context = new FolderContext(input.config, input.rules);
-    const { naming, rules, overrides } = context.settingsFor(entry.path);
+    const { naming, rules, overrides } = context.settingsFor(entry);
     const effective: Record<string, RuleState & { effectiveOptions: Readonly<Record<string, unknown>> }> = {};
     for (const [name, state] of Object.entries(rules)) {
         const rule = input.rules[name];
@@ -157,6 +157,7 @@ export function sortFindings(findings: readonly Finding[]): Finding[] {
 interface CompiledOverride {
     readonly state: OverrideState;
     readonly globs: readonly Glob[];
+    readonly withFiles: readonly Glob[];
     used: boolean;
 }
 
@@ -170,15 +171,28 @@ class FolderContext {
     constructor(config: ResolvedConfig, rules: Readonly<Record<string, Rule>>) {
         this.config = config;
         this.rules = rules;
-        this.overrides = config.overrides.map(state => ({ state, globs: state.folders.map(compileGlob), used: false }));
+        this.overrides = config.overrides.map(state => ({
+            state,
+            globs: state.folders.map(compileGlob),
+            withFiles: state.withFiles.map(compileGlob),
+            used: false,
+        }));
     }
 
-    settingsFor(path: string): { naming: NamingState; rules: Record<string, RuleState>; overrides: OverrideState[] } {
+    settingsFor(entry: Pick<FolderEntry, 'files' | 'path'>): {
+        naming: NamingState;
+        rules: Record<string, RuleState>;
+        overrides: OverrideState[];
+    } {
         let naming = this.config.naming;
         const rules: Record<string, RuleState> = { ...this.config.rules };
         const applied: OverrideState[] = [];
         for (const override of this.overrides) {
-            if (override.globs.every(glob => !glob.test(path))) {
+            if (
+                override.globs.every(glob => !glob.test(entry.path)) ||
+                (override.withFiles.length > 0 &&
+                    entry.files.every(file => override.withFiles.every(glob => !glob.test(file))))
+            ) {
                 continue;
             }
             override.used = true;
@@ -198,7 +212,7 @@ class FolderContext {
     }
 
     statsOf(entry: FolderEntry): FolderStat {
-        const { naming, rules } = this.settingsFor(entry.path);
+        const { naming, rules } = this.settingsFor(entry);
         const state = rules['max-files'];
         const rule = this.rules['max-files'];
         const max =
@@ -216,7 +230,7 @@ class FolderContext {
 
     /** Runs the rules on one folder; with `notes`, also collects what they chose not to report. */
     check(entry: FolderEntry, notes?: RuleNote[]): Finding[] {
-        const { naming, rules } = this.settingsFor(entry.path);
+        const { naming, rules } = this.settingsFor(entry);
         const active = Object.entries(rules).filter(([, state]) => state.severity !== 'off');
         if (active.length === 0) {
             return [];

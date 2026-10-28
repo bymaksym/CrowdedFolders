@@ -35,6 +35,7 @@ export function validateConfig(
     for (const [index, override] of (config.overrides ?? []).entries()) {
         const at = `overrides[${index}]`;
         checkGlobs(override.folders, `${at}.folders`, problems);
+        checkGlobs(override.withFiles, `${at}.withFiles`, problems);
         checkNaming(override.naming, `${at}.naming`, problems);
         checkRules(override.rules, `${at}.rules`, rules, problems);
     }

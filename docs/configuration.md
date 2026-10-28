@@ -37,6 +37,7 @@ How a configuration is written, with examples, is in [configuring.md](configurin
 | Setting | Type | What it does |
 | --- | --- | --- |
 | `folders` | string[] | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
+| `withFiles` | string[] | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
 | `reason` | string | Why these folders are different. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
 | `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
 | `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
@@ -59,6 +60,7 @@ A folder holds at most `max` files (or modules): past that it is scrolled, not r
 | `count` | `"files"` \| `"modules"` | `"files"` | "files" counts every file; "modules" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one). |
 | `filesPerModule` | integer | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
 | `hint` | string | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
+| `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
 | `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. |
 
 ### `prefix-groups`
@@ -72,6 +74,7 @@ At least `min` modules whose names start with the same word belong in a folder n
 | `min` | integer | `4` | How many modules sharing a prefix make a group. |
 | `words` | see below | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; "auto" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`). |
 | `ignore` | string[] | `[]` | Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`. |
+| `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
 | `hint` | string | `""` | Added to the message: what making a folder costs in this ecosystem ("In Go a folder is a package: …"). |
 
 ### `max-folders`
@@ -100,7 +103,9 @@ A folder that holds one file and no subfolders is a level of nesting with nothin
 
 [More about `single-file-folders`](rules/single-file-folders.md)
 
-No options.
+| Option | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `allowed` | string[] | `[]` | Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without "/" is a file name at any depth, one with "/" is a path from the root. |
 
 ### `case-collision`
 

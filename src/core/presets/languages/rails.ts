@@ -33,7 +33,10 @@ export const rails: Preset = {
                 reason: 'Rails sorts these by type on purpose, and a sub-folder is a namespace that changes every constant in it.',
                 rules: {
                     'max-files': ['error', { max: 40 }],
-                    'prefix-groups': ['warn', { hint: 'In Rails a sub-folder is a namespace (Render::Json).' }],
+                    'prefix-groups': [
+                        'warn',
+                        { hint: 'In Rails a sub-folder is a namespace (Render::Json).', hintFor: ['*.rb'] },
+                    ],
                 },
             },
         ],

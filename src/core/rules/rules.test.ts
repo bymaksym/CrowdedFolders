@@ -39,6 +39,16 @@ describe('max-files', () => {
         assert.equal(findings(files, { rules: { 'max-files': ['error', { max: 2, dotfiles: true }] } }).length, 1);
     });
 
+    it('adds the hint only when the files are of the kind it is about (hintFor)', () => {
+        const hint = { max: 2, hint: 'A folder is a package.', hintFor: ['*.{java,kt}'] };
+        const code = findings(['a/A.java', 'a/B.java', 'a/C.kt'], { rules: { 'max-files': ['error', hint] } });
+        assert.match(code[0]?.message ?? '', /A folder is a package.$/u);
+        const sql = findings(['db/V1__a.sql', 'db/V2__b.sql', 'db/V3__c.sql'], {
+            rules: { 'max-files': ['error', hint] },
+        });
+        assert.doesNotMatch(sql[0]?.message ?? '', /package/u);
+    });
+
     it('adds the hint of the preset to the message', () => {
         const [finding] = findings(many('a', 3), {
             rules: { 'max-files': ['error', { max: 2, hint: 'In Go a folder is a package.' }] },
@@ -509,5 +519,37 @@ describe('max-files: what is not counted', () => {
         assert.equal(findings(files, config(0)).length, 0);
         assert.equal(findings(files, config(5))[0]?.measured, 5);
         assert.match(notesOf(files, config(0), 'App/Extensions').join('\n'), /25 files counted as one module/u);
+    });
+});
+
+describe('single-file-folders', () => {
+    const rule = { 'single-file-folders': 'warn' } as const;
+
+    it('reports a folder with one file, unless the file is allowed there', () => {
+        const files = ['cmd/api/main.go', 'cmd/worker/job.go', 'crates/core/src/lib.rs'];
+        assert.deepEqual(
+            findings(files, { rules: rule }).map(finding => finding.folder),
+            ['cmd/api', 'cmd/worker', 'crates/core/src'],
+        );
+        const allowed = findings(files, {
+            rules: { 'single-file-folders': ['warn', { allowed: ['main.go', 'lib.rs'] }] },
+        });
+        assert.deepEqual(
+            allowed.map(finding => finding.folder),
+            ['cmd/worker'],
+        );
+    });
+
+    it('matches allowed globs against the path, so a convention can be tied to a folder (Expo Router)', () => {
+        const options = { allowed: ['**/app/**/index.*', '**/app/**/[[]*].*'] };
+        const files = [
+            'src/app/(app)/experiences/[id].tsx',
+            'src/app/about/index.tsx',
+            'src/components/card/index.tsx',
+        ];
+        assert.deepEqual(
+            findings(files, { rules: { 'single-file-folders': ['warn', options] } }).map(finding => finding.folder),
+            ['src/components/card'],
+        );
     });
 });

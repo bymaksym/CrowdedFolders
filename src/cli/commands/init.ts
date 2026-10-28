@@ -2,13 +2,14 @@ import { basename, join, relative } from 'node:path';
 
 import { SCHEMA_URL } from '../../core/config/schema.ts';
 import { runEngine } from '../../core/engine.ts';
-import { type Detection, detectPresets, excludesFor } from '../../core/presets/detect.ts';
+import { type Detection, detectPresets, excludesFor, godotAddons } from '../../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { CONFIG_NAMES, findConfig } from '../../node/config-file.ts';
 import { loadConfig } from '../../node/load-config.ts';
+import { dependenciesOf } from '../../node/manifests.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, writeFileAtomic } from '../io.ts';
-import { dependenciesOf, type Session } from '../session.ts';
+import { type Session, warnIfTruncated } from '../session.ts';
 
 /**
  * Writes `crowded-folders.config.json` at the root with the presets that fit the repository, then
@@ -24,14 +25,25 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         existing !== undefined && existing.path.endsWith('.json') && basename(existing.path) !== 'package.json';
     const path = isReuse ? existing.path : join(session.base, CONFIG_NAMES[0]);
 
-    const detections: Detection[] =
-        args.presets.length > 0
-            ? args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }))
-            : detectPresets(session.files, dependenciesOf(session.base, session.files), BUILT_IN_PRESETS);
+    let detections: Detection[];
+    if (args.presets.length > 0) {
+        detections = args.presets.map(preset => ({ preset, evidence: 'given with --preset', folders: ['.'] }));
+    } else {
+        const manifests = dependenciesOf(session.base, session.files);
+        warnIfTruncated(manifests, io);
+        detections = detectPresets(session.files, manifests.names, BUILT_IN_PRESETS);
+    }
     const presets = [...new Set(detections.map(detection => detection.preset))];
     // A preset found in a sub-folder (a Flutter app in app/) gets its root-anchored excludes from there,
     // written down so that they can be read and changed.
-    const exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    let exclude = excludesFor(detections, session.files, BUILT_IN_PRESETS);
+    // Godot's addons/ is left out by the preset, and a plugin of your own lives there too: one line each.
+    const addons = godotAddons(detections, session.files);
+    for (const { folder, names } of addons) {
+        const base = folder === '.' ? '' : `${folder}/`;
+        exclude = exclude.filter(pattern => pattern !== `${base}addons`);
+        exclude.push(...(folder === '.' ? ['!/addons'] : []), ...names.map(name => `${base}addons/${name}`));
+    }
     const config = { $schema: SCHEMA_URL, extends: presets, ...(exclude.length > 0 && { exclude }) };
     writeFileAtomic(path, `${JSON.stringify(config, undefined, 4)}\n`);
 
@@ -44,6 +56,11 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
         const preset = BUILT_IN_PRESETS[detection.preset];
         lines.push(
             `  ${detection.preset.padEnd(14)} ${detection.evidence}${preset ? ` — ${firstSentence(preset.description)}` : ''}`,
+        );
+    }
+    for (const { folder, names } of addons) {
+        lines.push(
+            `  addons of ${folder === '.' ? 'the project' : folder}: ${names.join(', ')} — left out one by one in "exclude"; delete the line of a plugin of your own to check it`,
         );
     }
     lines.push('');

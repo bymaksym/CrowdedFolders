@@ -1,7 +1,9 @@
 import type { Preset } from '../config/types.ts';
+import { bazel } from './content/bazel.ts';
 import { dataScience } from './content/data-science.ts';
 import { docs } from './content/docs.ts';
 import { latex } from './content/latex.ts';
+import { protobuf } from './content/protobuf.ts';
 import { terraform } from './content/terraform.ts';
 import { godot } from './games/godot.ts';
 import { unity } from './games/unity.ts';
@@ -9,6 +11,7 @@ import { unreal } from './games/unreal.ts';
 import { recommended, strict } from './general.ts';
 import { cpp } from './languages/c-cpp.ts';
 import { dotnet } from './languages/dotnet.ts';
+import { elixir } from './languages/elixir.ts';
 import { flutter } from './languages/flutter.ts';
 import { go } from './languages/go.ts';
 import { android, java } from './languages/jvm.ts';
@@ -16,6 +19,7 @@ import { php } from './languages/php.ts';
 import { django, python } from './languages/python.ts';
 import { rails } from './languages/rails.ts';
 import { rust } from './languages/rust.ts';
+import { scala } from './languages/scala.ts';
 import { swift } from './languages/swift.ts';
 import { angular } from './web/angular.ts';
 import { nestjs } from './web/nestjs.ts';
@@ -52,6 +56,8 @@ export const BUILT_IN_PRESETS: Readonly<Record<string, Preset>> = {
     flutter,
     rails,
     php,
+    elixir,
+    scala,
     'c-cpp': cpp,
     // Games
     unity,
@@ -59,6 +65,8 @@ export const BUILT_IN_PRESETS: Readonly<Record<string, Preset>> = {
     godot,
     // Infrastructure, documents and data
     terraform,
+    bazel,
+    protobuf,
     docs,
     'data-science': dataScience,
     latex,

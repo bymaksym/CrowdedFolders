@@ -54,8 +54,8 @@ Names are read in every convention — `user-service`, `user_service`, `userServ
 `HTTPServer` — so `UserService.java`, `user_service.py` and `user-service.ts` all start with `user`.
 How, and why each choice: [docs/how-it-works.md](docs/how-it-works.md).
 
-The limits are not guesses: 20 modules is the median 95th percentile of folder sizes measured over 30
-real repositories of every ecosystem ([docs/field-trial.md](docs/field-trial.md)). It flags about the
+The limits are not guesses: 20 modules is about the median 95th percentile of folder sizes (19) measured
+over 36 real repositories of every ecosystem ([docs/field-trial.md](docs/field-trial.md)). It flags about the
 biggest folder in twenty, and nothing at all in small, tidy projects.
 
 ## Presets: the standard of each ecosystem
@@ -65,13 +65,13 @@ Conventions differ, and the tool must not fight them. Vue's style guide _asks_ f
 sub-folders, so `activity_*` and `ic_*` are the only grouping there is; in Go a new folder is a new
 package. Each preset follows its ecosystem's own guide, and says which:
 
-| Field                           | Presets                                                                                                                 |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| General                         | `recommended`, `strict`                                                                                                 |
-| Web                             | `angular`, `react`, `nextjs`, `react-native`, `vue`, `nuxt`, `svelte`, `nestjs`                                         |
-| Languages                       | `python`, `django`, `go`, `rust`, `java` (and Kotlin), `android`, `dotnet`, `swift`, `flutter`, `rails`, `php`, `c-cpp` |
-| Games                           | `unity`, `unreal`, `godot`                                                                                              |
-| Infrastructure, documents, data | `terraform`, `docs`, `data-science`, `latex`                                                                            |
+| Field                           | Presets                                                                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| General                         | `recommended`, `strict`                                                                                                                                                   |
+| Web                             | `angular`, `react`, `nextjs`, `react-native`, `vue`, `nuxt`, `svelte`, `nestjs`                                                                                           |
+| Languages                       | `python`, `django`, `go`, `rust`, `java` (and Kotlin), `android`, `dotnet`, `swift`, `flutter`, `rails`, `php`, `elixir` (Phoenix), `scala`, `c-cpp`, `protobuf`, `bazel` |
+| Games                           | `unity`, `unreal`, `godot`                                                                                                                                                |
+| Infrastructure, documents, data | `terraform`, `docs`, `data-science`, `latex`                                                                                                                              |
 
 `crowded-folders init` detects them; every preset, what it changes and its sources are in
 [docs/presets.md](docs/presets.md). Plugins add more (`namespace/preset`), and a team can publish its
@@ -171,7 +171,7 @@ The API, its types and what is stable: [docs/api.md](docs/api.md).
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
 | [how-it-works.md](docs/how-it-works.md)   | How names are read, and why.                                       |
-| [field-trial.md](docs/field-trial.md)     | The 30 repositories the limits were measured on.                   |
+| [field-trial.md](docs/field-trial.md)     | The 36 repositories the limits were measured on.                   |
 | [decisions.md](docs/decisions.md)         | Why it is built the way it is, and what was discarded.             |
 
 ## Community
