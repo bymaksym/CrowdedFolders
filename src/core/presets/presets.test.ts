@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { mergeLayer } from '../config/merge.ts';
 import { type Config, EMPTY_CONFIG, type ResolvedConfig } from '../config/types.ts';
 import { validateConfig } from '../config/validate.ts';
-import { type Finding, runEngine } from '../engine.ts';
+import { explainFolder, type Finding, runEngine } from '../engine.ts';
 import { BUILT_IN_RULES } from '../rules/index.ts';
 import { detectPresets, excludesFor } from './detect.ts';
 import { BUILT_IN_PRESETS } from './index.ts';
@@ -22,6 +22,16 @@ function resolvePreset(name: string, applied = new Set<string>(), base: Resolved
         config = resolvePreset(parent, applied, config);
     }
     return mergeLayer(config, preset.config, name, false);
+}
+
+/** Several presets applied in the order of `extends`, each once, as the loader does. */
+function checkAll(presets: readonly string[], files: readonly string[]): Finding[] {
+    const applied = new Set<string>();
+    let config: ResolvedConfig = EMPTY_CONFIG;
+    for (const name of presets) {
+        config = resolvePreset(name, applied, config);
+    }
+    return [...runEngine({ files, config, rules: BUILT_IN_RULES }).findings];
 }
 
 function check(preset: string, files: readonly string[]): Finding[] {
@@ -402,6 +412,200 @@ describe('recommended, after the review of 21-10-2026', () => {
         );
         const code = ['button-a', 'button-b', 'button-c', 'button-d', 'x'].map(name => `packages/ui/src/${name}.tsx`);
         assert.equal(check('recommended', code).length, 1);
+    });
+});
+
+describe('languages, after the review of 21-10-2026', () => {
+    it('java and dotnet read the test doubles and base classes as being about their subject', () => {
+        const repositories = ['Repository', 'Service', 'Store', 'Cache'].map(name => `FakeUser${name}.java`);
+        const found = check('java', inFolder('src/test/java/com/acme', [...repositories, 'App.java']));
+        assert.deepEqual(
+            found.map(finding => finding.key),
+            ['user'],
+        );
+        assert.deepEqual(
+            check('recommended', inFolder('src/test/java/com/acme', [...repositories, 'App.java'])).map(
+                finding => finding.key,
+            ),
+            ['fake'],
+        );
+        const bases = ['AbstractHandler', 'DefaultHandler', 'SimpleHandler', 'BaseHandler', 'Main'].map(
+            name => `${name}.java`,
+        );
+        assert.deepEqual(
+            check('java', inFolder('src/main/java/com/acme/core', bases)).map(finding => finding.key),
+            ['handler'],
+        );
+        const doubles = ['Mock', 'Stub', 'Spy', 'Dummy'].map(prefix => `${prefix}Clock.cs`);
+        assert.deepEqual(
+            check('dotnet', inFolder('Tests', [...doubles, 'Program.cs'])).map(finding => finding.key),
+            ['clock'],
+        );
+    });
+
+    it('swift reads FakeAuthService as being about auth', () => {
+        const names = ['Fake', 'Mock', 'Stub', 'Spy'].map(prefix => `${prefix}AuthService.swift`);
+        assert.deepEqual(
+            check('swift', inFolder('Tests/Doubles', [...names, 'Main.swift'])).map(finding => finding.key),
+            ['auth'],
+        );
+    });
+
+    it('java checks a package called build (com/acme/build), and leaves out what the build writes', () => {
+        const classes = (folder: string): string[] => series(folder, 25, index => `Task${pad(index)}.kt`);
+        const files = [
+            ...classes('src/main/kotlin/com/acme/build'),
+            ...classes('build/classes'),
+            ...classes('target/classes'),
+        ];
+        assert.deepEqual(
+            check('java', files).map(finding => finding.folder),
+            ['src/main/kotlin/com/acme/build'],
+        );
+    });
+
+    it('java leaves out META-INF, where strict would ask to flatten META-INF/spring', () => {
+        const files = [
+            'src/main/resources/META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports',
+            'src/main/resources/META-INF/services/org.acme.Plugin',
+        ];
+        assert.deepEqual(checkAll(['strict', 'java'], files), []);
+    });
+
+    it('java puts its hint on code, not on SQL (laboral-time-server)', () => {
+        const sql = inFolder(
+            'src/main/resources/queries',
+            Array.from({ length: 25 }, (_, index) => `query${pad(index)}.sql`),
+        );
+        const code = series('src/main/java/com/acme', 25, index => `Thing${pad(index)}.java`);
+        const [onSql] = check('java', sql);
+        const [onCode] = check('java', code);
+        assert.doesNotMatch(onSql?.message ?? '', /package/u);
+        assert.match(onCode?.message ?? '', /A folder is a package/u);
+    });
+
+    it('android ignores the platform in build-logic (nowinandroid) and leaves out composeResources', () => {
+        const plugins = [
+            'AndroidApplicationConventionPlugin',
+            'AndroidLibraryConventionPlugin',
+            'AndroidFeatureConventionPlugin',
+            'AndroidRoomConventionPlugin',
+            'AndroidHiltConventionPlugin',
+        ].map(name => `${name}.kt`);
+        const files = inFolder('build-logic/convention/src/main/kotlin', [...plugins, 'Utils.kt']);
+        assert.deepEqual(check('android', files), []);
+        assert.equal(check('recommended', files).length, 1);
+        const drawables = series(
+            'composeApp/src/commonMain/composeResources/drawable',
+            40,
+            index => `ic_${pad(index)}.xml`,
+        );
+        assert.deepEqual(check('android', drawables), []);
+    });
+
+    it('android reads Platform.kt, Platform.android.kt and Platform.ios.kt as one module', () => {
+        const files = inFolder('shared/src', [
+            'Platform.kt',
+            'Platform.android.kt',
+            'Platform.ios.kt',
+            'Platform.jvm.kt',
+        ]);
+        const view = explainFolder({ files, config: resolvePreset('android'), rules: BUILT_IN_RULES }, 'shared/src');
+        assert.equal(view?.folder.modules.length, 1);
+    });
+
+    it('swift leaves out vendored frameworks and DocC resources (GoogleMobileAds.xcframework)', () => {
+        const headers = series(
+            'Frameworks/GoogleMobileAds.xcframework/ios-arm64/Headers',
+            40,
+            index => `GAD${pad(index)}.h`,
+        );
+        const docc = series('Sources/Kit/Kit.docc/Resources', 40, index => `step${pad(index)}.json`);
+        const bundle = series('Resources/Fonts.bundle', 40, index => `font${pad(index)}.json`);
+        assert.deepEqual(check('swift', [...headers, ...docc, ...bundle]), []);
+    });
+
+    it('flutter leaves out the .arb files in any folder and the generated suffixes', () => {
+        const arb = series('lib/src/localization', 25, index => `app_${pad(index)}.arb`);
+        const generated = [
+            'app_router.gr.dart',
+            'user_test.mocks.dart',
+            'injection.config.dart',
+            'assets.gen.dart',
+            'user.pb.dart',
+            'user.pbenum.dart',
+            'user.pbgrpc.dart',
+            'api.chopper.dart',
+        ].flatMap(name => series('lib/gen', 4, index => `${pad(index)}${name}`));
+        assert.deepEqual(check('flutter', [...arb, ...generated]), []);
+    });
+
+    it('go checks cmd/migrate, leaves out the generators output, and lets strict keep cmd/api/main.go', () => {
+        const generated = [
+            ...series('internal/store', 40, index => `mock_store${pad(index)}.go`),
+            ...series('internal/store', 40, index => `query${pad(index)}.sql.go`),
+            ...series('internal/web', 40, index => `view${pad(index)}_templ.go`),
+            'cmd/api/wire_gen.go',
+            ...series('api', 40, index => `svc${pad(index)}.pb.gw.go`),
+        ];
+        assert.deepEqual(check('go', generated), []);
+        const migrate = series('cmd/migrate', 35, index => `step${pad(index)}.go`);
+        assert.deepEqual(
+            check('go', migrate).map(finding => finding.folder),
+            ['cmd/migrate'],
+        );
+        const commands = ['cmd/api/main.go', 'cmd/worker/job.go'];
+        assert.deepEqual(
+            checkAll(['go', 'strict'], commands).map(finding => finding.folder),
+            ['cmd/worker'],
+        );
+    });
+
+    it('rust lets strict keep crates/core/src/lib.rs, which Cargo requires', () => {
+        const files = ['crates/core/src/lib.rs', 'crates/cli/src/main.rs', 'crates/cli/src/util/mod.rs'];
+        assert.deepEqual(
+            checkAll(['rust', 'strict'], files).map(finding => finding.folder),
+            ['crates/cli/src/util'],
+        );
+    });
+
+    it('django keeps management/commands and templatetags flat, and templates named after the app', () => {
+        const files = [
+            ...series('zerver/management/commands', 40, index => `import_${pad(index)}.py`),
+            ...series('orders/templatetags', 40, index => `tags_${pad(index)}.py`),
+            'orders/templates/orders/order_list.html',
+            'orders/templates/orders/order_detail.html',
+            'orders/templates/orders/order_form.html',
+        ];
+        assert.deepEqual(checkAll(['strict', 'django'], files), []);
+        assert.equal(
+            checkAll(
+                ['strict', 'python'],
+                ['orders/templates/orders/order_list.html', 'orders/templates/orders/order_detail.html'],
+            ).length,
+            1,
+        );
+    });
+
+    it('c-cpp, php and terraform put their hint only on their own files', () => {
+        const message = (preset: string, extension: string): string => {
+            const names = ['net_a', 'net_b', 'net_c', 'net_d', 'net_e', 'net_f', 'other'];
+            return (
+                check(
+                    preset,
+                    inFolder(
+                        'x',
+                        names.map(name => `${name}.${extension}`),
+                    ),
+                )[0]?.message ?? ''
+            );
+        };
+        assert.match(message('c-cpp', 'c'), /subsystem/u);
+        assert.doesNotMatch(message('c-cpp', 'txt'), /subsystem/u);
+        assert.match(message('php', 'php'), /PSR-4/u);
+        assert.doesNotMatch(message('php', 'txt'), /PSR-4/u);
+        assert.match(message('terraform', 'tf'), /child module/u);
+        assert.doesNotMatch(message('terraform', 'txt'), /child module/u);
     });
 });
 

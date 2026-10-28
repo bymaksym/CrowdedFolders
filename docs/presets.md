@@ -200,29 +200,33 @@ Sources:
 
 ## django
 
-Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders).
+Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for.
 
 - **Extends:** [python](#python)
-- **Left out:** `/static`, `/media`, `/staticfiles`
+- **Left out:** `/static`, `/media`, `/staticfiles`, `**/management/commands`, `**/templatetags`
+- **In `**/templates/**`:** `redundant-prefix` `off`. ListView looks for orders/templates/orders/order_list.html by default (<app>/<model>_list.html): the name repeats the folder because Django asks for it.
 
 Sources:
 
 - [Django: applications](https://docs.djangoproject.com/en/5.2/ref/applications/)
 - [Django: migrations (squashing)](https://docs.djangoproject.com/en/5.2/topics/migrations/)
+- [Django: custom management commands (management/commands/<name>.py, run as manage.py <name>)](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/)
+- [Django: custom template tags (a templatetags package in the app)](https://docs.djangoproject.com/en/5.2/howto/custom-template-tags/)
 
 ## go
 
 Go puts a package in a folder, and a new folder is a new package with its own API — so the limits are looser and the advice is about packages. Reads foo_test.go, foo_linux.go and foo_linux_amd64_test.go as foo. Go's own guidance: "There is no 'one type, one file' convention"; net/http has 17 files and the go command 34.
 
 - **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"max":30,"count":"modules","hint":"In Go a folder is a package: split off a part that has its own API, not just to shorten the list."}`
-- **`prefix-groups`:** `warn` `{"hint":"In Go a folder is a package: would they make sense as their own package?"}`
+- **`max-files`:** `error` `{"max":30,"count":"modules","hint":"In Go a folder is a package: split off a part that has its own API, not just to shorten the list.","hintFor":["*.go"]}`
+- **`prefix-groups`:** `warn` `{"hint":"In Go a folder is a package: would they make sense as their own package?","hintFor":["*.go"]}`
+- **`single-file-folders`:** `off` `{"allowed":["main.go"]}`
 - **Companions:** `_test$`, `_(aix|android|darwin|dragonfly|freebsd|hurd|illumos|ios|js|linux|nacl|netbsd|openbsd|plan9|solaris|wasip1|windows|zos|unix)$`, `_(386|amd64|arm|arm64|loong64|mips|mipsle|mips64|mips64le|ppc64|ppc64le|riscv64|s390x|sparc64|wasm)$`
-- **Left out:** `testdata`, `*.pb.go`, `*_string.go`, `zz_generated.*`
+- **Left out:** `testdata`, `*.pb.go`, `*_string.go`, `zz_generated.*`, `mock_*.go`, `wire_gen.go`, `*_templ.go`, `*.sql.go`, `*.pb.gw.go`
 
 Sources:
 
-- [Go: organizing a Go module](https://go.dev/doc/modules/layout)
+- [Go: organizing a Go module: multiple programs in the same repository will typically have separate directories (prog1/main.go)](https://go.dev/doc/modules/layout)
 - [Google Go style: package size](https://google.github.io/styleguide/go/best-practices)
 - [The Go blog: organizing Go code](https://go.dev/blog/organizing-go-code)
 - [go build: _test.go, testdata and build constraints in file names](https://pkg.go.dev/cmd/go)
@@ -232,7 +236,8 @@ Sources:
 Recommended for Rust: render_json.rs and render_pr.rs become render.rs and render/json.rs, the module layout the Rust reference prefers. Cargo builds one target per file in src/bin, examples, benches and tests, so those stay flat.
 
 - **Extends:** [recommended](#recommended)
-- **Left out:** `target`
+- **`single-file-folders`:** `off` `{"allowed":["lib.rs","main.rs"]}`
+- **Left out:** `/target`
 - **In `**/src/bin`, `**/examples`, `**/benches`, `**/tests`, `**/tests/**`:** `max-files` `off`, `prefix-groups` `off`. Cargo makes every file there its own target (binary, example, benchmark, integration test), and UI-test suites keep one case per file.
 
 Sources:
@@ -314,13 +319,16 @@ Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the gene
 
 - **Extends:** [recommended](#recommended)
 - **Companions:** `_test$`
-- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`
+- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `*.mocks.dart`, `*.config.dart`, `*.gen.dart`, `*.pb*.dart`, `*.chopper.dart`, `*.arb`
 - **In `lib/data/**`:** `max-files` `error` `{"max":30}`, `prefix-groups` `warn`. The Flutter architecture guide organises the data layer by type: "The data folder organizes code by type".
 
 Sources:
 
 - [Effective Dart: style (file names)](https://dart.dev/effective-dart/style)
 - [Flutter: app architecture case study (ui by feature, data by type)](https://docs.flutter.dev/app-architecture/case-study)
+- [mockito: "we import the generated library as cat_test.mocks.dart"](https://pub.dev/packages/mockito)
+- [injectable: the generated file is file_name.config.dart](https://pub.dev/packages/injectable)
+- [Flutter: internationalization, one .arb file per language](https://docs.flutter.dev/ui/accessibility-and-localization/internationalization)
 - [json_serializable: generated code goes in a part file, part 'example.g.dart'](https://pub.dev/packages/json_serializable)
 
 ## rails
@@ -331,7 +339,7 @@ Ruby on Rails organises app/ by type by design, and every sub-folder is a Zeitwe
 - **`max-files`:** `error` `{"max":20,"count":"modules"}`
 - **Companions:** `_(test|spec)$`
 - **Left out:** `/tmp`, `/log`, `/storage`, `/public`, `app/assets/builds`, `db/schema.rb`
-- **In `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}`, `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}/**`, `app/views/**`, `spec/**`, `test/**`:** `max-files` `error` `{"max":40}`, `prefix-groups` `warn` `{"hint":"In Rails a sub-folder is a namespace (Render::Json)."}`. Rails sorts these by type on purpose, and a sub-folder is a namespace that changes every constant in it.
+- **In `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}`, `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}/**`, `app/views/**`, `spec/**`, `test/**`:** `max-files` `error` `{"max":40}`, `prefix-groups` `warn` `{"hint":"In Rails a sub-folder is a namespace (Render::Json).","hintFor":["*.rb"]}`. Rails sorts these by type on purpose, and a sub-folder is a namespace that changes every constant in it.
 
 Sources:
 
@@ -343,8 +351,8 @@ Sources:
 PHP with Composer (Laravel, Symfony): a folder is a PSR-4 namespace and there is one class per file, hence 20. Laravel sorts app/Models and app/Http/Controllers by type, so they get more room. UserTest is User.
 
 - **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a PSR-4 namespace."}`
-- **`prefix-groups`:** `error` `{"hint":"A folder is a PSR-4 namespace."}`
+- **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a PSR-4 namespace.","hintFor":["*.php"]}`
+- **`prefix-groups`:** `error` `{"hint":"A folder is a PSR-4 namespace.","hintFor":["*.php"]}`
 - **Companions:** `Test$`
 - **Left out:** `storage`, `bootstrap/cache`, `public/build`
 - **In `app/Models`, `app/Http/Controllers`:** `max-files` `error` `{"max":40}`. Laravel sorts these by type by default.
@@ -360,7 +368,7 @@ C and C++: foo.h, foo.cc and foo_test.cc are one module. Without namespaces in C
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules"}`
-- **`prefix-groups`:** `warn` `{"min":5,"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory."}`
+- **`prefix-groups`:** `warn` `{"min":5,"hintFor":["*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}"],"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory."}`
 - **Companions:** `[-_]inl$`, `_(test|unittest|tests)$`, `^test_`
 - **Left out:** `cmake-build-*`, `/out`, `extern`, `/deps`, `*.pb.h`, `*.pb.cc`, `moc_*`, `ui_*`, `qrc_*`, `.vs`
 
@@ -418,8 +426,8 @@ Sources:
 Terraform: a folder is a module, and HashiCorp's style guide grows a configuration with more flat files (network.tf, storage.tf) before making one. Looser limits, and groups are warnings that ask whether they are a child module.
 
 - **Extends:** [recommended](#recommended)
-- **`max-files`:** `error` `{"max":25,"count":"modules","hint":"In Terraform a folder is a module."}`
-- **`prefix-groups`:** `warn` `{"hint":"In Terraform a folder is a module: would they be a child module under modules/?"}`
+- **`max-files`:** `error` `{"max":25,"count":"modules","hint":"In Terraform a folder is a module.","hintFor":["*.tf"]}`
+- **`prefix-groups`:** `warn` `{"hint":"In Terraform a folder is a module: would they be a child module under modules/?","hintFor":["*.tf"]}`
 - **Left out:** `.terraform`
 
 Sources:

@@ -13,8 +13,11 @@ export const php: Preset = {
         exclude: ['storage', 'bootstrap/cache', 'public/build'],
         naming: { companions: ['Test$'] },
         rules: {
-            'max-files': ['error', { max: 20, count: 'modules', hint: 'A folder is a PSR-4 namespace.' }],
-            'prefix-groups': ['error', { hint: 'A folder is a PSR-4 namespace.' }],
+            'max-files': [
+                'error',
+                { max: 20, count: 'modules', hint: 'A folder is a PSR-4 namespace.', hintFor: ['*.php'] },
+            ],
+            'prefix-groups': ['error', { hint: 'A folder is a PSR-4 namespace.', hintFor: ['*.php'] }],
         },
         overrides: [
             {
