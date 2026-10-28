@@ -264,3 +264,100 @@ function isCloseTo(a: string, b: string): boolean {
     }
     return edits + (a.length - index) + (b.length - index_) <= 1;
 }
+
+/** The keywords `validate` reads, and the ones that only describe (titles, defaults, examples). */
+const SUPPORTED_KEYWORDS: ReadonlySet<string> = new Set([
+    '$schema',
+    '$id',
+    'title',
+    'description',
+    'markdownDescription',
+    'type',
+    'enum',
+    'const',
+    'properties',
+    'required',
+    'additionalProperties',
+    'propertyNames',
+    'items',
+    'additionalItems',
+    'minItems',
+    'maxItems',
+    'uniqueItems',
+    'minimum',
+    'maximum',
+    'minLength',
+    'pattern',
+    'anyOf',
+    'default',
+    'examples',
+    'definitions',
+]);
+
+const TYPES: ReadonlySet<string> = new Set(['array', 'boolean', 'integer', 'null', 'number', 'object', 'string']);
+
+/**
+ * What in a schema `validate` would not check: a keyword it does not read (`oneOf`,
+ * `exclusiveMinimum`, `$ref`), a type it does not know, a pattern that does not compile. A keyword
+ * it skipped would let any value through without a word, so a rule's schema is checked with this
+ * when its plugin loads. An empty list means every keyword in it is enforced.
+ */
+export function schemaProblems(schema: unknown, at = 'options'): string[] {
+    const problems: string[] = [];
+    collectSchemaProblems(schema, at, problems);
+    return problems;
+}
+
+function collectSchemaProblems(schema: unknown, at: string, problems: string[]): void {
+    if (!isObject(schema)) {
+        problems.push(`${at} must be a schema object, not ${typeOf(schema)}`);
+        return;
+    }
+    for (const key of Object.keys(schema)) {
+        if (!SUPPORTED_KEYWORDS.has(key)) {
+            problems.push(
+                `${at} uses "${key}", which crowded-folders does not check: any value would pass. Use only ${[...SUPPORTED_KEYWORDS].join(', ')}`,
+            );
+        }
+    }
+    const types: unknown[] = Array.isArray(schema['type']) ? schema['type'] : [schema['type']];
+    for (const type of types) {
+        if (type !== undefined && (typeof type !== 'string' || !TYPES.has(type))) {
+            problems.push(`${at}.type: ${JSON.stringify(type)} is not a JSON Schema type`);
+        }
+    }
+    const pattern = schema['pattern'];
+    if (pattern !== undefined && typeof pattern !== 'string') {
+        problems.push(`${at}.pattern must be a string`);
+    } else if (pattern !== undefined) {
+        try {
+            new RegExp(pattern, 'u');
+        } catch (error) {
+            problems.push(`${at}.pattern does not compile: ${(error as Error).message}`);
+        }
+    }
+    for (const key of ['properties', 'definitions'] as const) {
+        const children = schema[key];
+        if (isObject(children)) {
+            for (const [name, child] of Object.entries(children)) {
+                collectSchemaProblems(child, `${at}.${key}.${name}`, problems);
+            }
+        }
+    }
+    for (const key of ['additionalProperties', 'propertyNames', 'items'] as const) {
+        const child = schema[key];
+        if (Array.isArray(child)) {
+            for (const [index, item] of child.entries()) {
+                collectSchemaProblems(item, `${at}.${key}[${index}]`, problems);
+            }
+        } else if (child !== undefined && typeof child !== 'boolean') {
+            collectSchemaProblems(child, `${at}.${key}`, problems);
+        }
+    }
+    const anyOf = schema['anyOf'];
+    if (Array.isArray(anyOf)) {
+        for (const [index, item] of anyOf.entries()) {
+            collectSchemaProblems(item, `${at}.anyOf[${index}]`, problems);
+        }
+    }
+}

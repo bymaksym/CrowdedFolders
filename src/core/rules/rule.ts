@@ -6,12 +6,42 @@ import type { FolderEntry } from '../paths/tree.ts';
 export type Severity = 'error' | 'off' | 'warn';
 
 /**
- * A rule looks at one folder at a time and reports what it finds. Built-in rules and plugin rules
- * have exactly this shape; nothing about the built-in ones is special.
+ * A rule looks at the folders and reports what it finds. Built-in rules and plugin rules have
+ * exactly this shape; nothing about the built-in ones is special.
+ *
+ * It has one of two forms. `check` looks at one folder at a time, and is all most rules need.
+ * `create`, as in ESLint, is called once per run and returns what to do with each folder and at the
+ * end: a rule about the tree (how deep it goes, `render.ts` next to `render/`) keeps what it saw in
+ * the closure and reports from `done`. Either form must be synchronous and pure: what it reports
+ * depends on the folders it is given, nothing else, and it keeps nothing from one run to the next.
  */
 export interface Rule<Options extends object = object> {
     readonly meta: RuleMeta<Options>;
-    check(folder: FolderView, context: RuleContext<Options>): void;
+    /** Called once for each folder. */
+    check?(folder: FolderView, context: RuleContext<Options>): void;
+    /** Called once per run, before the first folder; what it returns is called for each folder, then `done`. */
+    create?(context: TreeContext): RuleVisitor<Options>;
+}
+
+/** What `create` returns: called for each folder (as `check` would be), then once at the end. */
+export interface RuleVisitor<Options extends object = object> {
+    folder?(folder: FolderView, context: RuleContext<Options>): void;
+    /** After the last folder. What it reports names its folder. */
+    done?(): void;
+}
+
+/** What `create` receives: a `report` that says which folder each problem is about. */
+export interface TreeContext {
+    /**
+     * Reports a problem in any folder the run looked at (`folder`, relative to the root). It takes the
+     * severity the rule has in that folder, and nothing when the rule is off there.
+     */
+    readonly report: (problem: TreeProblem) => void;
+}
+
+/** A problem reported from `done`: the folder it is about, and the rest as `report` takes it. */
+export interface TreeProblem extends Problem {
+    readonly folder: string;
 }
 
 export interface RuleMeta<Options extends object> {
