@@ -155,6 +155,29 @@ know.
 - `crowded-folders explain <folder>` prints, for every file, the stem, the words and the group the tool
   read. It is the quickest way to see whether a setting does what you meant.
 
+The rest of `naming` says where `--moves` may put a file, and the presets set it per language
+([prefix-groups.md](rules/prefix-groups.md#moves)):
+
+```jsonc
+{
+    "naming": {
+        // Folders as our packages are written: user_role/, not user-role/.
+        "folderCase": "snake",
+        // Never a folder no import can name.
+        "reservedWords": ["async", "import"],
+        // A tool reads these by name and place.
+        "keepInPlace": ["config/settings-*.toml"],
+        // Our integration tests copy the package tree: one problem for both, and both move.
+        "mirrors": ["src/** => it/**"],
+    },
+}
+```
+
+- **mirrors** are `"source => mirror"`, where `**` stands for the part both trees share, at the start,
+  the end or both: `"**/src/main/java/** => **/src/test/java/**"`, `"** => **/__tests__"`.
+- **routes** (`true` under Expo Router's and Next.js's `app/`) moves a group into a route group,
+  `(sign)/`, keeping its names; **groupFileStays** (Rust) leaves `render.rs` beside `render/`.
+
 ## Configuration in JavaScript
 
 ```js

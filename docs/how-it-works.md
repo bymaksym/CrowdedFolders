@@ -138,6 +138,18 @@ file are never among the files. The exit code is `1` for any error or stale supp
 warnings than `--max-warnings`; `2` for a configuration or command-line problem, which never looks like a
 clean run. The text summary is written from the same decision, so its mark always matches the code.
 
+## 9. Moves
+
+`prefix-groups` and `redundant-prefix` say where their files could go (`moves`), read from the folder's
+naming: the folder written as the language writes packages (`naming.folderCase`), never a keyword
+(`naming.reservedWords`), a route group where the path is the address (`naming.routes`), nothing a
+tool reads by name and place (`naming.keepInPlace`), and never onto a path that exists, compared
+without case. A tree that mirrors another (`naming.mirrors`: `src/test/java` of `src/main/java`,
+`__tests__`) is folded into it after the rules run: the problem both have is reported once, in the
+source, and its moves take the mirror's files of the same modules along; a run over some folders reads
+their mirrors too, so it folds the same way. With `--moves`, the command — not the core — searches
+the tracked files for the paths a group moves, to say which would break.
+
 ## What it never does
 
 - **Read file contents.** Only paths. It cannot leak what is in a file, and it is fast.

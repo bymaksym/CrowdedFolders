@@ -72,6 +72,11 @@ this folder. Lists accumulate and `"!x"` removes, as everywhere.
 | `files`             | File names in the folder the problem is about; the first is where annotations and SARIF point.                             |
 | `moves`             | `{ from, to }` paths relative to the root, printed by `--moves`. Never applied.                                            |
 
+A rule that proposes moves can ask `existing(path)` (in the second argument, next to `report`) for
+the file or folder at a path as the tree writes it, compared without case: a move must not land on
+`Text.ts` with `text.ts`, which Windows and macOS take for the same file. `folder.naming` also
+carries what decides a destination: `folderCase`, `reservedWords`, `keepInPlace`, `routes`.
+
 Helpers exported for rules: `splitWords`, `stemOf`, `groupKeyOf`, `modulesOf`.
 
 **A rule must be pure:** no file reads, no network, no state between calls. It sees paths only, the
