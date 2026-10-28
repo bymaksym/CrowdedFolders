@@ -13,6 +13,10 @@ npx crowded-folders init     # write a configuration with the presets that fit i
 Installed in a project (`npm install --save-dev crowded-folders`), the command is
 `crowded-folders`, as in the rest of this page.
 
+No Node? Each release has [a single-file binary](docs/distribution.md#binaries-no-node-needed) for Linux, macOS
+and Windows (x64 and arm64 where it exists), and [Docker](docs/distribution.md#docker) is the official Node image
+plus git.
+
 No configuration needed to start, no runtime dependencies, any language: TypeScript, Python, Go,
 Rust, Java, C#, Swift, C++, Unity, Unreal, Terraform, documentation sites, notebooks… Node
 `^20.19 || ^22.13 || >=24` — ESLint 10's range, and the one CI tests from its floor (20.19) up. Node
@@ -179,6 +183,7 @@ findings wherever ESLint runs: [docs/eslint.md](docs/eslint.md).
 | [ci.md](docs/ci.md)                       | GitHub Actions, GitLab, pre-commit, hooks, output formats.         |
 | [plugins.md](docs/plugins.md)             | Writing and publishing rules and presets.                          |
 | [api.md](docs/api.md)                     | Using it from JavaScript or TypeScript.                            |
+| [distribution.md](docs/distribution.md)   | Binaries without Node, Docker, and the listings still to do.       |
 | [eslint.md](docs/eslint.md)               | The ESLint plugin: editors, the ESLint MCP server, oxlint.         |
 | [how-it-works.md](docs/how-it-works.md)   | How names are read, and why.                                       |
 | [field-trial.md](docs/field-trial.md)     | The 36 repositories the limits were measured on.                   |

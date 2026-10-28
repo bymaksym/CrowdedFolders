@@ -38,6 +38,8 @@ words:
   - pytest
   - unpkg
   - npx
+  - postject
+  - esbuild
   - reviewdog
   - SonarQube
   - pnpm
