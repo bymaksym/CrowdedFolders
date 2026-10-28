@@ -1,4 +1,6 @@
 import { FileListError } from '../core/paths/input.ts';
+import { RuleError } from '../core/rules/error.ts';
+import { describeConfigError } from '../node/config-error.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
@@ -7,7 +9,7 @@ import { explain } from './commands/explain.ts';
 import { init } from './commands/init.ts';
 import { listPresets, listRules, printConfig } from './commands/lists.ts';
 import { COMMAND_HELP, HELP } from './help.ts';
-import { type Io, processIo } from './io.ts';
+import { type Io, processIo, WriteError } from './io.ts';
 import { writeFailureReports } from './report/failure.ts';
 import { openSession } from './session.ts';
 import { TOOL } from './tool.ts';
@@ -63,7 +65,17 @@ export async function run(argv: readonly string[], io: Io = processIo()): Promis
             io.error(`crowded-folders: ${error.message}\nRun crowded-folders --help for the options.\n`);
             return 2;
         }
-        if (error instanceof ConfigError || error instanceof GitError || error instanceof FileListError) {
+        if (error instanceof ConfigError) {
+            io.error(`crowded-folders: ${describeConfigError(error, io.cwd)}\n`);
+            return 2;
+        }
+        // What the person who ran it caused: the files git lists, a plugin's rule, a file it cannot write.
+        if (
+            error instanceof GitError ||
+            error instanceof FileListError ||
+            error instanceof RuleError ||
+            error instanceof WriteError
+        ) {
             io.error(`crowded-folders: ${error.message}\n`);
             return 2;
         }

@@ -3,27 +3,15 @@ import { dirname, resolve } from 'node:path';
 import { isObject } from '../core/config/json-schema.ts';
 import { mergeLayer } from '../core/config/merge.ts';
 import { type Config, EMPTY_CONFIG, type Plugin, type Preset, type ResolvedConfig } from '../core/config/types.ts';
-import { type ConfigProblem, formatProblems, validateConfig } from '../core/config/validate.ts';
+import { validateConfig } from '../core/config/validate.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 import { BUILT_IN_RULES } from '../core/rules/index.ts';
 import type { Rule } from '../core/rules/rule.ts';
+import { ConfigError } from './config-error.ts';
 import { readConfigFile } from './config-file.ts';
 import { importDefault, resolveSpecifier } from './modules.ts';
 
-/** A configuration that cannot be used, with every problem found in it. */
-export class ConfigError extends Error {
-    readonly origin: string;
-    readonly problems: readonly ConfigProblem[];
-
-    constructor(origin: string, problems: readonly ConfigProblem[]) {
-        super(
-            `${origin} has ${problems.length === 1 ? 'a problem' : `${problems.length} problems`}:\n${formatProblems(problems)}`,
-        );
-        this.name = 'ConfigError';
-        this.origin = origin;
-        this.problems = problems;
-    }
-}
+export { ConfigError } from './config-error.ts';
 
 export interface LoadedConfig {
     readonly config: ResolvedConfig;

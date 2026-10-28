@@ -157,10 +157,13 @@ describe('extends', () => {
 
     it('says which file is not JSON', async () => {
         const root = folder({ 'crowded-folders.config.json': '{ "a": }' });
-        await assert.rejects(
-            readConfigFile(join(root, 'crowded-folders.config.json')),
-            /crowded-folders\.config\.json is not valid JSON/u,
-        );
+        await assert.rejects(readConfigFile(join(root, 'crowded-folders.config.json')), (error: unknown) => {
+            assert.ok(error instanceof ConfigError, String(error));
+            assert.match(error.message, /crowded-folders\.config\.json has a problem:\n.*is not valid JSON/u);
+            assert.equal(error.problems[0]?.line, 1);
+            assert.equal(error.problems[0]?.column, 8);
+            return true;
+        });
     });
 });
 

@@ -2,7 +2,9 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative } from 'node:path';
 
 import { isObject } from '../core/config/json-schema.ts';
-import { parseJsonc } from '../core/config/jsonc.ts';
+import { parseJsonc, stripJsonc } from '../core/config/jsonc.ts';
+import { positionOf, syntaxErrorOffset } from '../core/config/locate.ts';
+import { ConfigError, PACKAGE_KEY } from './config-error.ts';
 import { importDefault } from './modules.ts';
 
 /** The names a configuration can have, in the order they are looked for in each folder. */
@@ -16,7 +18,7 @@ export const CONFIG_NAMES = [
     '.config/crowded-folders.mjs',
 ] as const;
 
-export const PACKAGE_KEY = 'crowded-folders';
+export { PACKAGE_KEY } from './config-error.ts';
 
 export interface FoundConfig {
     /** The file that holds it: a configuration file, or a package.json with a "crowded-folders" key. */
@@ -38,9 +40,12 @@ export function findConfig(startDir: string): FoundConfig | undefined {
             found.push(manifest);
         }
         if (found.length > 1) {
-            throw new Error(
-                `${dir} has more than one crowded-folders configuration (${found.map(path => basename(path)).join(', ')}): keep one, so it is clear which is read.`,
-            );
+            throw new ConfigError(dir, [
+                {
+                    at: '(the folder)',
+                    message: `has more than one crowded-folders configuration (${found.map(path => basename(path)).join(', ')}): keep one, so it is clear which is read.`,
+                },
+            ]);
         }
         const [path] = found;
         if (path !== undefined) {
@@ -60,19 +65,40 @@ export function projectDirOf(path: string): string {
 /** Reads a configuration file of any supported kind and returns what it holds, not yet checked. */
 export async function readConfigFile(path: string): Promise<unknown> {
     if (basename(path) === 'package.json') {
-        const manifest = parseJsonc(readFileSync(path, 'utf8'));
+        const manifest = parseJsonText(path);
         return isObject(manifest) ? manifest[PACKAGE_KEY] : undefined;
     }
     const extension = extname(path);
     if (extension === '.json' || extension === '.jsonc') {
-        try {
-            return parseJsonc(readFileSync(path, 'utf8'));
-        } catch (error) {
-            throw new Error(`${path} is not valid JSON: ${(error as Error).message}`, { cause: error });
-        }
+        return parseJsonText(path);
     }
-    const value = await importDefault(path);
-    return typeof value === 'function' ? await (value as () => unknown)() : value;
+    try {
+        const value = await importDefault(path);
+        return typeof value === 'function' ? await (value as () => unknown)() : value;
+    } catch (error) {
+        throw new ConfigError(path, [{ at: '(the file)', message: `cannot be loaded: ${(error as Error).message}` }]);
+    }
+}
+
+/** A JSON or JSONC file as a value; one that cannot be read or is not JSON is the user's, with where it breaks. */
+function parseJsonText(path: string): unknown {
+    let text: string;
+    try {
+        text = readFileSync(path, 'utf8');
+    } catch (error) {
+        throw new ConfigError(path, [{ at: '(the file)', message: `cannot be read: ${(error as Error).message}` }]);
+    }
+    try {
+        return parseJsonc(text);
+    } catch (error) {
+        // Node says where differently in each version, or not at all: the place is found from the text.
+        // `stripJsonc` drops a byte order mark before reading and keeps every other offset.
+        const bom = text.startsWith('\u{FEFF}') ? 1 : 0;
+        const offset = syntaxErrorOffset(stripJsonc(text)) ?? text.length - bom;
+        const place = positionOf(text, offset + bom);
+        const reason = (error as Error).message.replace(/ in JSON at position \d.*$/u, '');
+        throw new ConfigError(path, [{ at: '(the file)', message: `is not valid JSON: ${reason}`, ...place }]);
+    }
 }
 
 /** Where a run reads from: the configuration, the folder checked, and the folder its paths start from. */

@@ -36,14 +36,23 @@ export function processIo(): Io {
  * stopped halfway leaves the old file, never half of the new one.
  */
 export function writeFileAtomic(path: string, content: string): void {
-    mkdirSync(dirname(path), { recursive: true });
     const temporary = `${path}.${process.pid}.tmp`;
     try {
+        mkdirSync(dirname(path), { recursive: true });
         writeFileSync(temporary, content, 'utf8');
         renameSync(temporary, path);
     } catch (error) {
         rmSync(temporary, { force: true });
-        throw error;
+        throw new WriteError(path, error);
+    }
+}
+
+/** A file the command was asked to write cannot be written: a folder in the way, no permission, a full disk. */
+export class WriteError extends Error {
+    override readonly name = 'WriteError';
+
+    constructor(path: string, cause: unknown) {
+        super(`cannot write ${path}: ${cause instanceof Error ? cause.message : String(cause)}`, { cause });
     }
 }
 

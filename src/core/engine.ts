@@ -4,6 +4,7 @@ import { compareText, type Naming, readFolder } from './naming/modules.ts';
 import { compileGlob, type Glob, matchesSelfOrAncestor } from './paths/glob.ts';
 import { FileListError, normaliseFileList } from './paths/input.ts';
 import { buildTree, type FolderEntry, joinPath } from './paths/tree.ts';
+import { RuleError } from './rules/error.ts';
 import type { FolderView, Move, Note, Problem, Rule, RuleContext } from './rules/rule.ts';
 
 /** One problem in one folder, as every output format receives it. */
@@ -265,7 +266,13 @@ class FolderContext {
                       notes.push({ rule: name, ...found });
                   }
                 : undefined;
-            rule.check(view, { options, report, settingsOf, ...(note && { note }) });
+            try {
+                rule.check(view, { options, report, settingsOf, ...(note && { note }) });
+            } catch (error) {
+                // A built-in rule that throws is our bug and says so; a plugin's rule (`namespace/name`) is the
+                // plugin's, and the run stops saying which one and where.
+                throw name.includes('/') ? new RuleError(name, entry.path, error) : error;
+            }
         }
         return findings;
     }
