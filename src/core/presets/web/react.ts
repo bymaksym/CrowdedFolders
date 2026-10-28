@@ -57,8 +57,12 @@ export const nextjs: Preset = {
 
 export const reactNative: Preset = {
     description:
-        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository.',
+        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address.',
     sources: [
+        {
+            title: 'Expo Router: "an index.tsx file indicates the default route for a directory"; square brackets in a file or directory name are a dynamic route',
+            url: 'https://docs.expo.dev/router/basics/notation/',
+        },
         {
             title: 'Expo: continuous native generation — prebuild "creates the android and ios directories"',
             url: 'https://docs.expo.dev/workflow/continuous-native-generation/',
@@ -68,5 +72,9 @@ export const reactNative: Preset = {
     config: {
         extends: ['react'],
         exclude: ['/ios', '/android', '.expo'],
+        rules: {
+            // Off here, and strict turns it on keeping this: in app/ the path of a file is its address.
+            'single-file-folders': ['off', { allowed: ['**/app/**/index.*', '**/app/**/[[]*].*'] }],
+        },
     },
 };

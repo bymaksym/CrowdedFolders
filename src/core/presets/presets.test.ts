@@ -38,6 +38,15 @@ function check(preset: string, files: readonly string[]): Finding[] {
     return [...runEngine({ files, config: resolvePreset(preset), rules: BUILT_IN_RULES }).findings];
 }
 
+/** `count` files named `name(i)`, in a folder. */
+const series = (folder: string, count: number, name: (index: number) => string): string[] =>
+    Array.from({ length: count }, (_, index) => `${folder}/${name(index)}`);
+/** The files of a folder, given their names. */
+const inFolder = (folder: string, names: readonly string[]): string[] => names.map(name => `${folder}/${name}`);
+/** Two letters for each index: a name that no numeric companion can strip. */
+const letters = (index: number): string => String.fromCodePoint(97 + Math.floor(index / 26), 97 + (index % 26));
+const pad = (index: number, width = 2): string => String(index + 1).padStart(width, '0');
+
 describe('every built-in preset', () => {
     for (const [name, preset] of Object.entries(BUILT_IN_PRESETS)) {
         it(`${name} is a valid configuration with a description and sources`, () => {
@@ -227,16 +236,35 @@ describe('what the presets change', () => {
         );
     });
 
-    it("angular's limit is for src/, not for the repository's tooling", () => {
-        const twelve = (folder: string): string[] =>
-            many(
-                folder,
-                Array.from({ length: 12 }, (_, index) => `part${index}.mjs`),
-            );
+    it("angular has recommended's 20 in src/ and the 10 of the former guide under features/", () => {
+        const ts = (folder: string, count: number): string[] =>
+            series(folder, count, index => `part${letters(index)}.ts`);
+        const files = [...ts('src/app/state', 12), ...ts('src/app/features/orders', 12), ...ts('src/app/core', 25)];
         assert.deepEqual(
-            check('angular', [...twelve('tooling/rounds'), ...twelve('src/app/state')]).map(finding => finding.folder),
-            ['src/app/state'],
+            check('angular', files).map(finding => finding.folder),
+            ['src/app/core', 'src/app/features/orders'],
         );
+    });
+
+    it('angular gives its hint on TypeScript in src/, and not on tooling or on styles (espaciot-app)', () => {
+        const scss = series('src/styles', 25, index => `_part-${letters(index)}.scss`);
+        const tooling = series('tooling/rounds', 25, index => `part${letters(index)}.mjs`);
+        const code = series('src/app/state', 25, index => `part${letters(index)}.ts`);
+        const messages = (files: string[]): string[] => check('angular', files).map(finding => finding.message);
+        assert.match(messages(code)[0] ?? '', /Angular asks for folders by feature/u);
+        assert.doesNotMatch(messages(scss)[0] ?? '', /Angular/u);
+        assert.doesNotMatch(messages(tooling)[0] ?? '', /Angular/u);
+    });
+
+    it('angular tells a folder that is already by type to group by topic inside (core/services, shared/utils)', () => {
+        for (const folder of ['src/app/core/services', 'src/app/shared/utils']) {
+            const [finding] = check(
+                'angular',
+                series(folder, 25, index => `part${letters(index)}.ts`),
+            );
+            assert.match(finding?.message ?? '', /group by topic inside, e\.g\. utils\/filters\//u);
+            assert.doesNotMatch(finding?.message ?? '', /Angular asks/u);
+        }
     });
 
     it('nuxt warns before grouping composables, which are auto-imported from the top level only', () => {
@@ -295,15 +323,6 @@ describe('what the presets change', () => {
         assert.ok(once);
     });
 });
-
-/** `count` files named `name(i)`, in a folder. */
-const series = (folder: string, count: number, name: (index: number) => string): string[] =>
-    Array.from({ length: count }, (_, index) => `${folder}/${name(index)}`);
-/** The files of a folder, given their names. */
-const inFolder = (folder: string, names: readonly string[]): string[] => names.map(name => `${folder}/${name}`);
-/** Two letters for each index: a name that no numeric companion can strip. */
-const letters = (index: number): string => String.fromCodePoint(97 + Math.floor(index / 26), 97 + (index % 26));
-const pad = (index: number, width = 2): string => String(index + 1).padStart(width, '0');
 
 describe('recommended, after the review of 21-10-2026', () => {
     it('reads validate-i18n as being about i18n in scripts/ and tooling/ (espaciot-app), and not in src/', () => {
@@ -669,6 +688,22 @@ describe('game engines, after the review of 21-10-2026', () => {
                 finding => `${finding.rule} ${finding.severity}`,
             ),
             ['prefix-groups warn'],
+        );
+    });
+});
+
+describe('expo router', () => {
+    it('does not ask strict to flatten experiences/[id].tsx or about/index.tsx, whose address would change (Zaporeak)', () => {
+        const files = [
+            'src/app/(app)/experiences/[id].tsx',
+            'src/app/(app)/blog/[...slug].tsx',
+            'src/app/about/index.tsx',
+            'src/components/card/index.tsx',
+            'src/app/settings/profile.tsx',
+        ];
+        assert.deepEqual(
+            checkAll(['react-native', 'strict'], files).map(finding => finding.folder),
+            ['src/app/settings', 'src/components/card'],
         );
     });
 });
