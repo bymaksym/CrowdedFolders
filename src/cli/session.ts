@@ -1,17 +1,17 @@
 import { existsSync, statSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
-import type { ResolvedConfig } from '../core/config/types.ts';
+import type { Config, ResolvedConfig } from '../core/config/types.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
 import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
-import { type Detection, detectPresets, excludesFor } from '../core/presets/detect.ts';
-import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
-import { gitRootOf, locate, projectDirOf, realPath } from '../node/config-file.ts';
+import type { Detection } from '../core/presets/detect.ts';
+import { gitRootOf, locate, realPath } from '../node/config-file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
-import { dependenciesOf, type Manifests, MAX_MANIFESTS } from '../node/manifests.ts';
+import { detectConfig, type Manifests, MAX_MANIFESTS } from '../node/manifests.ts';
+import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
 import type { Io } from './io.ts';
 
@@ -79,16 +79,14 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
     let loaded: LoadedConfig;
     let detected: Detection[] | undefined;
     if (configPath === undefined) {
-        let presets = args.presets;
-        let exclude: string[] = [];
-        if (presets.length === 0) {
-            const manifests = dependenciesOf(base, files);
-            warnIfTruncated(manifests, io);
-            detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
-            presets = detected.map(detection => detection.preset);
-            exclude = excludesFor(detected, files, BUILT_IN_PRESETS);
+        let config: Config = { extends: args.presets, exclude: [] };
+        if (args.presets.length === 0) {
+            const detection = detectConfig(base, files);
+            warnIfTruncated(detection.manifests, io);
+            detected = detection.detected;
+            config = detection.config;
         }
-        loaded = await loadConfig({ extends: presets, exclude }, '(the command line)', base);
+        loaded = await loadConfig(config, '(the command line)', base);
     } else {
         loaded = await loadConfigFile(configPath);
         if (args.presets.length > 0) {
@@ -171,12 +169,9 @@ export function foldersFromPaths(paths: readonly string[], session: Session, cwd
  * option; `suppressions` in the configuration from the configuration's folder; by default next to it.
  */
 export function suppressionsPathOf(args: Args, session: Session, fallback: string): string {
-    if (args.suppressionsLocation !== undefined) {
-        return resolve(session.cwd, args.suppressionsLocation);
-    }
-    const configured = session.loaded.config.suppressions;
-    const folder = session.configPath === undefined ? session.base : projectDirOf(session.configPath);
-    return resolve(configured === undefined ? session.base : folder, configured ?? fallback);
+    return args.suppressionsLocation === undefined
+        ? suppressionsPathFor(session.loaded.config, session.configPath, session.base, fallback)
+        : resolve(session.cwd, args.suppressionsLocation);
 }
 
 /** Says so when a file was written outside the folder being checked: `-o ../../x.json` is allowed, not silent. */

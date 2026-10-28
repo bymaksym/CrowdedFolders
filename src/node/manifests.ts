@@ -3,7 +3,9 @@ import { join } from 'node:path';
 
 import { isObject } from '../core/config/json-schema.ts';
 import { parseJsonc } from '../core/config/jsonc.ts';
-import { isEvidence } from '../core/presets/detect.ts';
+import type { Config } from '../core/config/types.ts';
+import { type Detection, detectPresets, excludesFor, isEvidence } from '../core/presets/detect.ts';
+import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 
 /**
  * How many package.json files are read to detect presets, the shallowest first. They are small, so a
@@ -51,4 +53,28 @@ export function dependenciesOf(root: string, files: readonly string[], limit = M
         }
     }
     return { names, skipped: all.length - manifests.length };
+}
+
+/** The configuration a run without one uses: the presets found in the repository, and what they leave out. */
+export interface DetectedConfig {
+    readonly config: Config;
+    readonly detected: Detection[];
+    readonly manifests: Manifests;
+}
+
+/**
+ * Detects the presets of a repository from its files and package.json files, the same way for the
+ * command and for `lint()`: what `init` would write, and what a run with no configuration uses.
+ */
+export function detectConfig(root: string, files: readonly string[]): DetectedConfig {
+    const manifests = dependenciesOf(root, files);
+    const detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
+    return {
+        config: {
+            extends: detected.map(detection => detection.preset),
+            exclude: excludesFor(detected, files, BUILT_IN_PRESETS),
+        },
+        detected,
+        manifests,
+    };
 }
