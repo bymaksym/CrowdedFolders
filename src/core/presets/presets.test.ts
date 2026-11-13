@@ -245,14 +245,21 @@ describe('what the presets change', () => {
         );
     });
 
-    it('angular gives its hint on TypeScript in src/, and not on tooling or on styles (espaciot-app)', () => {
-        const scss = series('src/styles', 25, index => `_part-${letters(index)}.scss`);
-        const tooling = series('tooling/rounds', 25, index => `part${letters(index)}.mjs`);
-        const code = series('src/app/state', 25, index => `part${letters(index)}.ts`);
+    it('angular gives its hint only to a folder named after a type, and only on TypeScript (espaciot-app, Ideas Crowded Folders 8)', () => {
+        const hinted = /by type|Angular/u;
         const messages = (files: string[]): string[] => check('angular', files).map(finding => finding.message);
-        assert.match(messages(code)[0] ?? '', /Angular asks for folders by feature/u);
-        assert.doesNotMatch(messages(scss)[0] ?? '', /Angular/u);
-        assert.doesNotMatch(messages(tooling)[0] ?? '', /Angular/u);
+        assert.match(messages(series('src/app/components', 25, index => `part${letters(index)}.ts`))[0] ?? '', hinted);
+        // A folder that is not by type is told nothing about types: shared/state, assets/ui.
+        for (const files of [
+            series('src/app/state', 25, index => `part${letters(index)}.ts`),
+            series('src/assets/ui', 25, index => `icon-${letters(index)}.ts`),
+            series('src/styles/components', 25, index => `_part-${letters(index)}.scss`),
+            series('tooling/rounds', 25, index => `part${letters(index)}.mjs`),
+        ]) {
+            const [message = ''] = messages(files);
+            assert.match(message, /over the limit/u, files[0]);
+            assert.doesNotMatch(message, hinted, files[0]);
+        }
     });
 
     it('angular tells a folder that is already by type to group by topic inside (core/services, shared/utils)', () => {

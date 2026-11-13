@@ -20,7 +20,7 @@ const TYPE_FOLDERS = [
 
 export const angular: Preset = {
     description:
-        "Angular's own guide: folders by feature, a component's files together, and sub-folders as a folder grows. The current guide gives no number (\"consider splitting further\"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for sub-folders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint, and their moves drop the prefix the new folder says (tooling/validate/i18n.mjs). A file named after its identifier repeats its folder's name on purpose, so redundant-prefix stays off under strict.",
+        "Angular's own guide: folders by feature, a component's files together, and sub-folders as a folder grows. The current guide gives no number (\"consider splitting further\"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for sub-folders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. Only a folder named after a type (components/, services/, utils/, models/…) gets a hint, and it is to group by topic inside, not to undo the layers: elsewhere \"by feature, not by type\" says nothing about the folder. The hint is about TypeScript, so a folder of SCSS partials or images does not get it. Scripts and tooling outside src/ keep recommended's limit, and their moves drop the prefix the new folder says (tooling/validate/i18n.mjs). A file named after its identifier repeats its folder's name on purpose, so redundant-prefix stays off under strict.",
     sources: [
         {
             title: 'Angular style guide: project structure, "As the number of files in a directory grows, consider splitting further into additional sub-directories"',
@@ -50,13 +50,6 @@ export const angular: Preset = {
                 folders: ['**/src', '**/src/**'],
                 reason: 'The style guide is about the application code, which Angular puts in src/: "All of your Angular UI code (TypeScript, HTML, and styles) should live inside a directory named src".',
                 rules: {
-                    'max-files': [
-                        'error',
-                        {
-                            hint: 'Angular asks for folders by feature, not by type (no components/ or services/).',
-                            hintFor: ['*.ts'],
-                        },
-                    ],
                     // "Match file names to the TypeScript identifier within": user-profile-avatar.ts holds
                     // UserProfileAvatar, so a move keeps the name. Only here: tooling/validate-i18n.mjs
                     // holds no identifier, and goes to tooling/validate/i18n.mjs.
@@ -69,7 +62,10 @@ export const angular: Preset = {
                 rules: {
                     'max-files': [
                         'error',
-                        { hint: 'This folder is already by type: group by topic inside, e.g. utils/filters/.' },
+                        {
+                            hint: 'This folder is already by type: group by topic inside, e.g. utils/filters/.',
+                            hintFor: ['*.ts'],
+                        },
                     ],
                 },
             },
