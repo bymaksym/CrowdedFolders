@@ -76,6 +76,42 @@ describe('strict', () => {
         );
         assert.equal(mine.config.rules['redundant-prefix']?.severity, 'error');
     });
+
+    it('does not propose in angular a name that strict would then flag (Ideas Crowded Folders, 4)', async () => {
+        const root = folder();
+        const files = [
+            ...['a', 'b', 'c', 'd', 'e'].map(part => `src/app/components/table-${part}.ts`),
+            'src/app/components/app.ts',
+            ...['i18n', 'routes', 'icons', 'fonts'].map(part => `tooling/release-${part}.mjs`),
+            'tooling/build.mjs',
+        ];
+        for (const extendsList of [
+            ['angular', 'strict'],
+            ['strict', 'angular'],
+        ]) {
+            const loaded = await loadConfig({ extends: extendsList }, 'cli', root);
+            const moves = runEngine({ files, config: loaded.config, rules: loaded.rules }).findings.flatMap(finding =>
+                finding.moves.map(move => `${move.from} → ${move.to}`),
+            );
+            // src/ keeps the identifier in the name; tooling/ has none, and drops the prefix.
+            assert.ok(
+                moves.includes('src/app/components/table-a.ts → src/app/components/table/table-a.ts'),
+                String(moves),
+            );
+            assert.ok(moves.includes('tooling/release-i18n.mjs → tooling/release/i18n.mjs'), String(moves));
+            const moved = files.map(file =>
+                file
+                    .replace('components/table-', 'components/table/table-')
+                    .replace('tooling/release-', 'tooling/release/'),
+            );
+            const after = runEngine({ files: moved, config: loaded.config, rules: loaded.rules }).findings;
+            assert.deepEqual(
+                after.filter(finding => finding.rule === 'redundant-prefix').map(finding => finding.folder),
+                [],
+                extendsList.join(' '),
+            );
+        }
+    });
 });
 
 describe('overrides[].extends', () => {
