@@ -1,3 +1,4 @@
+import { docsUrl } from '../docs-url.ts';
 import { sameWord } from '../naming/inflect.ts';
 import { compareText, keyRestatesPath, type Module } from '../naming/modules.ts';
 import { isNumericWord, splitWords } from '../naming/words.ts';
@@ -38,7 +39,7 @@ export const scatteredFeature = defineRule<ScatteredFeatureOptions>({
     meta: {
         description:
             'A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.',
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/scattered-feature.md',
+        url: docsUrl('rules/scattered-feature.md'),
         defaultOptions: {
             layers: ['controller', 'service', 'repository', 'repo', 'dao', 'dto', 'model', 'entity', 'mapper'],
             min: 3,
@@ -217,7 +218,7 @@ function problemOf(
     };
 }
 
-/** The sub-folder that already is the feature's folder, written in other case; else the name itself. */
+/** The subfolder that already is the feature's folder, written in other case; else the name itself. */
 function intoExisting(name: string, folders: readonly string[]): string {
     return folders.find(folder => caseless(folder) === caseless(name)) ?? baseName(name);
 }

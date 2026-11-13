@@ -20,14 +20,14 @@ const TYPE_FOLDERS = [
 
 export const angular: Preset = {
     description:
-        "Angular's own guide: folders by feature, a component's files together, and sub-folders as a folder grows. The current guide gives no number (\"consider splitting further\"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for sub-folders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint.",
+        "Angular's own guide: folders by feature, a component's files together, and subfolders as a folder grows. The current guide gives no number (\"consider splitting further\"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for subfolders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint.",
     sources: [
         {
             title: 'Angular style guide: project structure, "As the number of files in a directory grows, consider splitting further into additional sub-directories"',
             url: 'https://angular.dev/style-guide',
         },
         {
-            title: 'Former Angular style guide, 04-04 "Flat": sub-folders at seven or more files',
+            title: 'Former Angular style guide, 04-04 "Flat": subfolders at seven or more files',
             url: 'https://raw.githubusercontent.com/angular/angular/17.3.x/aio/content/guide/styleguide.md',
         },
     ],
@@ -67,7 +67,7 @@ export const angular: Preset = {
             },
             {
                 folders: ['**/src/**/features', '**/src/**/features/**'],
-                reason: 'The 10 of the former guide, which asked for sub-folders early ("Flat": seven or more files), kept where the guide\'s feature folders are.',
+                reason: 'The 10 of the former guide, which asked for subfolders early ("Flat": seven or more files), kept where the guide\'s feature folders are.',
                 rules: { 'max-files': ['error', { max: 10 }] },
             },
         ],

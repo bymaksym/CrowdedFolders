@@ -5,18 +5,39 @@ A folder of a game project named after a type of asset: `Textures/`, `Materials/
 **Off in `recommended`; a warning in `unreal` (under `Content/`) and `godot` (without `assets`).**
 Options and defaults: [configuration.md](../configuration.md#type-folders).
 
+<!-- output: type-folders -->
+
 ```text
 Content/ActionRoguelike/Materials/
-  MF_HitFlashDemo.uasset  MI_RageBar.uasset  M_3DFont.uasset
+  ⚠ warn   type-folders  "Materials" is named after the type of its assets, not what they are for:
+                         put each next to what uses it (Rocks/ with its mesh, textures and
+                         materials), where the editor's type filter finds it. Allar 2.6.2: "Creating
+                         a folder named Meshes, Textures, or Materials is redundant."
 
-  ⚠ warn  type-folders  "Materials" is named after the type of its assets, not what they are for: put
-          each next to what uses it (Rocks/ with its mesh, textures and materials), where the editor's
-          type filter finds it. Allar 2.6.2: "Creating a folder named Meshes, Textures, or Materials is
-          redundant."
+⚠ 0 errors, 1 warning in 1 folder (4 folders and 3 files checked; 100 % of folders within the limit
+  (4/4)).
 ```
+
+<!-- /output -->
 
 A rock's mesh, textures and materials in `Meshes/`, `Textures/` and `Materials/` are one rock in three
 folders, and the editor already filters by type.
+
+## The fix
+
+<!-- fix: type-folders -->
+
+No move makes this decision: it is a person who does. After it, the files are these, and the run passes:
+
+```text
+Content/ActionRoguelike/Effects/HitFlash/ MF_HitFlashDemo.uasset
+Content/ActionRoguelike/UI/Fonts/ M_3DFont.uasset
+Content/ActionRoguelike/UI/RageBar/ MI_RageBar.uasset
+
+✔ No crowded folders (8 folders and 3 files checked; 100 % of folders within the limit (8/8)).
+```
+
+<!-- /fix -->
 
 ## The sources
 

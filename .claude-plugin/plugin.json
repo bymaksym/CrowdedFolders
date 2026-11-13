@@ -1,6 +1,6 @@
 {
     "name": "crowded-folders",
-    "description": "Warns an AI agent, without blocking it, when a new file would make its folder a drawer, and teaches it to read crowded-folders' output.",
+    "description": "Warns an AI agent, without blocking it, when a new file would make its folder a junk drawer, and teaches it to read crowded-folders' output.",
     "author": { "name": "bymaksym" },
     "homepage": "https://github.com/bymaksym/CrowdedFolders#readme",
     "repository": "https://github.com/bymaksym/CrowdedFolders",

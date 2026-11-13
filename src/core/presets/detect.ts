@@ -341,7 +341,7 @@ export interface DetectedConfig {
 
 /**
  * The configuration the detected presets make. A preset found at the root goes in `extends`; one
- * found only in sub-folders (a pom.xml in server/, an Angular package.json in web/) goes in an
+ * found only in subfolders (a pom.xml in server/, an Angular package.json in web/) goes in an
  * override with `extends`, so that it applies there and not to the rest of the repository. A preset
  * that puts back what recommended leaves out (`"!…"`, as the game presets do with media) cannot be
  * applied to some folders only, and stays in `extends` with its excludes read from where it was found.

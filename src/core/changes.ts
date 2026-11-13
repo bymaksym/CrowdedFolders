@@ -11,7 +11,7 @@ import { baseName, parentOf } from './paths/tree.ts';
  */
 export interface TreeChange {
     /**
-     * The folders whose shape changed: a file was added to or removed from them, or a sub-folder of
+     * The folders whose shape changed: a file was added to or removed from them, or a subfolder of
      * theirs appeared or went.
      */
     readonly touched: ReadonlySet<string>;

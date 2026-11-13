@@ -4,16 +4,48 @@ At least `min` modules whose names start with the same word belong in a folder n
 
 **On in `recommended`:** error, 4 modules. Options and defaults: [configuration.md](../configuration.md#prefix-groups).
 
+<!-- output: prefix-groups -->
+
 ```text
 cli/
-  render-json.ts  render-markdown.ts  render-pr.ts  render-sarif.ts  render-text.ts  main.ts  args.ts
-
   ✖ error  prefix-groups  5 modules start with "render" (render-json, render-markdown, render-pr,
-           render-sarif, render-text): they are a folder that was never made — cli/render/.
+                          render-sarif, render-text): they are a folder that was never made —
+                          cli/render/.
+
+✖ 1 error, 0 warnings in 1 folder (2 folders and 7 files checked; 100 % of folders within the limit
+  (2/2)).
+  --moves prints where each file could go; `crowded-folders explain cli` shows how a folder was
+    read.
 ```
+
+<!-- /output -->
 
 The prefix is doing the job a directory should. Once they are in `cli/render/`, the folder says
 "render" once and the names get shorter (see [`redundant-prefix`](redundant-prefix.md)).
+
+## The fix
+
+<!-- fix: prefix-groups -->
+
+`--moves` prints the fix. The folder after it, and the run that passes:
+
+```sh
+mkdir -p cli/render
+git mv cli/render-json.ts cli/render/json.ts
+git mv cli/render-markdown.ts cli/render/markdown.ts
+git mv cli/render-pr.ts cli/render/pr.ts
+git mv cli/render-sarif.ts cli/render/sarif.ts
+git mv cli/render-text.ts cli/render/text.ts
+```
+
+```text
+cli/ args.ts, main.ts
+cli/render/ json.ts, markdown.ts, pr.ts, sarif.ts, text.ts
+
+✔ No crowded folders (3 folders and 7 files checked; 100 % of folders within the limit (3/3)).
+```
+
+<!-- /fix -->
 
 ## How the prefix is read
 

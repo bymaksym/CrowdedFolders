@@ -1,5 +1,5 @@
 name: crowded-folders
-description: Finds the folders that have become a drawer — too many files, or modules sharing a prefix that are a folder nobody made.
+description: Finds the folders that have become a junk drawer — too many files, or modules sharing a prefix that are a folder nobody made.
 author: bymaksym
 branding:
   icon: folder

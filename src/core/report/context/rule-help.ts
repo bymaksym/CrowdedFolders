@@ -11,7 +11,7 @@ export const WHEN_IT_FIRES: Readonly<Record<string, string>> = {
     'redundant-prefix':
         'Modules in a folder repeat the name of the folder (`render/render-json.ts`). The folder already says it: rename them (`render/json.ts`).',
     'max-folders':
-        'A folder holds more subfolders than `max`. A long list of folders is a drawer too: group them by what they are about.',
+        'A folder holds more subfolders than `max`. A long list of folders is a junk drawer too: group them by what they are about.',
     'single-file-folders':
         'A folder holds one file and no subfolders: a level of nesting with nothing to group. Move the file up, unless a convention needs the folder.',
     'case-collision':

@@ -176,7 +176,7 @@ export const AGENTS_END = '<!-- crowded-folders:end -->';
 export const AGENTS_BLOCK = `${AGENTS_START}
 ## Folder structure (crowded-folders)
 
-Do not let a folder become a drawer. Before you add a file:
+Do not let a folder become a junk drawer. Before you add a file:
 
 - \`npx crowded-folders where <new/path.ts>\` says OK, WORSE or CREATES a problem, and which existing folder fits the name.
 - \`npx crowded-folders\` checks the whole repository; run it before you say you are done (exit 1 means errors).

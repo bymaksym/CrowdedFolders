@@ -1,5 +1,7 @@
+import { docsUrl } from '../docs-url.ts';
 import type { Rule } from '../rules/rule.ts';
 import type { JsonSchema } from './json-schema.ts';
+import { EMPTY_CONFIG } from './types.ts';
 
 export const SCHEMA_URL = 'https://unpkg.com/crowded-folders/schema.json';
 
@@ -24,13 +26,30 @@ const SEVERITY: JsonSchema = {
     description: '"error" fails the run, "warn" reports without failing, "off" does not run the rule.',
 };
 
+/** What the editor offers for a preset: its name and what it changes. */
+export type PresetNames = Readonly<Record<string, { readonly description: string }>> | readonly string[];
+
+/**
+ * A built-in preset: one choice for each, with its own description, so that the editor says what
+ * `angular` or `unity` changes when it completes the name. Given only names, they get the same description.
+ */
+const isNameList = (presets: PresetNames): presets is readonly string[] => Array.isArray(presets);
+
+function builtInPresets(presets: PresetNames): JsonSchema[] {
+    const described: [string, string][] = isNameList(presets)
+        ? presets.map((name): [string, string] => [name, 'A built-in preset.'])
+        : Object.entries(presets).map(([name, preset]): [string, string] => [name, preset.description]);
+    return described.map(([name, description]) => ({ const: name, description }));
+}
+
 const GLOBS = (description: string): JsonSchema => ({
     type: 'array',
     items: { type: 'string', minLength: 1 },
     description,
 });
 
-const NAMING: JsonSchema = {
+/** The `naming` settings: what `crowded-folders rules` lists beside the rules' options. */
+const NAMING_SETTINGS: JsonSchema = {
     type: 'object',
     additionalProperties: false,
     description: 'How file names are read. Lists accumulate across presets; "!x" removes an inherited "x".',
@@ -50,8 +69,7 @@ const NAMING: JsonSchema = {
         },
         groupNumericPrefixes: {
             type: 'boolean',
-            description:
-                'Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. Default: false.',
+            description: 'Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.',
         },
         folderFiles: {
             type: 'array',
@@ -70,7 +88,7 @@ const NAMING: JsonSchema = {
         folderCase: {
             enum: ['kebab', 'snake', 'camel', 'pascal', 'lower'],
             description:
-                'How the folder a move proposes is written from the words of its group: "kebab" user-list (default), "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages).',
+                'How the folder a move proposes is written from the words of its group: "kebab" user-list, "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages).',
         },
         reservedWords: {
             type: 'array',
@@ -89,12 +107,12 @@ const NAMING: JsonSchema = {
         routes: {
             type: 'boolean',
             description:
-                "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them. Default: false.",
+                "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.",
         },
         groupFileStays: {
             type: 'boolean',
             description:
-                'Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). Default: false: render.ts goes into render/.',
+                'Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.',
         },
         mirrors: {
             type: 'array',
@@ -106,6 +124,20 @@ const NAMING: JsonSchema = {
     },
 };
 
+/**
+ * The `naming` settings, each with the value it has when nothing sets it (`EMPTY_CONFIG`, what the engine
+ * starts from), so that the editor, `rules` and `configuration.md` show the default that is used.
+ */
+export const NAMING: JsonSchema = {
+    ...NAMING_SETTINGS,
+    properties: Object.fromEntries(
+        Object.entries(NAMING_SETTINGS.properties ?? {}).map(([name, setting]) => [
+            name,
+            { ...setting, default: (EMPTY_CONFIG.naming as unknown as Record<string, unknown>)[name] },
+        ]),
+    ),
+};
+
 /** The setting of one rule: its severity, or its severity and options. */
 function ruleSetting(rule: Rule | undefined): JsonSchema {
     const options: JsonSchema = rule?.meta.options ?? { type: 'object' };
@@ -115,10 +147,24 @@ function ruleSetting(rule: Rule | undefined): JsonSchema {
     };
 }
 
+/** The options of a rule with their value when nothing sets them: the editor shows it next to each. */
+function withDefaults(rule: Rule): Rule {
+    const options = rule.meta.options;
+    if (!options?.properties) {
+        return rule;
+    }
+    const defaults = new Map(Object.entries(rule.meta.defaultOptions as Record<string, unknown>));
+    const properties: Record<string, JsonSchema> = {};
+    for (const [option, schema] of Object.entries(options.properties)) {
+        properties[option] = defaults.has(option) ? { ...schema, default: defaults.get(option) } : schema;
+    }
+    return { ...rule, meta: { ...rule.meta, options: { ...options, properties } } };
+}
+
 function rulesSchema(rules: Readonly<Record<string, Rule>>): JsonSchema {
     const properties: Record<string, JsonSchema> = {};
     for (const [name, rule] of Object.entries(rules)) {
-        properties[name] = ruleSetting(rule);
+        properties[name] = ruleSetting(withDefaults(rule));
     }
     return {
         type: 'object',
@@ -133,9 +179,9 @@ function rulesSchema(rules: Readonly<Record<string, Rule>>): JsonSchema {
  * The JSON Schema of a configuration file. Published as `schema.json` and used to check every
  * configuration as it loads, so the editor and the command read the file the same way.
  */
-export function configSchema(rules: Readonly<Record<string, Rule>>, presets: readonly string[]): JsonSchema {
+export function configSchema(rules: Readonly<Record<string, Rule>>, presets: PresetNames): JsonSchema {
     const rulesProperty = rulesSchema(rules);
-    return {
+    return documented({
         $schema: 'https://json-schema.org/draft-07/schema#',
         $id: SCHEMA_URL,
         title: 'crowded-folders configuration',
@@ -152,7 +198,7 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                 type: 'array',
                 items: {
                     anyOf: [
-                        { enum: presets, description: 'A built-in preset.' },
+                        ...builtInPresets(presets),
                         {
                             type: 'string',
                             minLength: 1,
@@ -201,7 +247,7 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                             type: 'array',
                             items: {
                                 anyOf: [
-                                    { enum: presets, description: 'A built-in preset.' },
+                                    ...builtInPresets(presets),
                                     {
                                         type: 'string',
                                         minLength: 1,
@@ -247,5 +293,47 @@ export function configSchema(rules: Readonly<Record<string, Rule>>, presets: rea
                     'The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or "per-project": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project.',
             },
         },
+    });
+}
+
+/** The page of a setting, as of this version: a rule's own, or the reference. */
+function pageOf(path: readonly string[]): string {
+    const [first, second] = path;
+    if (first === 'rules' && second !== undefined) {
+        return docsUrl(path.length === 2 ? `rules/${second}.md` : `configuration.md#${second}`);
+    }
+    return docsUrl(`configuration.md#${first === 'naming' || first === 'overrides' ? first : 'top-level'}`);
+}
+
+/**
+ * Gives each described setting a `markdownDescription` (what editors render in a hover): the same text,
+ * its default, and a link to its page. The plain `description` stays for the editors that do not read Markdown.
+ */
+function documented(schema: JsonSchema, path: readonly string[] = []): JsonSchema {
+    const walk = (child: JsonSchema, at: readonly string[], property: boolean): JsonSchema => {
+        const one = documented(child, at);
+        return property ? mark(one, at) : one;
     };
+    return {
+        ...schema,
+        ...(schema.properties && {
+            properties: Object.fromEntries(
+                Object.entries(schema.properties).map(([name, child]) => [name, walk(child, [...path, name], true)]),
+            ),
+        }),
+        ...(schema.items && {
+            items: Array.isArray(schema.items)
+                ? (schema.items as readonly JsonSchema[]).map(child => walk(child, path, false))
+                : walk(schema.items as JsonSchema, path, false),
+        }),
+        ...(schema.anyOf && { anyOf: schema.anyOf.map(child => walk(child, path, false)) }),
+    };
+}
+
+function mark(schema: JsonSchema, path: readonly string[]): JsonSchema {
+    if (schema.description === undefined) {
+        return schema;
+    }
+    const value = schema.default === undefined ? '' : `\n\nDefault: \`${JSON.stringify(schema.default)}\``;
+    return { ...schema, markdownDescription: `${schema.description}${value}\n\n[Documentation](${pageOf(path)})` };
 }

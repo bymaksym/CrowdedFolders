@@ -6,52 +6,53 @@ Every setting of `crowded-folders.config.json` (or `.jsonc`, `.mjs`, `.config/cr
 `"crowded-folders"` key in `package.json`). Point `$schema` at
 `https://unpkg.com/crowded-folders/schema.json` and your editor completes and checks all of it.
 
-How a configuration is written, with examples, is in [configuring.md](configuring.md).
+This page is the reference: every setting, its type and its default. How to use them, with examples, is the
+guide, [configuring.md](configuring.md).
 
 ## Top level
 
-| Setting | Type | What it does |
-| --- | --- | --- |
-| `$schema` | string | This schema, for editors. |
-| `root` | boolean | false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true. |
-| `extends` | see below[] | Presets and configurations applied before this one, in order; later ones win. |
-| `plugins` | string[] | Packages or files whose default export is a plugin: more rules and presets. |
-| `include` | string[] | Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git. |
-| `exclude` | string[] | Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth; "!x" removes an inherited x, and brings no file back. |
-| `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
-| `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
-| `overrides` | object[] | Settings for some folders only. Every override says why. |
-| `suppressions` | string | The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or "per-project": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project. |
+| Setting | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `$schema` | string | — | This schema, for editors. |
+| `root` | boolean | — | false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true. |
+| `extends` | string[] | — | Presets and configurations applied before this one, in order; later ones win. |
+| `plugins` | string[] | — | Packages or files whose default export is a plugin: more rules and presets. |
+| `include` | string[] | — | Globs of the files looked at; like exclude, a pattern matches a file or any folder above it ("src" takes everything in src). Default: every file git knows about, or every file under the root without git. |
+| `exclude` | string[] | — | Globs of files and folders left out, on top of .gitignore. A pattern without "/" matches at any depth; "!x" removes an inherited x, and brings no file back. |
+| `naming` | object | — | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
+| `rules` | object | — | Rules by name, built-in or "namespace/rule" from a plugin. |
+| `overrides` | object[] | — | Settings for some folders only. Every override says why. |
+| `suppressions` | string | — | The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or "per-project": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project. |
 
 ## `naming`
 
-| Setting | Type | What it does |
-| --- | --- | --- |
-| `companions` | string[] | Regular expressions removed from each stem, so that companion files join their module: "_test$" makes foo_test.go part of foo.go; "^test_" makes test_foo.py part of foo.py. |
-| `ignoreLeadingWords` | string[] | Lowercase words skipped at the start of a name before reading what it is about: "i" for C# interfaces (IUserService), "bp" for Unreal blueprints (BP_Door). |
-| `groupNumericPrefixes` | boolean | Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. Default: false. |
-| `folderFiles` | string[] | Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs. |
-| `folderCompanions` | string[] | Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/. |
-| `folderCase` | `"kebab"` \| `"snake"` \| `"camel"` \| `"pascal"` \| `"lower"` | How the folder a move proposes is written from the words of its group: "kebab" user-list (default), "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages). |
-| `reservedWords` | string[] | Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it. |
-| `keepInPlace` | string[] | Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames. |
-| `routes` | boolean | Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them. Default: false. |
-| `groupFileStays` | boolean | Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). Default: false: render.ts goes into render/. |
-| `mirrors` | string[] | Trees that mirror another one, as "source => mirror", where "**" stands for the part both share: "**/src/main/java/** => **/src/test/java/**". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along. |
+| Setting | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `companions` | string[] | `[]` | Regular expressions removed from each stem, so that companion files join their module: "_test$" makes foo_test.go part of foo.go; "^test_" makes test_foo.py part of foo.py. |
+| `ignoreLeadingWords` | string[] | `[]` | Lowercase words skipped at the start of a name before reading what it is about: "i" for C# interfaces (IUserService), "bp" for Unreal blueprints (BP_Door). |
+| `groupNumericPrefixes` | boolean | `false` | Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. |
+| `folderFiles` | string[] | `[]` | Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs. |
+| `folderCompanions` | string[] | `[]` | Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/. |
+| `folderCase` | `"kebab"` \| `"snake"` \| `"camel"` \| `"pascal"` \| `"lower"` | `"kebab"` | How the folder a move proposes is written from the words of its group: "kebab" user-list, "snake" user_list, "camel" userList, "pascal" UserList (C# namespaces, PSR-4), "lower" userlist (Java and Go packages). |
+| `reservedWords` | string[] | `[]` | Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it. |
+| `keepInPlace` | string[] | `[]` | Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames. |
+| `routes` | boolean | `false` | Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them. |
+| `groupFileStays` | boolean | `false` | Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/. |
+| `mirrors` | string[] | `[]` | Trees that mirror another one, as "source => mirror", where "**" stands for the part both share: "**/src/main/java/** => **/src/test/java/**". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along. |
 
 ## `overrides[]`
 
-| Setting | Type | What it does |
-| --- | --- | --- |
-| `folders` | string[] | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
-| `withFiles` | string[] | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
-| `extends` | see below[] | Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration. |
-| `reason` | string | Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
-| `expires` | string | A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review. |
-| `owner` | string | Who answers for it (a person or a team, such as @org/team): shown with it. |
-| `ticket` | string | Where the work that removes it is tracked (an issue number or a link): shown with it. |
-| `rules` | object | Rules by name, built-in or "namespace/rule" from a plugin. |
-| `naming` | object | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
+| Setting | Type | Default | What it does |
+| --- | --- | --- | --- |
+| `folders` | string[] | — | Globs matched against folder paths relative to the root; the root itself is ".". **Required.** |
+| `withFiles` | string[] | — | Globs of file names: the override applies only to the folders that hold one of them directly ("package.json" is the root of a package). Default: every folder matching "folders". |
+| `extends` | string[] | — | Presets applied to these folders only, before the settings of the override: ["java"] under "server/**". Their root-anchored patterns ("/target") start at each folder of "folders", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration. |
+| `reason` | string | — | Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed. **Required.** |
+| `expires` | string | — | A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review. |
+| `owner` | string | — | Who answers for it (a person or a team, such as @org/team): shown with it. |
+| `ticket` | string | — | Where the work that removes it is tracked (an issue number or a link): shown with it. |
+| `rules` | object | — | Rules by name, built-in or "namespace/rule" from a plugin. |
+| `naming` | object | — | How file names are read. Lists accumulate across presets; "!x" removes an inherited "x". |
 
 ## `rules`
 
@@ -59,69 +60,85 @@ Each rule is set to a severity — `"error"`, `"warn"` or `"off"` — or to `[se
 you do not set keep their value from the presets, then from the defaults below. Lists inside options
 accumulate across presets; `"!x"` removes an inherited `x`.
 
+Two columns per option: the **rule default** is what the rule uses when nothing sets the option, and
+**in `recommended`** what `extends: ["recommended"]` gives, which most presets build on. They differ:
+every preset counts `modules` where `max-files` alone counts `files`.
+
 ### `max-files`
 
 A folder holds at most `max` files (or modules): past that it is scrolled, not read.
 
+On in `recommended`: `error`.
+
 [More about `max-files`](rules/max-files.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `max` | integer | `20` | How many it may hold. |
-| `count` | `"files"` \| `"modules"` | `"files"` | "files" counts every file; "modules" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one). |
-| `filesPerModule` | integer | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
-| `hint` | string | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
-| `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
-| `dotfiles` | boolean | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"]. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `max` | integer | `20` | `20` | How many it may hold. |
+| `count` | `"files"` \| `"modules"` | `"files"` | `"modules"` | "files" counts every file; "modules" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one). |
+| `filesPerModule` | integer | `0` | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
+| `hint` | string | `""` | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
+| `hintFor` | string[] | `[]` | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
+| `dotfiles` | boolean | `false` | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"]. |
 
 ### `prefix-groups`
 
 At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.
 
+On in `recommended`: `error`.
+
 [More about `prefix-groups`](rules/prefix-groups.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `min` | integer | `4` | How many modules sharing a prefix make a group. |
-| `words` | see below | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; "auto" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`). |
-| `ignore` | string[] | `[]` | Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`. |
-| `hintFor` | string[] | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
-| `dropPrefix` | boolean | `true` | Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true. |
-| `hint` | string | `""` | Added to the message: what making a folder costs in this ecosystem ("In Go a folder is a package: …"). |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `min` | integer | `4` | `4` | How many modules sharing a prefix make a group. |
+| `words` | integer \| `"auto"` | `1` | `1` | How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; "auto" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`). |
+| `ignore` | string[] | `[]` | `["test","tests","spec","get","set","is","has","can","should"]` | Prefixes that are never a group, lowercase, words joined with "-": a verb shared by unrelated files, or a convention such as `use`. |
+| `hintFor` | string[] | `[]` | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
+| `dropPrefix` | boolean | `true` | `true` | Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true. |
+| `hint` | string | `""` | `""` | Added to the message: what making a folder costs in this ecosystem ("In Go a folder is a package: …"). |
 
 ### `max-folders`
 
-A folder holds at most `max` subfolders: a long list of folders is a drawer too.
+A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.
+
+Off in `recommended`: the last column is what it uses once it is turned on.
 
 [More about `max-folders`](rules/max-folders.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `max` | integer | `30` | How many subfolders it may hold. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `max` | integer | `30` | `30` | How many subfolders it may hold. |
 
 ### `redundant-prefix`
 
 Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.
 
+Off in `recommended`: the last column is what it uses once it is turned on.
+
 [More about `redundant-prefix`](rules/redundant-prefix.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `min` | integer | `2` | How many modules have to repeat the name before it is reported: 1 reports every one. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `min` | integer | `2` | `2` | How many modules have to repeat the name before it is reported: 1 reports every one. |
 
 ### `single-file-folders`
 
 A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.
 
+Off in `recommended`: the last column is what it uses once it is turned on.
+
 [More about `single-file-folders`](rules/single-file-folders.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `allowed` | string[] | `[]` | Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without "/" is a file name at any depth, one with "/" is a path from the root. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `allowed` | string[] | `[]` | `[]` | Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without "/" is a file name at any depth, one with "/" is a path from the root. |
 
 ### `case-collision`
 
 Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.
+
+Off in `recommended`: the last column is what it uses once it is turned on.
 
 [More about `case-collision`](rules/case-collision.md)
 
@@ -131,33 +148,39 @@ No options.
 
 A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.
 
+Off in `recommended`: the last column is what it uses once it is turned on.
+
 [More about `scattered-feature`](rules/scattered-feature.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `layers` | string[] | `["controller","service","repository","repo","dao","dto","model","entity","mapper"]` | Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`. |
-| `min` | integer | `3` | In how many layer folders of one folder a word has to start a name to be reported. |
-| `ignore` | string[] | `[]` | Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`. |
-| `hint` | string | `""` | Added to the message: what a feature folder is in this ecosystem. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `layers` | string[] | `["controller","service","repository","repo","dao","dto","model","entity","mapper"]` | `["controller","service","repository","repo","dao","dto","model","entity","mapper"]` | Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`. |
+| `min` | integer | `3` | `3` | In how many layer folders of one folder a word has to start a name to be reported. |
+| `ignore` | string[] | `[]` | `[]` | Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`. |
+| `hint` | string | `""` | `""` | Added to the message: what a feature folder is in this ecosystem. |
 
 ### `orphan-companions`
 
 A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.
 
+Off in `recommended`: the last column is what it uses once it is turned on.
+
 [More about `orphan-companions`](rules/orphan-companions.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `suffixes` | string[] | `[".meta",".import",".uid"]` | The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. "!.uid" takes one out. |
-| `emptyFolders` | boolean | `false` | Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `suffixes` | string[] | `[".meta",".import",".uid"]` | `[".meta",".import",".uid"]` | The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. "!.uid" takes one out. |
+| `emptyFolders` | boolean | `false` | `false` | Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's. |
 
 ### `type-folders`
 
 A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.
 
+Off in `recommended`: the last column is what it uses once it is turned on.
+
 [More about `type-folders`](rules/type-folders.md)
 
-| Option | Type | Default | What it does |
-| --- | --- | --- | --- |
-| `names` | string[] | `["assets","meshes","textures","materials"]` | Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`. |
-| `hint` | string | `""` | Added to the message: the guide's words, where they come from. |
+| Option | Type | Rule default | In `recommended` | What it does |
+| --- | --- | --- | --- | --- |
+| `names` | string[] | `["assets","meshes","textures","materials"]` | `["assets","meshes","textures","materials"]` | Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`. |
+| `hint` | string | `""` | `""` | Added to the message: the guide's words, where they come from. |

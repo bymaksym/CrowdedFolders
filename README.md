@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bymaksym/CrowdedFolders/main/.github/banner.png?v=1" alt="crowded-folders — folders that became a drawer" width="100%">
+  <img src="https://raw.githubusercontent.com/bymaksym/CrowdedFolders/main/.github/banner.png?v=1" alt="crowded-folders — folders that became a junk drawer" width="100%">
 </p>
 
-> Finds the folders of a repository that have become a drawer: too many files in one place, or
+> Finds the folders of a repository that have become a junk drawer: too many files in one place, or
 > several modules sharing a prefix that are a folder nobody made.
 
 ```sh
@@ -23,15 +23,25 @@ Rust, Java, C#, Swift, C++, Unity, Unreal, Terraform, documentation sites, noteb
 21, 23 and 22.0 to 22.12 are outside it on purpose, so "Node 20 or later" is not quite it
 ([decisions.md](docs/decisions.md#node-2019-and-later)).
 
+<!-- output: readme -->
+
 ```text
 cli/
-  ✖ error  prefix-groups  5 modules start with "render" (render-json, render-markdown, render-pr, render-sarif, render-text): they are a folder that was never made — cli/render/.
+  ✖ error  prefix-groups  5 modules start with "render" (render-json, render-markdown, render-pr,
+                          render-sarif, render-text): they are a folder that was never made —
+                          cli/render/.
 
 src/components/
-  ✖ error  max-files      34 modules, over the limit of 20: split it into folders by what the files are about.
+  ✖ error  max-files      34 modules, over the limit of 20: split it into folders by what the files
+                          are about.
 
-✖ 2 errors, 0 warnings in 2 folders (4 folders and 41 files checked).
+✖ 2 errors, 0 warnings in 2 folders (4 folders and 40 files checked; 75 % of folders within the
+  limit (3/4)).
+  --moves prints where each file could go; `crowded-folders explain cli` shows how a folder was
+    read.
 ```
+
+<!-- /output -->
 
 ## Why
 
@@ -52,7 +62,7 @@ crowded-folders counts, and reads names the way people write them.
 | [`max-files`](docs/rules/max-files.md)                     | error, 20 modules               | A folder with too many modules. A module is a file with its companions: `foo.ts`, `foo.spec.ts` and `foo.html` count once.    |
 | [`prefix-groups`](docs/rules/prefix-groups.md)             | error, 4 modules                | Modules whose names start with the same word: `render-json`, `render-text`, `render-pr`, `render-sarif` → `render/`.          |
 | [`redundant-prefix`](docs/rules/redundant-prefix.md)       | off (on in `strict`)            | Modules that repeat their folder's name: `render/render-json.ts` → `render/json.ts`.                                          |
-| [`max-folders`](docs/rules/max-folders.md)                 | off (on in `strict`)            | A folder with too many sub-folders.                                                                                           |
+| [`max-folders`](docs/rules/max-folders.md)                 | off (on in `strict`)            | A folder with too many subfolders.                                                                                            |
 | [`single-file-folders`](docs/rules/single-file-folders.md) | off (warn in `strict`)          | A folder that holds a single file and nothing else.                                                                           |
 | [`case-collision`](docs/rules/case-collision.md)           | off (on in `strict`)            | Names that differ only in case (`Components/`, `components/`): one name on Windows and macOS.                                 |
 | [`scattered-feature`](docs/rules/scattered-feature.md)     | off                             | One word in every layer folder (`controller/RegistroController`, `service/RegistroService`, `dto/RegistroDto`) → `registro/`. |
@@ -71,7 +81,7 @@ biggest folder in twenty, and nothing at all in small, tidy projects.
 
 Conventions differ, and the tool must not fight them. Vue's style guide _asks_ for `TodoList.vue`,
 `TodoListItem.vue` and `TodoListItemButton.vue` side by side; Android's `res/` folders cannot have
-sub-folders, so `activity_*` and `ic_*` are the only grouping there is; in Go a new folder is a new
+subfolders, so `activity_*` and `ic_*` are the only grouping there is; in Go a new folder is a new
 package. Each preset follows its ecosystem's own guide, and says which:
 
 | Field                           | Presets                                                                                                                                                                   |
@@ -159,7 +169,7 @@ the agent without blocking it; the package also ships a skill and a plugin
 ## Plugins
 
 A plugin is an npm package that exports rules and presets; a rule is one function that looks at a
-folder and reports. [examples/plugin](examples/plugin) is a complete one to copy, and
+folder and reports. [examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.0/examples/plugin) is a complete one to copy, and <!-- x-release-please-version -->
 [docs/plugins.md](docs/plugins.md) explains every part, from the folder a rule receives to publishing.
 
 ```js
@@ -199,6 +209,18 @@ how many folders are within their limit, and `-f badge=badge.json` writes that f
 ```
 
 More in [docs/tree.md](docs/tree.md).
+
+## Words used here
+
+- **Module**: a file with its companions, the files that share its stem: `button.tsx`, `button.spec.tsx` and
+  `button.scss` are one module. `max-files` counts modules.
+- **Stem**: a file name up to its first dot, without the companion part (`button.spec.tsx` → `button`).
+- **Companion**: a file that goes with a module and is not counted apart: a test, a style, a template.
+- **Group**: modules whose names start with the same word (`render-json`, `render-text`): a folder nobody made.
+- **Subfolder**: a folder inside a folder. **Junk drawer**: a folder where everything ends up because nothing
+  says where it goes.
+- **`"warn"`** is the severity you write in a configuration; the report calls what it finds a **warning**.
+  An **error** fails the run; a warning does not, unless `--max-warnings` says so.
 
 ## Documentation
 

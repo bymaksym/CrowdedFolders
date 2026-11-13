@@ -440,7 +440,7 @@ describe('where it reads the files from', () => {
         assert.match(excluded.err, /leaves out android \("\/android" in exclude/u);
     });
 
-    it('reads --stdin from a sub-folder the way git ls-files prints it there (src/lib became lib/)', async () => {
+    it('reads --stdin from a subfolder the way git ls-files prints it there (src/lib became lib/)', async () => {
         const root = gitRepository({
             ...Object.fromEntries(Object.keys(render).map(path => [`src/${path}`, ''])),
             'src/a.ts': '',

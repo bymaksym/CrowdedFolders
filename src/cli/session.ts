@@ -240,7 +240,7 @@ export function noticeIfOutside(io: Io, session: Session, path: string): void {
 }
 
 /**
- * The list from standard input, as files of the root. From a sub-folder, `git ls-files` and
+ * The list from standard input, as files of the root. From a subfolder, `git ls-files` and
  * `git ls-tree` print paths from that folder, so when more of them exist there than at the root they
  * are read from there (and only that folder is checked: the list holds nothing else). Absolute paths
  * under the root are made relative to it; any other is an error. What `.gitattributes` marks as

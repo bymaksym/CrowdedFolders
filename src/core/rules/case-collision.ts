@@ -1,3 +1,4 @@
+import { docsUrl } from '../docs-url.ts';
 import { compareText } from '../naming/modules.ts';
 import { defineRule } from './rule.ts';
 
@@ -9,7 +10,7 @@ export const caseCollision = defineRule<CaseCollisionOptions>({
     meta: {
         description:
             'Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.',
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/case-collision.md',
+        url: docsUrl('rules/case-collision.md'),
         defaultOptions: {},
         options: { type: 'object', additionalProperties: false, properties: {} },
     },

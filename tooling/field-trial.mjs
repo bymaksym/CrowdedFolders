@@ -353,7 +353,7 @@ function fieldTrialPage(rows) {
         '',
         '- **Media, translations, test data and tool folders are left out by `recommended`.** A folder of icons,',
         '  a `locales/` folder with one file per language, `__snapshots__`, screenshot goldens and',
-        '  `.github/workflows` (GitHub does not read sub-folders there) are crowded by design, not by neglect.',
+        '  `.github/workflows` (GitHub does not read subfolders there) are crowded by design, not by neglect.',
         '- **A group that repeats the name of its folder, or of a folder above it, is not reported.**',
         '  `ColorPicker/ColorInput`, `drag-drop/drag-handle` and `BardHare/BardHare_Idle` are already where',
         '  they belong.',

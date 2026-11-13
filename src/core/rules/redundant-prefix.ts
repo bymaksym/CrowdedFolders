@@ -1,3 +1,4 @@
+import { docsUrl } from '../docs-url.ts';
 import { shownName } from '../naming/modules.ts';
 import { splitWords } from '../naming/words.ts';
 import { plural } from '../plural.ts';
@@ -12,7 +13,7 @@ export const redundantPrefix = defineRule<RedundantPrefixOptions>({
     meta: {
         description:
             "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.",
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/redundant-prefix.md',
+        url: docsUrl('rules/redundant-prefix.md'),
         defaultOptions: { min: 2 },
         options: {
             type: 'object',

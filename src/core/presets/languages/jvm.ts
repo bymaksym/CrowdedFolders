@@ -123,7 +123,7 @@ export const java: Preset = {
 
 export const android: Preset = {
     description:
-        'Java/Kotlin, plus Android resources: res/ folders cannot have sub-folders ("Alternative resource directories can\'t be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ and the composeResources/ of Kotlin Multiplatform (the same fixed layout: drawable, font, values, files) are left out, and Platform.kt, Platform.android.kt and Platform.ios.kt are one module, as the Kotlin conventions name them.',
+        'Java/Kotlin, plus Android resources: res/ folders cannot have subfolders ("Alternative resource directories can\'t be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ and the composeResources/ of Kotlin Multiplatform (the same fixed layout: drawable, font, values, files) are left out, and Platform.kt, Platform.android.kt and Platform.ios.kt are one module, as the Kotlin conventions name them.',
     sources: [
         {
             title: 'Android: providing resources',

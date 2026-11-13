@@ -1,7 +1,10 @@
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import type { JsonSchema } from '../../core/config/json-schema.ts';
+import { NAMING } from '../../core/config/schema.ts';
 import type { Plugin, Preset } from '../../core/config/types.ts';
+import { docsUrl } from '../../core/docs-url.ts';
 import { explainFolder } from '../../core/engine.ts';
 import { closest } from '../../core/paths/suggest.ts';
 import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
@@ -23,13 +26,15 @@ function matching<T>(
     entries: readonly (readonly [string, T])[],
     typed: string | undefined,
     noun: string,
+    elsewhere = false,
 ): readonly (readonly [string, T])[] {
     if (typed === undefined) {
         return entries;
     }
     const wanted = typed.toLowerCase();
     const found = entries.filter(([name]) => name.toLowerCase().includes(wanted));
-    if (found.length > 0) {
+    // What was typed names something else the command lists (a naming option): not a mistake.
+    if (found.length > 0 || elsewhere) {
         return found;
     }
     const guess = closest(
@@ -115,24 +120,56 @@ export async function listPresets(args: Args, io: Io): Promise<number> {
     return 0;
 }
 
-/** `crowded-folders rules [name]`: every rule, built-in and of the plugins, with its options and their defaults. */
+/** A naming option's default, unless it is an empty list: there is nothing to say then. */
+function shownDefault(value: unknown): string {
+    return value === undefined || (Array.isArray(value) && value.length === 0)
+        ? ''
+        : ` (default ${JSON.stringify(value)})`;
+}
+
+/** The `naming` options that match what was typed: all of them for nothing, or for "naming". */
+function namingMatching(typed: string | undefined): readonly (readonly [string, JsonSchema])[] {
+    const options = Object.entries(NAMING.properties ?? {});
+    return typed === undefined || typed.toLowerCase() === 'naming'
+        ? options
+        : options.filter(([name]) => name.toLowerCase().includes(typed.toLowerCase()));
+}
+
+/**
+ * `crowded-folders rules [name]`: every rule, built-in and of the plugins, with its options and their
+ * defaults, then the `naming` options, which are not a rule's but are what most of a name's reading is set with.
+ */
 export async function listRules(args: Args, io: Io): Promise<number> {
     const { rules, plugins } = await listed(args, io);
     const width = terminalWidth(io) ?? PIPE_WIDTH;
+    const typed = args.paths[0];
+    const naming = namingMatching(typed);
     const lines: string[] = [];
-    for (const [name, rule] of matching(Object.entries(rules), args.paths[0], 'rule')) {
+    const found = matching(Object.entries(rules), typed, 'rule', naming.length > 0);
+    for (const [name, rule] of found) {
         const options = Object.entries(rule.meta.defaultOptions)
             .map(([option, value]) => `${option}: ${JSON.stringify(value)}`)
             .join(', ');
         lines.push(
             `${name}${origin(name, plugins)}`,
             ...wrapped(rule.meta.description, 2, width),
-            ...wrapped(`options (defaults): ${options}`, 2, width),
+            ...(options === '' ? [] : wrapped(`options (defaults): ${options}`, 2, width)),
         );
         if (rule.meta.url) {
             lines.push(`  ${rule.meta.url}`);
         }
         lines.push('');
+    }
+    if (naming.length > 0) {
+        lines.push(
+            'naming (settings, not a rule: how names are read, in a configuration or an override)',
+            ...naming.flatMap(([name, option]) => [
+                `  ${name}${shownDefault(option.default)}`,
+                ...wrapped(option.description ?? '', 4, width),
+            ]),
+            `  ${docsUrl('configuring.md#naming')}`,
+            '',
+        );
     }
     io.write(`${lines.join('\n')}\n`);
     return 0;

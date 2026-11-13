@@ -2,6 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { basename, extname, join, relative, resolve } from 'node:path';
 
 import { pinnedSchemaUrl } from '../../core/config/schema.ts';
+import { docsUrl } from '../../core/docs-url.ts';
 import { runEngine } from '../../core/engine.ts';
 import { plural } from '../../core/plural.ts';
 import { configFromDetections, godotAddons } from '../../core/presets/detect.ts';
@@ -29,7 +30,7 @@ export async function init(args: Args, io: Io, session: Session): Promise<number
 
     // --preset adds to what is detected, unless --no-detect.
     const detections = presetsWithoutConfiguration(args, session.base, session.files, io);
-    // A preset found only in sub-folders (a pom.xml in server/) applies there, in an override; one at
+    // A preset found only in subfolders (a pom.xml in server/) applies there, in an override; one at
     // the root, in extends, with its root-anchored excludes read from every folder it was found in.
     const made = configFromDetections(detections, session.files, BUILT_IN_PRESETS);
     const presets = made.extends;
@@ -155,7 +156,7 @@ function pushNextSteps(
     const installed = command === 'crowded-folders';
     const inCi = `${installed ? 'crowded-folders' : 'npx --yes crowded-folders'} --format auto`;
     const script = installed ? 'crowded-folders' : 'npx --yes crowded-folders';
-    const ci = `${TOOL.url}/blob/main/docs/ci.md`;
+    const ci = docsUrl('ci.md');
     if (errors + warnings === 0) {
         lines.push(
             `No crowded folders today (${plural(folders, 'folder')} checked).`,

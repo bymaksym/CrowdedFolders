@@ -1,11 +1,11 @@
 ---
 name: crowded-folders
-description: Keeps folders from becoming a drawer. Use it before adding a file to a folder that already holds many, when a new file's name starts like several others, after moving or adding files, and when a folder is reported as crowded or the user asks to reorganise one. It says where a new file fits, what a folder's problem is, and writes the reorganisation task.
+description: Keeps folders from becoming a junk drawer. Use it before adding a file to a folder that already holds many, when a new file's name starts like several others, after moving or adding files, and when a folder is reported as crowded or the user asks to reorganise one. It says where a new file fits, what a folder's problem is, and writes the reorganisation task.
 ---
 
 # crowded-folders
 
-`crowded-folders` finds the folders of a repository that have become a drawer: too many files in one
+`crowded-folders` finds the folders of a repository that have become a junk drawer: too many files in one
 place (`max-files`), or several files whose names start with the same word that are a folder nobody made
 (`prefix-groups`: `render-json.ts`, `render-text.ts`, `render-sarif.ts`, `render-pr.ts` want a `render/`).
 Run it with `npx crowded-folders`. It reads the repository's own configuration, so its limits are the

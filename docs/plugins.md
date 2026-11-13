@@ -21,8 +21,8 @@ A configuration loads it and uses what it adds by `namespace/name`:
 }
 ```
 
-[examples/plugin](../examples/plugin) is a complete plugin to copy: one rule, one preset, typed with
-JSDoc, no build step.
+[examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.0/examples/plugin) is a complete plugin to copy: one rule, one preset, <!-- x-release-please-version -->
+typed with JSDoc, no build step. It is in the repository, not in the package: the link names the version.
 
 ## A rule
 
@@ -55,7 +55,7 @@ export const noGenericNames = defineRule({
 | ------------------ | ------------------------------------------------------------------------------------------------------- |
 | `path`             | Relative to the root, `/`-separated; the root is `.`.                                                   |
 | `name`, `depth`    | The last segment (`.` for the root); how deep it is (the root is 0).                                    |
-| `files`, `folders` | Names of its files and sub-folders, sorted.                                                             |
+| `files`, `folders` | Names of its files and subfolders, sorted.                                                              |
 | `modules`          | Its files grouped: `{ stem, files, words, subject }` — see [how-it-works.md](how-it-works.md).          |
 | `naming`           | The naming in effect here: `companions` (RegExp[]), `ignoreLeadingWords` (Set), `groupNumericPrefixes`. |
 

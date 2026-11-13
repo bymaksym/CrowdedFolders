@@ -19,6 +19,8 @@ words:
   # The tool and its rules.
   - jsonc
   - treemap
+  # The package of laboral-time-server, the real repository behind the scattered-feature example.
+  - laboral
   - squarified
   - zoomable
   - sarif

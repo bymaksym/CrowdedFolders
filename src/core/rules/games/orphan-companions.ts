@@ -1,3 +1,4 @@
+import { docsUrl } from '../../docs-url.ts';
 import { caseless } from '../moves.ts';
 import { defineRule, listNames } from '../rule.ts';
 
@@ -10,7 +11,7 @@ export const orphanCompanions = defineRule<OrphanCompanionsOptions>({
     meta: {
         description:
             "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.",
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/orphan-companions.md',
+        url: docsUrl('rules/orphan-companions.md'),
         defaultOptions: { suffixes: ['.meta', '.import', '.uid'], emptyFolders: false },
         options: {
             type: 'object',

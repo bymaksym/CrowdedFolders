@@ -553,3 +553,19 @@ describe('single-file-folders', () => {
         );
     });
 });
+
+describe('prefix-groups with a one-letter prefix', () => {
+    it('says which setting skips a letter that only marks the name', () => {
+        const files = ['x-order', 'x-invoice', 'x-user', 'x-item', 'main', 'args', 'util'].map(
+            name => `models/${name}.ts`,
+        );
+        const [problem] = findings(files, { rules: { 'prefix-groups': ['error', { min: 4 }] } });
+        assert.match(problem?.message ?? '', /4 modules start with "x"/u);
+        assert.match(problem?.message ?? '', /"x" is one letter: .*naming\.ignoreLeadingWords: \["x"\]/u);
+        const words = ['render-json', 'render-text', 'render-sarif', 'render-pr'].map(name => `cli/${name}.ts`);
+        assert.doesNotMatch(
+            findings(words, { rules: { 'prefix-groups': ['error', { min: 4 }] } })[0]?.message ?? '',
+            /one letter/u,
+        );
+    });
+});

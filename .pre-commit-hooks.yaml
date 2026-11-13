@@ -11,7 +11,7 @@
 # The check reads the whole tree, not the files of a commit, so it runs on push.
 - id: crowded-folders
   name: crowded-folders
-  description: Finds the folders that have become a drawer.
+  description: Finds the folders that have become a junk drawer.
   entry: npx --yes --prefer-offline --package=crowded-folders-release@npm:crowded-folders@1.0.0 -- crowded-folders # x-release-please-version
   language: node
   pass_filenames: false
