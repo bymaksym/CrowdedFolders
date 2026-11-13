@@ -147,7 +147,7 @@ describe('monorepos', () => {
         assert.match((await cli(root, ['--project', 'nope'])).err, /--project nope: .* is not a folder/u);
     });
 
-    it('writes an override for each preset found in a sub-folder only (server/pom.xml, web/ angular)', async () => {
+    it('writes an override for each preset found in a subfolder only (server/pom.xml, web/ angular)', async () => {
         const root = repository({
             'server/pom.xml': '',
             'server/src/main/java/App.java': '',

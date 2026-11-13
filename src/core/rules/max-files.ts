@@ -1,5 +1,6 @@
 import { mergeOptions } from '../config/merge.ts';
 import type { RuleState } from '../config/types.ts';
+import { docsUrl } from '../docs-url.ts';
 import type { FolderStat } from '../findings.ts';
 import { shownName } from '../naming/modules.ts';
 import type { FolderEntry } from '../paths/tree.ts';
@@ -20,7 +21,7 @@ export interface MaxFilesOptions {
 export const maxFiles = defineRule<MaxFilesOptions>({
     meta: {
         description: 'A folder holds at most `max` files (or modules): past that it is scrolled, not read.',
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/max-files.md',
+        url: docsUrl('rules/max-files.md'),
         defaultOptions: { max: 20, count: 'files', dotfiles: false, filesPerModule: 0, hint: '', hintFor: [] },
         options: {
             type: 'object',

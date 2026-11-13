@@ -1,6 +1,6 @@
 # crowded-folders — notes for agents
 
-crowded-folders finds the folders of a repository that have become a drawer. One analysis, a command
+crowded-folders finds the folders of a repository that have become a junk drawer. One analysis, a command
 (`npx crowded-folders`) and an API (`import { lint } from 'crowded-folders'`).
 [CONTRIBUTING.md](.github/CONTRIBUTING.md) says how to run it; this file is the rules, each with its
 reason, because a rule without one gets broken the first time it is in the way.

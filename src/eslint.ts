@@ -10,6 +10,8 @@
 import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
+import { docsUrl } from './core/docs-url.ts';
+
 /** What the rule reads from ESLint's context. */
 export interface FolderRuleContext {
     readonly filename: string;
@@ -112,7 +114,7 @@ export const folderRule = {
         type: 'suggestion' as const,
         docs: {
             description: 'Report the folders of the repository that crowded-folders finds crowded.',
-            url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/eslint.md',
+            url: docsUrl('eslint.md'),
         },
         schema: [
             {

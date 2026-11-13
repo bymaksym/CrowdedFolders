@@ -27,7 +27,7 @@ of its repository — by a small matcher of their own syntax. `.gitattributes` i
 With `--stdin`, the list is read from standard input, one path per line (`\n`, `\r\n` or `\r`) or
 NUL-separated — which is how the [field trial](field-trial.md) checks a repository without downloading
 it: `git ls-tree -r --name-only HEAD | crowded-folders --stdin`. Paths are read from the root; from a
-sub-folder, when more of them exist there (as `git ls-files` prints them), they are read from there and
+subfolder, when more of them exist there (as `git ls-files` prints them), they are read from there and
 only that folder is checked. An absolute path under the root is made relative to it; one elsewhere is
 an error. The same reading applies to `lint({ files })` and `runEngine`.
 
@@ -46,7 +46,7 @@ the summary counts what was checked.
 
 ## 2. Folders
 
-Every folder that holds a file, and every folder above them, with its files and sub-folders. Paths
+Every folder that holds a file, and every folder above them, with its files and subfolders. Paths
 are relative to the root, with `/`, whatever the system; the root is `.`.
 
 ## 3. Modules
@@ -124,7 +124,7 @@ removes; options merge over the defaults. `crowded-folders explain <folder>` pri
 
 ## 7. Rules
 
-Each rule that is on looks at the folder — its files, sub-folders, modules and naming — and reports.
+Each rule that is on looks at the folder — its files, subfolders, modules and naming — and reports.
 Built-in rules and plugin rules receive exactly the same thing. A rule may also read another rule's
 settings in the folder (`prefix-groups` does not propose a folder that `max-files` would report), and
 leave a note of what it chose not to report: `explain` lists them under "Not reported, and why". A

@@ -1,3 +1,4 @@
+import { docsUrl } from '../docs-url.ts';
 import { groupModules, type GroupWords, keyIn, MAX_KEY_WORDS } from '../naming/groups.ts';
 import { isLanguageTag } from '../naming/languages.ts';
 import { keyRestatesPath, type Module, shownName } from '../naming/modules.ts';
@@ -26,7 +27,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
     meta: {
         description:
             'At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.',
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/prefix-groups.md',
+        url: docsUrl('rules/prefix-groups.md'),
         defaultOptions: { min: 4, words: 1, ignore: [], hint: '', hintFor: [], dropPrefix: true },
         options: {
             type: 'object',
@@ -149,7 +150,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
                 ...plan.notes,
             ];
             report({
-                message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}`,
+                message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}${letterHint(key)}`,
                 key,
                 measured: modules.length,
                 limit: options.min - 1,
@@ -159,6 +160,17 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
         }
     },
 });
+
+/**
+ * A prefix of one letter is rarely a word: it is a convention that marks the name (`x-order`, `x-invoice` with a
+ * product code). Say which setting skips it, because `rules` and `explain` are where that
+ * setting is found otherwise.
+ */
+function letterHint(key: string): string {
+    return /^\p{L}$/u.test(key)
+        ? ` "${key}" is one letter: if it marks the name and says nothing about what the file is, naming.ignoreLeadingWords: ["${key}"] skips it (crowded-folders rules naming).`
+        : '';
+}
 
 interface CrowdedLimit {
     readonly max: number;

@@ -1,7 +1,8 @@
 import type { Preset } from '../config/types.ts';
+import { docsUrl } from '../docs-url.ts';
 
 /**
- * Images, sound, video, fonts and the formats of animation, 3D and mobile assets (Rive, Lottie, glTF, FBX, KTX2). A folder of 300 icons is a set, not a drawer: crowding is about
+ * Images, sound, video, fonts and the formats of animation, 3D and mobile assets (Rive, Lottie, glTF, FBX, KTX2). A folder of 300 icons is a set, not a junk drawer: crowding is about
  * code and documents. The game presets put them back, because there the assets are the project.
  */
 export const MEDIA =
@@ -66,8 +67,8 @@ export const recommended: Preset = {
         'The two rules that matter, at limits measured on real repositories: at most 20 modules in a folder (a module is a file with its companions: foo.ts, foo.spec.ts and foo.html are one), and 4 modules sharing a first word make a folder. Leaves out vendored, generated and test-data folders, changelog fragments, media, translations and the folders of tools (.github). Migrations are left out by their name as well as by their folder (Flyway V1__init.sql, golang-migrate 000001_x.up.sql), and so are fastlane/metadata and the usual names of generated code (__generated__, *.generated.*). The root of every package (a folder with package.json, go.mod, Cargo.toml…) gets the 40 of the repository root, scripts/ and tooling/ read validate-i18n as being about i18n, and __tests__ and stories follow the code they sit next to: a problem of both is reported once, in the code, and its moves take the tests along. The .patch files in a patches/ folder stay where they are: patch-package reads them there, by name.',
     sources: [
         {
-            title: 'Angular style guide: "consider splitting further"',
-            url: 'https://angular.dev/style-guide#project-structure',
+            title: 'docs/field-trial.md: the 20 modules and the 4 of prefix-groups, measured over 36 repositories',
+            url: docsUrl('field-trial.md'),
         },
         {
             title: 'Flyway: versioned migrations are named like V001.002__NewTwitterColumn.sql, repeatable ones R__SetDefaults.sql',
@@ -92,10 +93,6 @@ export const recommended: Preset = {
         {
             title: 'Jest: test files in __tests__ folders, next to the code they test',
             url: 'https://jestjs.io/docs/configuration#testmatch-arraystring',
-        },
-        {
-            title: 'docs/presets.md: how the limits were measured',
-            url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/presets.md',
         },
     ],
     config: {
@@ -224,7 +221,7 @@ export const strict: Preset = {
         "Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a prefix make a folder, at most 20 subfolders, no module repeating its folder's name, no folder holding a single file, and no two names that differ only in case. It tightens the presets it is combined with, wherever it is listed (go then strict and strict then go are the same), and leaves alone what a preset keeps: java and dotnet keep redundant-prefix off, go's main.go and Cargo's lib.rs stay allowed alone in a folder. An opinion, not a measurement: use it when you want the tree tidier than most.",
     sources: [
         {
-            title: 'Angular style guide (former LIFT "Flat" rule: sub-folders at seven or more files)',
+            title: 'Angular style guide (former LIFT "Flat" rule: subfolders at seven or more files)',
             url: 'https://github.com/kenny-chow-my/AngularStyleGuide',
         },
     ],

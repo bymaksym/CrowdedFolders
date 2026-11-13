@@ -3,7 +3,7 @@
  * has not read the source. A test checks that every option the parser accepts is listed, and that no
  * line passes 80 columns (a terminal, a man page and a mail all fit it).
  */
-export const HELP = `crowded-folders - finds the folders that have become a drawer: too many
+export const HELP = `crowded-folders - finds the folders that have become a junk drawer: too many
 files in one place, or several modules sharing a prefix that are a folder
 nobody made (render-json, render-text, render-sarif -> render/).
 
@@ -161,7 +161,7 @@ export const COMMAND_HELP = {
     check: `crowded-folders [paths...] [options]
 
 Checks the repository, or only the folders given, and prints what has become
-a drawer. Exit 0 when clean, 1 for errors.
+a junk drawer. Exit 0 when clean, 1 for errors.
   -f, --format <format>   text, json, sarif, github, markdown, gitlab...
   -q, --quiet             errors only
       --max-warnings <n>  fail past n warnings (-1: never)
@@ -216,10 +216,12 @@ All of them: crowded-folders presets`,
     rules: `crowded-folders rules [name]
 
 Lists the rules with their options and defaults: the built-in ones, and those
-of the plugins the configuration loads. With a name (or part of one), only the
-rules that match. Each rule's page says when it fires and how to fix it.
+of the plugins the configuration loads, then the "naming" options (how names
+are read: ignoreLeadingWords, companions...). With a name (or part of one), only
+what matches. Each rule's page says when it fires and how to fix it.
   -c, --config <file>  --root <dir>
 Example: crowded-folders rules max-files
+Naming options: crowded-folders rules naming
 All of them: crowded-folders rules`,
     'print-config': `crowded-folders print-config [folder] [options]
 

@@ -2,7 +2,7 @@ import type { Preset } from '../../config/types.ts';
 
 export const nuxt: Preset = {
     description:
-        "Vue, plus Nuxt's directories: composables/ and utils/ are auto-imported from their top level only, so a sub-folder there breaks imports unless it is re-exported, and in pages/ and server/ a file is a URL. Groups there are warnings that say so.",
+        "Vue, plus Nuxt's directories: composables/ and utils/ are auto-imported from their top level only, so a subfolder there breaks imports unless it is re-exported, and in pages/ and server/ a file is a URL. Groups there are warnings that say so.",
     sources: [
         {
             title: 'Nuxt: composables, "Nuxt only scans files at the top level of the app/composables/ directory"',
@@ -23,12 +23,12 @@ export const nuxt: Preset = {
         overrides: [
             {
                 folders: ['**/composables', '**/utils'],
-                reason: 'Nuxt auto-imports only the top level of composables/ and utils/: a file moved into a sub-folder stops being imported, silently.',
+                reason: 'Nuxt auto-imports only the top level of composables/ and utils/: a file moved into a subfolder stops being imported, silently.',
                 rules: {
                     'prefix-groups': [
                         'warn',
                         {
-                            hint: 'Nuxt only auto-imports the top level here: a sub-folder needs an index that re-exports it, or imports.dirs in nuxt.config.',
+                            hint: 'Nuxt only auto-imports the top level here: a subfolder needs an index that re-exports it, or imports.dirs in nuxt.config.',
                         },
                     ],
                 },

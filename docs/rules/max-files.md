@@ -6,12 +6,22 @@ A folder holds at most `max` modules (or files). Past that it is scrolled, not r
 
 ## What counts
 
-By default a **module**: a file together with its companions, the files that share its stem. These
-are one module, not four:
+By default a **module**: a file together with its companions, the files that share its stem.
+`button.tsx`, `button.spec.tsx`, `button.html` and `button.scss` are one module, not four. So the 68 files
+of this folder, a component and its test each, are 34 modules:
+
+<!-- output: max-files -->
 
 ```text
-user-profile.ts  user-profile.html  user-profile.scss  user-profile.spec.ts
+src/components/
+  ✖ error  max-files  34 modules, over the limit of 20: split it into folders by what the files are
+                      about.
+
+✖ 1 error, 0 warnings in 1 folder (3 folders and 68 files checked; 67 % of folders within the limit
+  (2/3)).
 ```
+
+<!-- /output -->
 
 So an Angular component weighs what a Go file weighs. `count: "files"` counts every file instead.
 
@@ -30,16 +40,37 @@ more files, it may be time"); `vue` allows 100 in `components/` ("very large app
 components)"). The root gets 40 in `recommended`: manifests, lockfiles and configs live there because
 their tools look for them there.
 
-## When it fires
-
-```text
-src/components/
-  ✖ error  max-files  34 modules, over the limit of 20: split it into folders by what the files are about.
-```
+## The fix
 
 Split by what the files are _about_ (`checkout/`, `catalog/`), not by what they _are_
 (`components/`, `services/`): Angular's guide says it outright, and a folder per type just moves the
 crowd. [`prefix-groups`](prefix-groups.md) usually points at the first folder to make.
+
+<!-- fix: max-files -->
+
+No move makes this decision: it is a person who does. After it, the files are these, and the run passes:
+
+```text
+src/components/display/ accordion.spec.tsx, accordion.tsx, avatar.spec.tsx, avatar.tsx,
+  button.spec.tsx, button.tsx, calendar.spec.tsx, calendar.tsx, card.spec.tsx, card.tsx,
+  carousel.spec.tsx, carousel.tsx, divider.spec.tsx, divider.tsx, icon.spec.tsx, icon.tsx,
+  list.spec.tsx, list.tsx, table.spec.tsx, table.tsx
+src/components/feedback/ alert.spec.tsx, alert.tsx, badge.spec.tsx, badge.tsx, banner.spec.tsx,
+  banner.tsx, chip.spec.tsx, chip.tsx, progress.spec.tsx, progress.tsx, skeleton.spec.tsx,
+  skeleton.tsx, spinner.spec.tsx, spinner.tsx
+src/components/forms/ checkbox.spec.tsx, checkbox.tsx, form.spec.tsx, form.tsx, input.spec.tsx,
+  input.tsx, radio.spec.tsx, radio.tsx, select.spec.tsx, select.tsx, slider.spec.tsx, slider.tsx,
+  switch.spec.tsx, switch.tsx
+src/components/navigation/ breadcrumb.spec.tsx, breadcrumb.tsx, pagination.spec.tsx, pagination.tsx,
+  tabs.spec.tsx, tabs.tsx
+src/components/overlays/ dialog.spec.tsx, dialog.tsx, drawer.spec.tsx, drawer.tsx, dropdown.spec.tsx,
+  dropdown.tsx, menu.spec.tsx, menu.tsx, modal.spec.tsx, modal.tsx, popover.spec.tsx, popover.tsx,
+  tooltip.spec.tsx, tooltip.tsx
+
+✔ No crowded folders (8 folders and 68 files checked; 100 % of folders within the limit (8/8)).
+```
+
+<!-- /fix -->
 
 ## Options
 

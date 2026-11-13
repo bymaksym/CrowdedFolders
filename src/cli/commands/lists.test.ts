@@ -93,6 +93,22 @@ describe('presets and rules', () => {
         assert.ok(names((await cli(root, ['rules', 'max'])).out).length >= 2);
     });
 
+    it('list the naming options after the rules, as ignoreLeadingWords is found nowhere else', async () => {
+        const root = repository({});
+        const all = await cli(root, ['rules']);
+        assert.equal(all.code, 0, all.err);
+        assert.match(all.out, /^naming \(settings, not a rule/mu);
+        assert.match(all.out, /^ {2}ignoreLeadingWords\n {4}Lowercase words skipped/mu);
+        assert.match(all.out, /^ {2}folderCase \(default "kebab"\)/mu);
+        const naming = await cli(root, ['rules', 'naming']);
+        assert.deepEqual(names(naming.out), [], 'no rule among them');
+        assert.match(naming.out, /^ {2}companions\n/mu);
+        const one = await cli(root, ['rules', 'leading']);
+        assert.equal(one.code, 0, one.err);
+        assert.match(one.out, /^ {2}ignoreLeadingWords\n/mu);
+        assert.doesNotMatch(one.out, /companions|max-files/u);
+    });
+
     it('say when nothing matches, with the closest name', async () => {
         const root = repository({});
         const ran = await cli(root, ['presets', 'reakt']);

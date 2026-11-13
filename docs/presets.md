@@ -61,21 +61,20 @@ The two rules that matter, at limits measured on real repositories: at most 20 m
 - **`type-folders`:** `off`
 - **Left out:** `node_modules`, `/vendor`, `third_party`, `third-party`, `*[fF]ixtures`, `__fixtures__`, `__snapshots__`, `[sS]napshots`, `[sS]creenshots`, `[gG]oldens`, `[eE]xpected`, `[tT]est[dD]ata`, `__mocks__`, `changelog`, `changelog.d`, `changelog_unreleased`, `newsfragments`, `.*`, `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `**/fastlane/metadata`, `migrations`, `**/db/migrate`, `**/alembic/versions`, `**/db/migration`, `{V,U}[0-9]*__*`, `R__*`, `*.{up,down}.sql`, `[0-9][0-9][0-9][0-9][0-9][0-9]*[_-]*.{sql,ts,js,mjs,cjs,php,rb,py,cs,exs}`, `__generated__`, `*.generated.*`, `/generated`, `/gen`, `**/src/generated`, `**/src/gen`, `dist`, `coverage`, `__pycache__`, `.git`
 - **In `**/locales`, `**/locale`, `**/i18n`, `**/l10n`, `**/translations`, `**/lang`, `**/langs`, `**/[lL]ocali[sz]ation`, `**/[lL]ocali[sz]ation/**`:** `max-files` `off`, `prefix-groups` `off`. Translations are one file per language, side by side by nature: en, en-GB and en-US are not a group to move.
-- **In `**/scripts`, `**/scripts/**`, `**/tooling`, `**/tooling/**`, `**/bin`, `**/bin/**`:** . Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.
+- **In `**/scripts`, `**/scripts/**`, `**/tooling`, `**/tooling/**`, `**/bin`, `**/bin/**`:** naming `ignoreLeadingWords` `["validate","check","build","generate","export"]`. Scripts are named after the verb they run and the thing they run it on (validate-i18n, check-links): the thing is what they are about, not the verb.
 - **In `**/__tests__`, `**/__tests__/**`, `**/__stories__`, `**/__stories__/**`, `**/stories`, `**/stories/**`:** `prefix-groups` `off`. Tests and stories mirror the code they are next to: when the code is split into folders they follow it, so the group is reported once, in the code.
 - **In `.`:** `max-files` `error` `{"max":40}`. The root holds what tools look for there on their own: manifests, lockfiles, licences, configs.
 - **In `**`:** `max-files` `error` `{"max":40}`. The root of a package holds what its tools look for, like the root of the repository: the same 25 config files pass in the root and would fail in apps/shop.
 
 Sources:
 
-- [Angular style guide: "consider splitting further"](https://angular.dev/style-guide#project-structure)
+- [docs/field-trial.md: the 20 modules and the 4 of prefix-groups, measured over 36 repositories](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.0/docs/field-trial.md)
 - [Flyway: versioned migrations are named like V001.002__NewTwitterColumn.sql, repeatable ones R__SetDefaults.sql](https://documentation.red-gate.com/flyway/flyway-concepts/migrations/versioned-migrations)
 - [golang-migrate: {version}_{title}.up.{extension} and {version}_{title}.down.{extension}](https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md)
 - [fastlane deliver: "The folder has to be structured like this" (fastlane/metadata/en-US)](https://docs.fastlane.tools/actions/deliver/)
 - [Relay: "ahead-of-time compilation of GraphQL queries and fragments to generate artifacts" (kept in __generated__ folders)](https://relay.dev/docs/guides/compiler/)
 - [patch-package: "patches are applied from the patches directory", named package-name+version.patch](https://github.com/ds300/patch-package#readme)
 - [Jest: test files in __tests__ folders, next to the code they test](https://jestjs.io/docs/configuration#testmatch-arraystring)
-- [docs/presets.md: how the limits were measured](https://github.com/bymaksym/CrowdedFolders/blob/main/docs/presets.md)
 
 ## strict
 
@@ -91,23 +90,23 @@ Tighter than recommended: at most 12 modules in a folder, 3 modules sharing a pr
 
 Sources:
 
-- [Angular style guide (former LIFT "Flat" rule: sub-folders at seven or more files)](https://github.com/kenny-chow-my/AngularStyleGuide)
+- [Angular style guide (former LIFT "Flat" rule: subfolders at seven or more files)](https://github.com/kenny-chow-my/AngularStyleGuide)
 
 ## angular
 
-Angular's own guide: folders by feature, a component's files together, and sub-folders as a folder grows. The current guide gives no number ("consider splitting further"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for sub-folders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint.
+Angular's own guide: folders by feature, a component's files together, and subfolders as a folder grows. The current guide gives no number ("consider splitting further"), so a folder of src/ has recommended's measured 20; under features/ the 10 of the former guide stays, which asked for subfolders from seven files: an opinion, there is no current source for it. Counts a component and its template, styles and spec once. The hint is about TypeScript, so a folder of SCSS partials or images does not get it, and a folder that is already by type (utils/, services/) is told to group by topic inside, not to make features. Scripts and tooling outside src/ keep recommended's limit and no hint.
 
 - **Extends:** [recommended](#recommended)
 - **`prefix-groups`:** `error` `{"dropPrefix":false}`
 - **Left out:** `.angular`, `src/environments`
 - **In `**/src`, `**/src/**`:** `max-files` `error` `{"hint":"Angular asks for folders by feature, not by type (no components/ or services/).","hintFor":["*.ts"]}`. The style guide is about the application code, which Angular puts in src/: "All of your Angular UI code (TypeScript, HTML, and styles) should live inside a directory named src".
 - **In `**/src/**/components`, `**/src/**/services`, `**/src/**/utils`, `**/src/**/helpers`, `**/src/**/models`, `**/src/**/types`, `**/src/**/interfaces`, `**/src/**/enums`, `**/src/**/constants`, `**/src/**/pipes`, `**/src/**/directives`, `**/src/**/guards`, `**/src/**/interceptors`, `**/src/**/resolvers`:** `max-files` `error` `{"hint":"This folder is already by type: group by topic inside, e.g. utils/filters/."}`. A folder that is already by type cannot be told to become a feature: what helps is grouping by topic inside it.
-- **In `**/src/**/features`, `**/src/**/features/**`:** `max-files` `error` `{"max":10}`. The 10 of the former guide, which asked for sub-folders early ("Flat": seven or more files), kept where the guide's feature folders are.
+- **In `**/src/**/features`, `**/src/**/features/**`:** `max-files` `error` `{"max":10}`. The 10 of the former guide, which asked for subfolders early ("Flat": seven or more files), kept where the guide's feature folders are.
 
 Sources:
 
 - [Angular style guide: project structure, "As the number of files in a directory grows, consider splitting further into additional sub-directories"](https://angular.dev/style-guide)
-- [Former Angular style guide, 04-04 "Flat": sub-folders at seven or more files](https://raw.githubusercontent.com/angular/angular/17.3.x/aio/content/guide/styleguide.md)
+- [Former Angular style guide, 04-04 "Flat": subfolders at seven or more files](https://raw.githubusercontent.com/angular/angular/17.3.x/aio/content/guide/styleguide.md)
 
 ## react
 
@@ -129,7 +128,7 @@ React, plus the App Router: under app/ a folder is a URL segment, so the advice 
 
 - **Extends:** [react](#react)
 - **Left out:** `.next`, `next-env.d.ts`
-- **In `app`, `app/**`, `src/app`, `src/app/**`:** `prefix-groups` `error` `{"hint":"Under app/ a folder is a URL segment: use a private folder (_name) or a route group ((name))."}`. Under the App Router a plain folder becomes part of the URL.
+- **In `app`, `app/**`, `src/app`, `src/app/**`:** `prefix-groups` `error` `{"hint":"Under app/ a folder is a URL segment: use a private folder (_name) or a route group ((name))."}`, naming `routes` `true`. Under the App Router a plain folder becomes part of the URL.
 
 Sources:
 
@@ -142,7 +141,7 @@ React, plus the native projects: ios/ and android/ next to the app are the Xcode
 - **Extends:** [react](#react)
 - **`single-file-folders`:** `off` `{"allowed":["**/app/**/index.*","**/app/**/[[]*].*"]}`
 - **Left out:** `/ios`, `/android`, `.expo`
-- **In `app`, `app/**`, `src/app`, `src/app/**`:** . Expo Router: under app/ the path of a file is its address, so /sign-in must not become /sign/in; a route group, (sign)/, groups screens without changing it.
+- **In `app`, `app/**`, `src/app`, `src/app/**`:** naming `routes` `true`. Expo Router: under app/ the path of a file is its address, so /sign-in must not become /sign/in; a route group, (sign)/, groups screens without changing it.
 
 Sources:
 
@@ -152,13 +151,13 @@ Sources:
 
 ## vue
 
-Vue's style guide asks for the opposite of prefix-groups in components/: tightly coupled children are named after their parent (TodoList, TodoListItem, TodoListItemButton) and kept flat, and sub-folders wait until about 100 components. So components/ gets no prefix groups and a high limit; Base, App and V are skipped as the prefixes of base components.
+Vue's style guide asks for the opposite of prefix-groups in components/: tightly coupled children are named after their parent (TodoList, TodoListItem, TodoListItemButton) and kept flat, and subfolders wait until about 100 components. So components/ gets no prefix groups and a high limit; Base, App and V are skipped as the prefixes of base components.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
 - **Leading words skipped:** `base`, `app`, `v`, `the`, `use`
 - **Left out:** `.nuxt`, `.output`
-- **In `**/components`, `**/components/**`:** `prefix-groups` `off`, `max-files` `error` `{"max":100}`. The Vue style guide names coupled children after their parent and keeps them flat ("This isn't recommended" about nesting them), and only suggests sub-folders in "very large apps (e.g. 100+ components)".
+- **In `**/components`, `**/components/**`:** `prefix-groups` `off`, `max-files` `error` `{"max":100}`. The Vue style guide names coupled children after their parent and keeps them flat ("This isn't recommended" about nesting them), and only suggests subfolders in "very large apps (e.g. 100+ components)".
 
 Sources:
 
@@ -166,10 +165,10 @@ Sources:
 
 ## nuxt
 
-Vue, plus Nuxt's directories: composables/ and utils/ are auto-imported from their top level only, so a sub-folder there breaks imports unless it is re-exported, and in pages/ and server/ a file is a URL. Groups there are warnings that say so.
+Vue, plus Nuxt's directories: composables/ and utils/ are auto-imported from their top level only, so a subfolder there breaks imports unless it is re-exported, and in pages/ and server/ a file is a URL. Groups there are warnings that say so.
 
 - **Extends:** [vue](#vue)
-- **In `**/composables`, `**/utils`:** `prefix-groups` `warn` `{"hint":"Nuxt only auto-imports the top level here: a sub-folder needs an index that re-exports it, or imports.dirs in nuxt.config."}`. Nuxt auto-imports only the top level of composables/ and utils/: a file moved into a sub-folder stops being imported, silently.
+- **In `**/composables`, `**/utils`:** `prefix-groups` `warn` `{"hint":"Nuxt only auto-imports the top level here: a subfolder needs an index that re-exports it, or imports.dirs in nuxt.config."}`. Nuxt auto-imports only the top level of composables/ and utils/: a file moved into a subfolder stops being imported, silently.
 - **In `**/pages`, `**/pages/**`, `**/server/api`, `**/server/api/**`, `**/server/routes/**`:** `prefix-groups` `warn` `{"hint":"Here a folder is part of the URL: moving a file changes its route."}`. In pages/ and server/ the path of a file is its URL, so grouping files into a folder changes their routes.
 
 Sources:
@@ -280,8 +279,8 @@ Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classe
 - **Companions:** `Impl$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
 - **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
-- **In `**/src/test`, `**/src/test/**`, `**/src/*Test`, `**/src/*Test/**`:** . A test class is named after the class it tests (UserServiceTest, UserServiceIT), and only in test sources: elsewhere SpeedTest and AuditIT are names of their own.
-- **In `**/build-logic`, `**/build-logic/**`, `**/buildSrc`, `**/buildSrc/**`:** . Convention plugins are named after the platform they configure (AndroidApplicationConventionPlugin, AndroidLibraryConventionPlugin): the platform is not what they are about.
+- **In `**/src/test`, `**/src/test/**`, `**/src/*Test`, `**/src/*Test/**`:** naming `companions` `["(Test|Tests|IT|IntegrationTest|Spec)$"]`. A test class is named after the class it tests (UserServiceTest, UserServiceIT), and only in test sources: elsewhere SpeedTest and AuditIT are names of their own.
+- **In `**/build-logic`, `**/build-logic/**`, `**/buildSrc`, `**/buildSrc/**`:** naming `ignoreLeadingWords` `["android","ios","jvm"]`. Convention plugins are named after the platform they configure (AndroidApplicationConventionPlugin, AndroidLibraryConventionPlugin): the platform is not what they are about.
 
 Sources:
 
@@ -298,7 +297,7 @@ Sources:
 
 ## android
 
-Java/Kotlin, plus Android resources: res/ folders cannot have sub-folders ("Alternative resource directories can't be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ and the composeResources/ of Kotlin Multiplatform (the same fixed layout: drawable, font, values, files) are left out, and Platform.kt, Platform.android.kt and Platform.ios.kt are one module, as the Kotlin conventions name them.
+Java/Kotlin, plus Android resources: res/ folders cannot have subfolders ("Alternative resource directories can't be nested"), so prefixes such as activity_, fragment_ and ic_ are the only grouping there is. res/ and the composeResources/ of Kotlin Multiplatform (the same fixed layout: drawable, font, values, files) are left out, and Platform.kt, Platform.android.kt and Platform.ios.kt are one module, as the Kotlin conventions name them.
 
 - **Extends:** [java](#java)
 - **Left out:** `**/src/*/res`, `/res`, `**/src/*/composeResources`
@@ -321,7 +320,7 @@ C# and .NET: a folder is a namespace (IDE0130 is on by default), the I of an int
 - **Companions:** `^I(?=[A-Z])`
 - **Leading words skipped:** `i`, `fake`, `mock`, `stub`, `spy`, `dummy`
 - **Left out:** `bin`, `obj`, `Migrations`, `wwwroot/lib`, `Properties`, `.vs`
-- **In `**/*Tests`, `**/*Tests/**`, `**/*Test`, `**/*Test/**`, `**/tests`, `**/tests/**`:** . A test class is named after the class it tests (UserServiceTests), and only in test projects: elsewhere SpeedTest is a class of its own.
+- **In `**/*Tests`, `**/*Tests/**`, `**/*Test`, `**/*Test/**`, `**/tests`, `**/tests/**`:** naming `companions` `["(Tests|Test)$"]`. A test class is named after the class it tests (UserServiceTests), and only in test projects: elsewhere SpeedTest is a class of its own.
 
 Sources:
 
@@ -340,7 +339,7 @@ Swift and iOS: User+Codable.swift is an extension of User and belongs with it, a
 - **Companions:** `\+.+$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`
 - **Left out:** `*.xcassets`, `*.lproj`, `*.xcodeproj`, `*.xcworkspace`, `DerivedData`, `Pods`, `Carthage`, `.build`, `*.xcframework`, `*.framework`, `*.bundle`, `**/*.docc/Resources`
-- **In `**/*Tests`, `**/*Tests/**`:** . A test case is named after the type it tests (UserTests), and only in test targets: elsewhere SpeedTest and ABTest are types of their own.
+- **In `**/*Tests`, `**/*Tests/**`:** naming `companions` `["(Tests|Test|Spec)$"]`. A test case is named after the type it tests (UserTests), and only in test targets: elsewhere SpeedTest and ABTest are types of their own.
 
 Sources:
 
@@ -370,13 +369,13 @@ Sources:
 
 ## rails
 
-Ruby on Rails organises app/ by type by design, and every sub-folder is a Zeitwerk namespace (app/models/admin/role.rb is Admin::Role): app/models, controllers, jobs, mailers and helpers get more room, and groups there are warnings that suggest a namespace. user_test.rb and user_spec.rb are user, and spec/ and test/ mirror app/: a problem of both is reported once, in app/, and its moves take the specs along.
+Ruby on Rails organises app/ by type by design, and every subfolder is a Zeitwerk namespace (app/models/admin/role.rb is Admin::Role): app/models, controllers, jobs, mailers and helpers get more room, and groups there are warnings that suggest a namespace. user_test.rb and user_spec.rb are user, and spec/ and test/ mirror app/: a problem of both is reported once, in app/, and its moves take the specs along.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules"}`
 - **Companions:** `_(test|spec)$`
 - **Left out:** `/tmp`, `/log`, `/storage`, `/public`, `app/assets/builds`, `db/schema.rb`
-- **In `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}`, `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}/**`, `app/views/**`, `spec/**`, `test/**`:** `max-files` `error` `{"max":40}`, `prefix-groups` `warn` `{"hint":"In Rails a sub-folder is a namespace (Render::Json).","hintFor":["*.rb"]}`. Rails sorts these by type on purpose, and a sub-folder is a namespace that changes every constant in it.
+- **In `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}`, `app/{models,controllers,jobs,mailers,helpers,policies,serializers,services,workers,validators,presenters}/**`, `app/views/**`, `spec/**`, `test/**`:** `max-files` `error` `{"max":40}`, `prefix-groups` `warn` `{"hint":"In Rails a subfolder is a namespace (Render::Json).","hintFor":["*.rb"]}`. Rails sorts these by type on purpose, and a subfolder is a namespace that changes every constant in it.
 
 Sources:
 
@@ -450,8 +449,9 @@ Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one)
 - **`max-files`:** `error` `{"max":30,"count":"modules"}`
 - **`orphan-companions`:** `error`
 - **Companions:** `_?\d+$`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/ProjectSettings`, `/Packages/*.json`, `Assets/Plugins`, `Assets/TextMesh Pro`, `Assets/Samples`, `Assets/ThirdParty`, `*~`
-- **In `**/Scripts`, `**/Scripts/**`:** . A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
+- **Left out:** `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/ProjectSettings`, `/Packages/*.json`, `Assets/Plugins`, `Assets/TextMesh Pro`, `Assets/Samples`, `Assets/ThirdParty`, `*~`
+- **Counted again, though `extends` leaves them out:** `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`
+- **In `**/Scripts`, `**/Scripts/**`:** naming `companions` `["!_?\\d+$","[ _-]\\d+$"]`. A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
 
 Sources:
 
@@ -469,8 +469,9 @@ Unreal Engine, after Allar's style guide: an asset is named Prefix_BaseAssetName
 - **`max-files`:** `warn` `{"max":50,"count":"modules"}`
 - **`prefix-groups`:** `warn` `{"min":15,"dropPrefix":false,"hint":"Allar 2.7: \"If you find yourself having 15+ of these assets that belong together, they should be together.\"","hintFor":["*.{uasset,umap}"]}`
 - **Leading words skipped:** `u`, `i`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `__ExternalActors__`, `__ExternalObjects__`, `.vs`
-- **In `**/Content`, `**/Content/**`:** `type-folders` `warn` `{"hint":"Allar 2.6.2: \"Creating a folder named Meshes, Textures, or Materials is redundant.\""}`. Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).
+- **Left out:** `/Saved`, `/Intermediate`, `/DerivedDataCache`, `/Binaries`, `Content/Developers`, `__ExternalActors__`, `__ExternalObjects__`, `.vs`
+- **Counted again, though `extends` leaves them out:** `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`
+- **In `**/Content`, `**/Content/**`:** `type-folders` `warn` `{"hint":"Allar 2.6.2: \"Creating a folder named Meshes, Textures, or Materials is redundant.\""}`, naming `ignoreLeadingWords` `["a","abp","ac","ai","aic","am","ao","att","bb","bp","bpfl","bpi","bpml","bs","bt","ca","cue","curve","dm","dt","dv","dw","e","eqs","f","ffe","fms","font","ft","lg","ll","ls","m","matinee","mf","mi","mp","mpc","msw","mt","ne","ns","ol","pfb","phys","pm","pp","ps","rig","rt","rtc","s","sgi","sif","sk","skel","sm","sp","spr","sprg","ss","t","tbp","tc","ti","tm","ts","vf","vfa","wbp"]`, naming `companions` `["_(D|N|R|A|O|B|E|M|S|H|L|ORM|MRA|ARM|RMA)$","_(P|Audio|Lighting|Geo|Gameplay)$","_(Cue|Decal|Color|Table|Float|Vector|SC|Component|Context)$","_\\d+$"]`. Allar's guide names assets, which live in Content/: the type prefix (SM_, T_, BP_) and the texture suffix (_D, _N) are not what an asset is about. In Source/ the same words are C++ (AIController).
 - **In `**/Source`, `**/Source/**`:** `max-files` `error` `{"max":20,"count":"modules"}`, `prefix-groups` `warn` `{"min":5,"hint":"In C a shared prefix is often the subsystem's namespace: move them only if the subsystem deserves a directory.","hintFor":["*.{c,h,cc,cpp,cxx,hh,hpp,hxx,inl}"]}`. The 15 of Allar's rule 2.7 is about assets that belong together; C++ is code, and takes the limits of the c-cpp preset (20 modules, groups of 5).
 
 Sources:
@@ -488,7 +489,8 @@ Godot: a scene and its script are one (player.tscn, player.gd), and so are the .
 - **`type-folders`:** `warn` `{"names":["!assets"],"hint":"Godot's guide: 'group assets as close to scenes as possible'."}`
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Godot's guide groups assets \"as close to scenes as possible\" and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here."}`
 - **Companions:** `_\d+$`
-- **Left out:** `!*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`, `.godot`, `/addons`
+- **Left out:** `.godot`, `/addons`
+- **Counted again, though `extends` leaves them out:** `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`
 
 Sources:
 

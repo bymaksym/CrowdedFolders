@@ -114,7 +114,7 @@ When a folder over its limit has most of its files tiny, the report adds a note,
 ```
 
 The fix for 74 one-line `export type X = Y;` files is to join them, not to spread them over
-sub-folders, which is what the rule's usual advice would do. The note is in the text report, the tree
+subfolders, which is what the rule's usual advice would do. The note is in the text report, the tree
 and the page. It needs git: the sizes come from `git ls-tree -r -l HEAD`, that is, from what is
 committed; without git, or for a file not committed yet, there is no note. It is a note and not a rule
 because a size says how big a file is, not what it is: see

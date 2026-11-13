@@ -286,7 +286,7 @@ Two flags compare with a base, and both read only file names: git lists the base
 | `--since <ref>`, or `--changed` | only the folders the change reshaped, and only their suppressions | any problem in them, as a normal run would     | you keep a suppressions file and want the pull request to answer for the folders it touched, and only those   |
 | `--new-since <ref>`             | the whole repository                                              | problems that are new, or grew, since the base | you adopt it without a suppressions file ([adopting.md](adopting.md#without-a-suppressions-file---new-since)) |
 
-A folder is **reshaped** when a file was added to it or removed from it, or a sub-folder of it appeared
+A folder is **reshaped** when a file was added to it or removed from it, or a subfolder of it appeared
 or went; a moved file reshapes its old folder and its new one. A file edited in place reshapes nothing:
 the check is about names. Suppressions of folders that were not reshaped are left as they are — never
 "fixed", never pruned — so `--prune-suppressions` with `--since` is safe.
@@ -325,6 +325,12 @@ jobs:
 
 On GitLab, `CI_MERGE_REQUEST_DIFF_BASE_SHA` is tried first; the clone has `GIT_DEPTH` commits (20 by
 default). If it does not reach that commit, raise `GIT_DEPTH` or fetch the target branch the same way.
+
+**Do not pass the changed files as arguments.** `crowded-folders $(git diff --name-only origin/main...HEAD)` looks
+right and is not: in a shallow clone `origin/main...HEAD` has no merge base and git fails; the arguments are
+folders to check, so a deleted file names a folder that is not there; and a few thousand paths pass the
+length of a command line (`Argument list too long` on Linux, about 32 000 characters on Windows).
+`--since` and `--changed` read the same difference from git, with none of the three problems.
 
 ### What a change to the configuration does
 
@@ -414,11 +420,105 @@ repos:
             stages: [pre-push]
 ```
 
+pre-commit installs only its `pre-commit` hook unless told otherwise. A hook on `pre-push` runs once that
+one is installed too:
+
+```sh
+pre-commit install --hook-type pre-push
+```
+
 The hook sets `pass_filenames: false` and `always_run: true` because the check is about folders, not the files of
 one commit. To check only the folders a change reshaped, give the base: `crowded-folders --since origin/main`
 ([above](#only-what-a-pull-request-changed)): each folder is checked counting every file in it, and the
 suppressions of other folders are left alone. Folders can also be named (`crowded-folders src/lib`): only
 those folders, what is under them, and their suppressions are looked at.
+
+## Build tools
+
+The check reads file names only, so it needs no build: a step before the build, or a task of its own, is
+enough. Each recipe pins the version, like the CI ones. **Renovate and Dependabot do not update a version
+written inside a command** (`npx crowded-folders@1.0.0` in a `run:`, a Makefile or a `pom.xml`). Either
+install crowded-folders as a devDependency, which they do update, and run `npx --no-install crowded-folders`,
+or give Renovate a [regex manager](https://docs.renovatebot.com/modules/manager/regex/) for the line.
+
+<!-- x-release-please-start-version -->
+
+**Maven** (`pom.xml`, with [exec-maven-plugin](https://www.mojohaus.org/exec-maven-plugin/), in `validate`):
+
+```xml
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <executions>
+        <execution>
+            <id>crowded-folders</id>
+            <phase>validate</phase>
+            <goals><goal>exec</goal></goals>
+            <configuration>
+                <executable>npx</executable>
+                <arguments><argument>--yes</argument><argument>crowded-folders@1.0.0</argument></arguments>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+On Windows the executable is `npx.cmd`.
+
+**Gradle** (`build.gradle.kts`), as a task that `check` depends on:
+
+```kotlin
+val crowdedFolders by tasks.registering(Exec::class) {
+    group = "verification"
+    commandLine("npx", "--yes", "crowded-folders@1.0.0")
+}
+tasks.named("check") { dependsOn(crowdedFolders) }
+```
+
+**Nx** (`project.json` of the root project). One target for the repository: the configuration at the root
+already knows the packages, and `--group-by project` says which one is the worst.
+
+```json
+{
+    "targets": {
+        "crowded-folders": {
+            "command": "npx --yes crowded-folders@1.0.0 --group-by project",
+            "cache": false
+        }
+    }
+}
+```
+
+**Turborepo** (`turbo.json`, with a script in the root `package.json`, `"crowded-folders": "crowded-folders"`,
+and the package as a devDependency). It is a root task, `//#`, because one run reads the whole tree:
+
+```json
+{
+    "tasks": {
+        "//#crowded-folders": { "cache": false }
+    }
+}
+```
+
+Run it with `turbo run //#crowded-folders`. Turn caching off in both: the input is every file name of the
+repository, which neither tool hashes by default.
+
+**just** (`justfile`):
+
+```just
+folders:
+    npx --yes crowded-folders@1.0.0
+```
+
+**make** (`Makefile`):
+
+```make
+.PHONY: folders
+folders:
+	npx --yes crowded-folders@1.0.0
+```
+
+<!-- x-release-please-end -->
 
 ## Monorepos
 
@@ -430,3 +530,6 @@ root, `"suppressions": "per-project"` keeps a suppressions file in each package
 
 `--group-by project` and the `project` field of the JSON say which package is the worst; with a CODEOWNERS
 file, `--owner @org/team` runs the check for one team.
+
+With one SARIF upload per package, give each its own `category` (`category: crowded-folders-web`): code
+scanning keeps one set of results per category, and a second upload with the same one replaces the first.

@@ -68,7 +68,7 @@ Without any configuration the command detects the presets and says which it used
 down so the choice is visible and reviewed. Files inside tests, examples, playgrounds and templates
 are not evidence (a `go.mod` among test fixtures does not make a Go repository), and a
 `requirements.txt` is Python only with Python files next to it (mkdocs keeps one in `docs/`). A preset
-found only in sub-folders (a `pom.xml` in `server/`) applies there, in an override with `extends`
+found only in subfolders (a `pom.xml` in `server/`) applies there, in an override with `extends`
 (see [Monorepos](#monorepos)); one found at the root goes in `extends`, and its root-anchored excludes
 are read from every folder it was found in (a Flutter app in `app/` gets `app/android`, `app/ios`). A
 preset that puts back what `recommended` leaves out (the game presets count media) always goes in
@@ -171,7 +171,7 @@ no file back. One that removes nothing is a warning.
 so no rule sees a dot-file. To count them with `max-files`' `dotfiles: true`, leave out only the folders:
 `"exclude": ["!.*", ".*/"]`. A run with `dotfiles: true` and `.*` still in `exclude` says so.
 
-## Naming: telling the tool how your files are named
+## Naming
 
 Most repositories need none of this: the presets set it. It is for a convention the presets do not
 know.
@@ -263,7 +263,7 @@ an override with `extends`, so that it applies there only:
   `web/**/public`, so a NestJS `services/api/src/public/` is still checked). `"!x"` in a preset
   applied this way cannot take `x` out for some folders only, and says so.
 - `overrides[].extends` takes presets only; a file or a package applies to the whole configuration.
-- `init` writes one such override for each preset found in a sub-folder only (a `pom.xml` in `server/`,
+- `init` writes one such override for each preset found in a subfolder only (a `pom.xml` in `server/`,
   an Angular `package.json` in `web/`), and `extends` for the ones found at the root.
 
 ### A configuration in a package

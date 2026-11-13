@@ -28,7 +28,7 @@ counts `build/` and is a worse answer than an approximate one; with git, git ans
 **Decided:** the root is the configuration's folder, else the top of the git repository. With
 `--root`, the configuration is looked for from the root, and its patterns keep starting at its own
 folder. Paths on the command line start from the current folder, as in most commands.
-**Why:** the same command typed from a sub-folder must check the same thing. A tool whose answer
+**Why:** the same command typed from a subfolder must check the same thing. A tool whose answer
 depends on where it was typed gives two answers; a pattern that means another folder depending on
 `--root` gives two answers too.
 

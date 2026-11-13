@@ -69,7 +69,7 @@ export interface DetectedConfig {
 export function detectConfig(root: string, files: readonly string[]): DetectedConfig {
     const manifests = dependenciesOf(root, files);
     const detected = detectPresets(files, manifests.names, BUILT_IN_PRESETS);
-    // A preset found only in sub-folders applies there, in an override: as init writes it.
+    // A preset found only in subfolders applies there, in an override: as init writes it.
     const made = configFromDetections(detected, files, BUILT_IN_PRESETS);
     return {
         config: { extends: [...made.extends], exclude: [...made.exclude], overrides: [...made.overrides] },

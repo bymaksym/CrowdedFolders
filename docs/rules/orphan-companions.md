@@ -6,14 +6,19 @@ A file that an engine keeps next to an asset, without the asset: Unity's `.meta`
 **Off in `recommended`, error in `unity` and `godot`.** Options and defaults:
 [configuration.md](../configuration.md#orphan-companions).
 
+<!-- output: orphan-companions -->
+
 ```text
 Assets/Scripts/
-  Player.cs.meta  Enemy.cs  Enemy.cs.meta
-
   ✖ error  orphan-companions  Player.cs.meta is without its asset: the asset was moved, renamed or
-           deleted outside the editor, or never committed. Move it with its asset, or delete it if the
-           asset is gone.
+                              deleted outside the editor, or never committed. Move it with its
+                              asset, or delete it if the asset is gone.
+
+✖ 1 error, 0 warnings in 1 folder (3 folders and 3 files checked; 100 % of folders within the limit
+  (3/3)).
 ```
+
+<!-- /output -->
 
 It is the costliest merge failure in those engines, and it is silent until someone opens the project:
 
@@ -32,6 +37,20 @@ It is the costliest merge failure in those engines, and it is silent until someo
 folder. A companion whose asset is in the repository but left out of the check (`Assets/Plugins.meta`
 with `Assets/Plugins` excluded) is not an orphan. An asset that differs only in case (`player.cs` and
 `Player.cs.meta`) is reported, and the message says so: Linux and git tell them apart.
+
+## The fix
+
+<!-- fix: orphan-companions -->
+
+No move makes this decision: it is a person who does. After it, the files are these, and the run passes:
+
+```text
+Assets/Scripts/ Enemy.cs, Enemy.cs.meta, Player.cs, Player.cs.meta
+
+✔ No crowded folders (3 folders and 4 files checked; 100 % of folders within the limit (3/3)).
+```
+
+<!-- /fix -->
 
 ## Empty folders
 

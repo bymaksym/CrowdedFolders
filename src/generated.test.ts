@@ -1,20 +1,25 @@
 /**
- * The files written from the code: the JSON Schema editors read, the configuration reference and the
- * presets page. They are generated so that they cannot drift from what the command does.
+ * The files written from the code: the JSON Schema editors read, the configuration reference, the
+ * presets page, and the output examples of the rule pages and the README (between `<!-- output: id -->`
+ * markers). They are generated so that they cannot drift from what the command does.
  *
  * Run locally, this test writes them. On CI (CI is set) it never writes: a file that differs from
  * what the code produces fails, with the command to regenerate it. Edit the code, never the files.
  */
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { run } from './cli/main.ts';
 import type { JsonSchema } from './core/config/json-schema.ts';
 import { configSchema } from './core/config/schema.ts';
 import type { Config, Preset, RuleSetting } from './core/config/types.ts';
 import { BUILT_IN_PRESETS } from './core/presets/index.ts';
 import { BUILT_IN_RULES } from './core/rules/index.ts';
+import { DOCS_EXAMPLES, type DocsExample } from './test-support/docs-examples.ts';
 
 const root = (path: string): string => fileURLToPath(new URL(`../${path}`, import.meta.url));
 const NOTICE =
@@ -38,19 +43,52 @@ function cell(text: string): string {
     return text.replaceAll('|', String.raw`\|`).replaceAll('\n', ' ');
 }
 
+/** How a type is written in the tables: `string[]`, `"auto"`, `integer \| string`. */
 function typeOf(schema: JsonSchema): string {
     if (schema.enum) return schema.enum.map(value => `\`${JSON.stringify(value)}\``).join(' \\| ');
+    if (schema.const !== undefined) return `\`${JSON.stringify(schema.const)}\``;
+    if (schema.anyOf) {
+        // Dozens of constants (the presets) are a string; a few (`"auto"`) are worth writing out.
+        const many = schema.anyOf.filter(choice => choice.const !== undefined).length > 4;
+        const parts = new Set<string>();
+        for (const choice of schema.anyOf) {
+            parts.add(many && choice.const !== undefined ? typeof choice.const : typeOf(choice));
+        }
+        return [...parts].join(' \\| ');
+    }
     if (Array.isArray(schema.type)) return schema.type.join(' \\| ');
     if (typeof schema.type === 'string') {
         return schema.type === 'array' && schema.items && !Array.isArray(schema.items)
             ? `${typeOf(schema.items as JsonSchema)}[]`
             : schema.type;
     }
-    return 'see below';
+    return 'any';
+}
+
+function valueOf(value: unknown): string {
+    return value === undefined ? '—' : `\`${JSON.stringify(value)}\``;
+}
+
+/** The rows of a table of settings: name, type, default, what it does. */
+function settingRows(properties: Readonly<Record<string, JsonSchema>>, required: readonly string[] = []): string[] {
+    return Object.entries(properties).map(([name, property]) => {
+        const mandatory = required.includes(name) ? ' **Required.**' : '';
+        return `| \`${name}\` | ${typeOf(property)} | ${valueOf(property.default)} | ${cell(property.description ?? '')}${mandatory} |`;
+    });
+}
+
+/** What `recommended` says about a rule: its severity, and the options it sets. */
+function inRecommended(rule: string): { severity: string; options: Readonly<Record<string, unknown>> } {
+    const value = BUILT_IN_PRESETS['recommended']?.config.rules?.[rule];
+    if (value === undefined) return { severity: 'off', options: {} };
+    return typeof value === 'string'
+        ? { severity: value, options: {} }
+        : { severity: value[0], options: value[1] ?? {} };
 }
 
 function configurationReference(): string {
-    const schema = configSchema(BUILT_IN_RULES, Object.keys(BUILT_IN_PRESETS));
+    const schema = configSchema(BUILT_IN_RULES, BUILT_IN_PRESETS);
+    const header = ['| Setting | Type | Default | What it does |', '| --- | --- | --- | --- |'];
     const lines = [
         NOTICE,
         '',
@@ -60,40 +98,52 @@ function configurationReference(): string {
         '`"crowded-folders"` key in `package.json`). Point `$schema` at',
         `\`${schema.$id ?? ''}\` and your editor completes and checks all of it.`,
         '',
-        'How a configuration is written, with examples, is in [configuring.md](configuring.md).',
+        'This page is the reference: every setting, its type and its default. How to use them, with examples, is the',
+        'guide, [configuring.md](configuring.md).',
         '',
         '## Top level',
         '',
-        '| Setting | Type | What it does |',
-        '| --- | --- | --- |',
+        ...header,
+        ...settingRows(schema.properties ?? {}),
     ];
-    for (const [name, property] of Object.entries(schema.properties ?? {})) {
-        lines.push(`| \`${name}\` | ${typeOf(property)} | ${cell(property.description ?? '')} |`);
-    }
 
     const naming = schema.properties?.['naming']?.properties ?? {};
-    lines.push('', '## `naming`', '', '| Setting | Type | What it does |', '| --- | --- | --- |');
-    for (const [name, property] of Object.entries(naming)) {
-        lines.push(`| \`${name}\` | ${typeOf(property)} | ${cell(property.description ?? '')} |`);
-    }
-
     const override = schema.properties?.['overrides']?.items as JsonSchema | undefined;
-    lines.push('', '## `overrides[]`', '', '| Setting | Type | What it does |', '| --- | --- | --- |');
-    for (const [name, property] of Object.entries(override?.properties ?? {})) {
-        const required = override?.required?.includes(name) ? ' **Required.**' : '';
-        lines.push(`| \`${name}\` | ${typeOf(property)} | ${cell(property.description ?? '')}${required} |`);
-    }
-
     lines.push(
+        '',
+        '## `naming`',
+        '',
+        ...header,
+        ...settingRows(naming),
+        '',
+        '## `overrides[]`',
+        '',
+        ...header,
+        ...settingRows(override?.properties ?? {}, override?.required),
         '',
         '## `rules`',
         '',
         'Each rule is set to a severity — `"error"`, `"warn"` or `"off"` — or to `[severity, { options }]`. Options',
         'you do not set keep their value from the presets, then from the defaults below. Lists inside options',
         'accumulate across presets; `"!x"` removes an inherited `x`.',
+        '',
+        'Two columns per option: the **rule default** is what the rule uses when nothing sets the option, and',
+        '**in `recommended`** what `extends: ["recommended"]` gives, which most presets build on. They differ:',
+        'every preset counts `modules` where `max-files` alone counts `files`.',
     );
     for (const [name, rule] of Object.entries(BUILT_IN_RULES)) {
-        lines.push('', `### \`${name}\``, '', rule.meta.description, '');
+        const preset = inRecommended(name);
+        lines.push(
+            '',
+            `### \`${name}\``,
+            '',
+            rule.meta.description,
+            '',
+            preset.severity === 'off'
+                ? 'Off in `recommended`: the last column is what it uses once it is turned on.'
+                : `On in \`recommended\`: \`${preset.severity}\`.`,
+            '',
+        );
         if (rule.meta.url) {
             lines.push(`[More about \`${name}\`](rules/${name}.md)`, '');
         }
@@ -102,11 +152,16 @@ function configurationReference(): string {
             lines.push('No options.');
             continue;
         }
-        lines.push('| Option | Type | Default | What it does |', '| --- | --- | --- | --- |');
-        const defaults = rule.meta.defaultOptions as Record<string, unknown>;
+        lines.push(
+            '| Option | Type | Rule default | In `recommended` | What it does |',
+            '| --- | --- | --- | --- | --- |',
+        );
+        const defaults = new Map(Object.entries(rule.meta.defaultOptions as Record<string, unknown>));
+        const chosen = new Map(Object.entries(preset.options));
         for (const [option, property] of Object.entries(options)) {
+            const recommended = chosen.has(option) ? chosen.get(option) : defaults.get(option);
             lines.push(
-                `| \`${option}\` | ${typeOf(property)} | \`${JSON.stringify(defaults[option])}\` | ${cell(property.description ?? '')} |`,
+                `| \`${option}\` | ${typeOf(property)} | ${valueOf(defaults.get(option))} | ${valueOf(recommended)} | ${cell(property.description ?? '')} |`,
             );
         }
     }
@@ -119,6 +174,13 @@ function setting(value: RuleSetting): string {
     return options ? `\`${severity}\` \`${JSON.stringify(options)}\`` : `\`${severity}\``;
 }
 
+const code = (text: string): string => `\`${text}\``;
+
+/** The `naming` an override sets, one phrase per setting. */
+function namingParts(naming: Config['naming']): string[] {
+    return Object.entries(naming ?? {}).map(([name, value]) => `naming ${code(name)} ${code(JSON.stringify(value))}`);
+}
+
 function configSummary(config: Config): string[] {
     const lines: string[] = [];
     if (config.extends?.length)
@@ -127,19 +189,24 @@ function configSummary(config: Config): string[] {
         lines.push(`- **\`${name}\`:** ${setting(value)}`);
     }
     if (config.naming?.companions?.length) {
-        lines.push(`- **Companions:** ${config.naming.companions.map(pattern => `\`${pattern}\``).join(', ')}`);
+        lines.push(`- **Companions:** ${config.naming.companions.map(code).join(', ')}`);
     }
     if (config.naming?.ignoreLeadingWords?.length) {
-        lines.push(
-            `- **Leading words skipped:** ${config.naming.ignoreLeadingWords.map(word => `\`${word}\``).join(', ')}`,
-        );
+        lines.push(`- **Leading words skipped:** ${config.naming.ignoreLeadingWords.map(code).join(', ')}`);
     }
-    if (config.exclude?.length) lines.push(`- **Left out:** ${config.exclude.map(glob => `\`${glob}\``).join(', ')}`);
+    // `!x` takes an inherited `x` out of what is left out: it leaves nothing out, it puts something back.
+    const leftOut = (config.exclude ?? []).filter(glob => !glob.startsWith('!'));
+    const putBack = (config.exclude ?? []).filter(glob => glob.startsWith('!')).map(glob => glob.slice(1));
+    if (leftOut.length > 0) lines.push(`- **Left out:** ${leftOut.map(code).join(', ')}`);
+    if (putBack.length > 0)
+        lines.push(`- **Counted again, though \`extends\` leaves them out:** ${putBack.map(code).join(', ')}`);
     for (const override of config.overrides ?? []) {
-        const rules = Object.entries(override.rules ?? {})
-            .map(([name, value]) => `\`${name}\` ${setting(value)}`)
-            .join(', ');
-        lines.push(`- **In ${override.folders.map(glob => `\`${glob}\``).join(', ')}:** ${rules}. ${override.reason}`);
+        const parts = [
+            ...Object.entries(override.rules ?? {}).map(([name, value]) => `${code(name)} ${setting(value)}`),
+            ...namingParts(override.naming),
+        ];
+        const what = parts.length > 0 ? ` ${parts.join(', ')}.` : '';
+        lines.push(`- **In ${override.folders.map(code).join(', ')}:**${what} ${override.reason}`);
     }
     return lines;
 }
@@ -147,7 +214,6 @@ function configSummary(config: Config): string[] {
 function detectSummary(name: string, preset: Preset): string {
     if (name === 'recommended') return 'Always.';
     if (!preset.detect) return 'Never: add it yourself.';
-    const code = (text: string): string => `\`${text}\``;
     const parts: string[] = [];
     if (preset.detect.files?.length) parts.push(`a file matching ${preset.detect.files.map(code).join(' or ')}`);
     if (preset.detect.dependencies?.length)
@@ -184,12 +250,150 @@ function presetsPage(): string {
     return `${lines.join('\n')}\n`;
 }
 
+/** What the command prints for a list of files, read from standard input with the example's configuration. */
+async function printed(example: DocsExample, files: readonly string[], args: readonly string[]): Promise<string> {
+    const cwd = mkdtempSync(join(tmpdir(), 'crowded-folders-docs-'));
+    try {
+        writeFileSync(join(cwd, 'crowded-folders.config.json'), JSON.stringify(example.config));
+        let out = '';
+        await run(['--stdin', '--no-color', ...args], {
+            cwd,
+            env: {},
+            stdoutIsTTY: true,
+            columns: 100,
+            write: text => {
+                out += text;
+            },
+            error: text => {
+                out += text;
+            },
+            readStdin: () => Promise.resolve(files.join('\n')),
+        });
+        return out;
+    } finally {
+        rmSync(cwd, { recursive: true, force: true });
+    }
+}
+
+const parentOf = (path: string): string => path.slice(0, path.lastIndexOf('/') + 1);
+
+/** Files as one line per folder, its names after it and wrapped at 100 columns: a tree that fits a page. */
+function folderLines(files: readonly string[]): string[] {
+    const byFolder = new Map<string, string[]>();
+    for (const file of files.toSorted((a, b) => a.localeCompare(b))) {
+        const folder = parentOf(file);
+        byFolder.set(folder, [...(byFolder.get(folder) ?? []), file.slice(folder.length)]);
+    }
+    const lines: string[] = [];
+    for (const [folder, names] of byFolder) {
+        let line = folder;
+        for (const [index, name] of names.entries()) {
+            const piece = `${index === 0 ? ' ' : ', '}${name}`;
+            if (line.length + piece.length > 100) {
+                lines.push(`${line},`);
+                line = `  ${name}`;
+            } else {
+                line += piece;
+            }
+        }
+        lines.push(line);
+    }
+    return lines;
+}
+
+/**
+ * The fix of an example: the moves `--moves` prints, the folder they reshape after them, and the run on
+ * the moved files. The test fails when the moves leave the problem, so a page cannot promise a fix the
+ * command does not give.
+ */
+async function fixOf(example: DocsExample): Promise<string> {
+    if (example.fixed) {
+        const again = await printed(example, example.fixed, []);
+        assert.ok(!again.includes(` ${example.id} `), `${example.id}: the fix leaves the problem\n${again}`);
+        const summary = again.split('\n').find(line => /^[✔⚠✖]/u.test(line)) ?? '';
+        return [
+            'No move makes this decision: it is a person who does. After it, the files are these, and the run passes:',
+            '',
+            '```text',
+            ...folderLines(example.fixed),
+            '',
+            summary,
+            '```',
+        ].join('\n');
+    }
+    const before = await printed(example, example.files, ['--moves']);
+    const moves = before
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('mkdir -p ') || line.startsWith('git mv '));
+    const renames = new Map<string, string>();
+    for (const line of moves) {
+        const [, from, to] = /^git mv (\S+) (\S+)$/u.exec(line) ?? [];
+        if (from !== undefined && to !== undefined) renames.set(from, to);
+    }
+    assert.ok(renames.size > 0, `${example.id}: --moves printed no move\n${before}`);
+    const files = example.files.map(file => renames.get(file) ?? file);
+    const folders = new Set([...renames.keys(), ...renames.values()].map(parentOf));
+    const shown = files.filter(file => [...folders].some(folder => file.startsWith(folder)));
+    const again = await printed(example, files, []);
+    assert.ok(!again.includes(` ${example.id} `), `${example.id}: the moves leave the problem\n${again}`);
+    const summary = again.split('\n').find(line => /^[✔⚠✖]/u.test(line)) ?? '';
+    return [
+        '`--moves` prints the fix. The folder after it, and the run that passes:',
+        '',
+        '```sh',
+        ...moves,
+        '```',
+        '',
+        '```text',
+        ...folderLines(shown),
+        '',
+        summary,
+        '```',
+    ].join('\n');
+}
+
+/** What the command prints for an example, as a terminal shows it: the findings and the summary line. */
+async function outputOf(example: DocsExample): Promise<string> {
+    const out = await printed(example, example.files, []);
+    const lines = out.split('\n');
+    const summary = lines.findIndex(line => /^[✔⚠✖]/u.test(line));
+    assert.ok(summary > 0, `${example.id}: no summary line in\n${out}`);
+    // The summary wraps at the width like the findings: take every line of it, up to the blank one.
+    const after = lines.findIndex((line, index) => index > summary && line.trim() === '');
+    return lines
+        .slice(0, after === -1 ? lines.length : after)
+        .join('\n')
+        .trimEnd();
+}
+
+/** A page with the output of each of its examples between its `<!-- output: id -->` markers. */
+async function withOutputs(path: string, examples: readonly DocsExample[]): Promise<string> {
+    let page = readFileSync(root(path), 'utf8');
+    for (const example of examples) {
+        const open = `<!-- output: ${example.id} -->`;
+        const close = '<!-- /output -->';
+        const start = page.indexOf(open);
+        const end = page.indexOf(close, start);
+        assert.ok(start !== -1 && end > start, `${path} needs ${open} ... ${close} around the output of ${example.id}`);
+        const output = await outputOf(example);
+        page = `${page.slice(0, start + open.length)}\n\n\`\`\`text\n${output}\n\`\`\`\n\n${page.slice(end)}`;
+    }
+    const withFix = examples.filter(one => one.fix === true || one.fixed !== undefined);
+    for (const example of withFix) {
+        const open = `<!-- fix: ${example.id} -->`;
+        const close = '<!-- /fix -->';
+        const start = page.indexOf(open);
+        const end = page.indexOf(close, start);
+        assert.ok(start !== -1 && end > start, `${path} needs ${open} ... ${close} around the fix of ${example.id}`);
+        page = `${page.slice(0, start + open.length)}\n\n${await fixOf(example)}\n\n${page.slice(end)}`;
+    }
+    return page;
+}
+
 describe('generated files', () => {
     it('schema.json is the schema the configuration is checked against', () => {
-        matchesFile(
-            'schema.json',
-            `${JSON.stringify(configSchema(BUILT_IN_RULES, Object.keys(BUILT_IN_PRESETS)), undefined, 4)}\n`,
-        );
+        matchesFile('schema.json', `${JSON.stringify(configSchema(BUILT_IN_RULES, BUILT_IN_PRESETS), undefined, 4)}\n`);
     });
 
     it('docs/configuration.md lists every setting and every rule option', () => {
@@ -209,5 +413,18 @@ describe('generated files', () => {
             assert.ok(page.includes(`## ${name}\n`), name);
         }
         matchesFile('docs/presets.md', page);
+    });
+
+    it('the output examples of the rule pages and the README are what the command prints', async () => {
+        const pages = new Set(DOCS_EXAMPLES.map(example => example.page));
+        for (const path of pages) {
+            matchesFile(
+                path,
+                await withOutputs(
+                    path,
+                    DOCS_EXAMPLES.filter(example => example.page === path),
+                ),
+            );
+        }
     });
 });

@@ -1,3 +1,4 @@
+import { docsUrl } from '../docs-url.ts';
 import { plural } from '../plural.ts';
 import { defineRule, listNames } from './rule.ts';
 
@@ -7,8 +8,8 @@ export interface MaxFoldersOptions {
 
 export const maxFolders = defineRule<MaxFoldersOptions>({
     meta: {
-        description: 'A folder holds at most `max` subfolders: a long list of folders is a drawer too.',
-        url: 'https://github.com/bymaksym/CrowdedFolders/blob/main/docs/rules/max-folders.md',
+        description: 'A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.',
+        url: docsUrl('rules/max-folders.md'),
         defaultOptions: { max: 30 },
         options: {
             type: 'object',
