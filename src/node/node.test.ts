@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 import { runEngine } from '../core/engine.ts';
 import { findConfig, locate, readConfigFile } from './config/file.ts';
-import { GitError, listFiles, parseFileList } from './files.ts';
+import { GitError, type GitRunner, listFiles, markedByAttributes, parseFileList } from './files.ts';
 import { ConfigError, loadConfig, loadConfigFile, pluginProblem } from './load-config.ts';
 import { resolveSpecifier } from './modules.ts';
 
@@ -306,6 +306,68 @@ describe('listFiles', () => {
 
     it('splits on a lone \\r too (classic Mac line ends read as one path)', () => {
         assert.deepEqual(parseFileList('a.ts\rsrc/b.ts\r'), ['a.ts', 'src/b.ts']);
+    });
+});
+
+describe('markedByAttributes (what --stdin and a commit list leave out)', () => {
+    /** Real git, without this machine's global and system attributes, and every call it gets. */
+    function counting(): { git: GitRunner; calls: { args: readonly string[]; paths: number }[] } {
+        const home = folder();
+        const calls: { args: readonly string[]; paths: number }[] = [];
+        const git: GitRunner = (root, args, input) => {
+            calls.push({ args, paths: input === undefined ? 0 : input.split('\0').length - 1 });
+            try {
+                return execFileSync('git', ['-C', root, ...args], {
+                    encoding: 'utf8',
+                    ...(input !== undefined && { input }),
+                    stdio: ['pipe', 'pipe', 'ignore'],
+                    env: {
+                        ...process.env,
+                        HOME: home,
+                        XDG_CONFIG_HOME: home,
+                        GIT_ATTR_NOSYSTEM: '1',
+                        GIT_CONFIG_NOSYSTEM: '1',
+                    },
+                });
+            } catch {
+                return;
+            }
+        };
+        return { git, calls };
+    }
+
+    // spring-boot's 11 958 paths took 53 s through --stdin: check-attr read the .gitattributes of every
+    // folder of every path, in a repository whose attributes mark nothing (point 166).
+    const list = Array.from({ length: 12_000 }, (_, index) => `modules/m${index % 400}/src/main/java/F${index}.java`);
+
+    it('asks git three short questions, and not check-attr, when no attributes file can mark a file', () => {
+        const root = folder({ '.gitattributes': '* text=auto eol=lf\n', 'a.ts': '' });
+        execFileSync('git', ['-C', root, 'init', '-q'], { stdio: 'ignore' });
+        const { git, calls } = counting();
+        assert.deepEqual(markedByAttributes(root, list, git), new Set());
+        assert.equal(calls.length, 3, JSON.stringify(calls.map(call => call.args)));
+        assert.ok(calls.every(call => !call.args.includes('check-attr')));
+    });
+
+    it('asks check-attr only about the files under a .gitattributes that can mark them', () => {
+        const root = folder({ 'modules/m7/.gitattributes': 'src/main/java/F7.java linguist-generated\n' });
+        execFileSync('git', ['-C', root, 'init', '-q'], { stdio: 'ignore' });
+        const { git, calls } = counting();
+        assert.deepEqual(markedByAttributes(root, list, git), new Set(['modules/m7/src/main/java/F7.java']));
+        assert.equal(calls.length, 4);
+        assert.equal(calls.find(call => call.args.includes('check-attr'))?.paths, 30, 'the 30 files of modules/m7');
+    });
+
+    it('asks about every file when an attributes file outside the tree (info/attributes) or above the root can mark', () => {
+        const root = folder({ 'pkg/a/gen/x.ts': '', 'pkg/a/b.ts': '' });
+        execFileSync('git', ['-C', root, 'init', '-q'], { stdio: 'ignore' });
+        mkdirSync(join(root, '.git', 'info'), { recursive: true });
+        writeFileSync(join(root, '.git', 'info', 'attributes'), 'gen/** linguist-generated\n');
+        const { git } = counting();
+        assert.deepEqual(markedByAttributes(root, ['gen/x.ts', 'b.ts'], git), new Set(['gen/x.ts']));
+        rmSync(join(root, '.git', 'info', 'attributes'));
+        writeFileSync(join(root, '.gitattributes'), '**/gen/** linguist-vendored\n');
+        assert.deepEqual(markedByAttributes(join(root, 'pkg', 'a'), ['gen/x.ts', 'b.ts'], git), new Set(['gen/x.ts']));
     });
 });
 
