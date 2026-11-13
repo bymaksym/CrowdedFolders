@@ -111,6 +111,12 @@ configuration looks like once the team has made it its own:
 }
 ```
 
+It is found without `--config` or `--root`: from the folder the command runs in up to the top of the git
+repository, the first `crowded-folders.config.{json,jsonc,js,mjs,cjs,ts,mts}`, `crowded-folders.json(c)`,
+the same in `.config/` (`.config/crowded-folders.json`), or a `"crowded-folders"` key in `package.json`.
+Paths in it start from the project folder (the one above `.config/`), not from where the command was typed
+([where the configuration lives](docs/configuring.md#where-the-configuration-lives)).
+
 Every override needs a `reason`: an exception without one cannot be reviewed, so the configuration does
 not load without it. An override that no longer matches any folder is reported, so they do not rot.
 

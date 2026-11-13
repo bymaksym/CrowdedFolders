@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { runEngine } from '../core/engine.ts';
-import { findConfig, locate, readConfigFile } from './config/file.ts';
+import { CONFIG_NAMES, findConfig, locate, readConfigFile } from './config/file.ts';
 import { GitError, listFiles, parseFileList } from './files.ts';
 import { ConfigError, loadConfig, loadConfigFile, pluginProblem } from './load-config.ts';
 import { resolveSpecifier } from './modules.ts';
@@ -374,6 +374,19 @@ describe('listFiles without git', () => {
 });
 
 describe('locate', () => {
+    it('is described in the README with every name and folder it looks in (Ideas Crowded Folders, 7)', () => {
+        const readme = readFileSync(new URL('../../README.md', import.meta.url), 'utf8');
+        const configuration = readme.slice(readme.indexOf('## Configuration'), readme.indexOf('## Adopting'));
+        for (const name of CONFIG_NAMES) {
+            const extension = name.slice(name.lastIndexOf('.') + 1);
+            const stem = name.slice(0, name.lastIndexOf('.')).replace(/^\.config\//u, '');
+            assert.ok(configuration.includes(stem), `${name}: "${stem}"`);
+            assert.ok(configuration.includes(extension), `${name}: "${extension}"`);
+        }
+        assert.ok(configuration.includes('`.config/`'), 'names the .config/ folder');
+        assert.ok(configuration.includes('package.json'), 'names the package.json key');
+    });
+
     it('looks for the configuration from --root, not from where the command runs', () => {
         const top = folder({
             'here/crowded-folders.config.json': '{}',
