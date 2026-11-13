@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
-import { basename, dirname, join, relative } from 'node:path';
+import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { type IgnoreFile, isIgnored, parseGitignore } from '../core/paths/gitignore.ts';
 import { normalisePath } from '../core/paths/tree.ts';
@@ -84,25 +84,124 @@ export function parseFileList(text: string): string[] {
         .filter(line => line !== '');
 }
 
+/** Runs git in a folder with some input, and gives its output, or `undefined` when it fails. */
+export type GitRunner = (root: string, args: readonly string[], input?: string) => string | undefined;
+
+const runGitWith: GitRunner = (root, args, input) => {
+    try {
+        return execFileSync('git', ['-C', root, ...args], {
+            encoding: 'utf8',
+            ...(input !== undefined && { input }),
+            maxBuffer: 512 * 1024 * 1024,
+            stdio: ['pipe', 'pipe', 'ignore'],
+        });
+    } catch {
+        return;
+    }
+};
+
+/** Whether the text of an attributes file can mark a file generated or vendored. */
+const canMark = (text: string): boolean => text.includes('linguist-generated') || text.includes('linguist-vendored');
+
+function readText(path: string): string | undefined {
+    try {
+        return readFileSync(path, 'utf8');
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * The files of a list that an attributes file could mark, so that git is asked about them and no other:
+ * all of them when an attributes file outside the tree can (`info/attributes`, the global or the system
+ * one, or a .gitattributes above the root), otherwise those under a folder whose `.gitattributes` can.
+ * `undefined` when git cannot say where those files are.
+ *
+ * `git check-attr` looks for a `.gitattributes` in every folder of every path it is given: for the 12 000
+ * paths of spring-boot, in a repository whose attributes mark nothing, that took seconds on Windows
+ * (point 166). Finding the files that could mark costs three short git calls, whatever the size of the list.
+ */
+function filesAttributesCanMark(root: string, files: readonly string[], git: GitRunner): readonly string[] | undefined {
+    const revParse = git(root, ['rev-parse', '--show-prefix', '--git-path', 'info/attributes']);
+    const variables = git(root, ['var', '-l']);
+    // Tracked and untracked (not ignored) .gitattributes: what git reads. One call, not a look in every folder.
+    const indexed = git(root, [
+        'ls-files',
+        '-z',
+        '--cached',
+        '--others',
+        '--exclude-standard',
+        '--',
+        ':(glob)**/.gitattributes',
+    ]);
+    if (revParse === undefined || variables === undefined || indexed === undefined) {
+        return undefined;
+    }
+    const [prefix = '', infoPath = ''] = revParse.split('\n').map(line => line.trim());
+    // When the root is a folder of the repository, the .gitattributes of the folders above it count too.
+    const above = prefix
+        .split('/')
+        .filter(part => part !== '')
+        .map((_, index, parts) => join(root, ...parts.slice(index).map(() => '..'), '.gitattributes'));
+    const outside = [infoPath, ...above];
+    // Git 2.42 and later name the global and system files (without the system one under GIT_ATTR_NOSYSTEM).
+    // An older git names neither: ask it about every file, as before.
+    const named = variables
+        .split('\n')
+        .filter(entry => entry.startsWith('GIT_ATTR_GLOBAL=') || entry.startsWith('GIT_ATTR_SYSTEM='));
+    if (named.length === 0) {
+        return files;
+    }
+    outside.push(...named.map(entry => entry.slice(entry.indexOf('=') + 1).trim()));
+    if (outside.some(path => path !== '' && canMark(readText(resolve(root, path)) ?? ''))) {
+        return files;
+    }
+    // The folders whose .gitattributes can mark. One only in the index (git reads it from there when the
+    // working tree has none) is not read here, so it counts as one that can.
+    const marking = new Set<string>();
+    for (const path of indexed.split('\0')) {
+        if (path !== '.gitattributes' && !path.endsWith('/.gitattributes')) continue;
+        const text = readText(join(root, path));
+        if (text === undefined || canMark(text)) {
+            marking.add(path.slice(0, Math.max(0, path.length - '/.gitattributes'.length)));
+        }
+    }
+    if (marking.size === 0) {
+        return [];
+    }
+    return files.filter(file => {
+        if (marking.has('')) return true;
+        for (let slash = file.indexOf('/'); slash !== -1; slash = file.indexOf('/', slash + 1)) {
+            if (marking.has(file.slice(0, slash))) return true;
+        }
+        return false;
+    });
+}
+
 /**
  * The files of a list (relative to `root`) that `.gitattributes` marks as generated or vendored,
  * asked to git as it reads them, nested files included; `undefined` when git cannot say. For `--stdin`,
- * whose list git did not make.
+ * whose list git did not make, and for the list of a commit. Git is asked only about the files an
+ * attributes file could mark: a list no attributes file mentions costs three short git calls.
  */
-export function markedByAttributes(root: string, files: readonly string[]): Set<string> | undefined {
-    let output: string;
-    try {
-        output = execFileSync(
-            'git',
-            ['-C', root, 'check-attr', '-z', '--stdin', 'linguist-generated', 'linguist-vendored'],
-            {
-                encoding: 'utf8',
-                input: `${files.join('\0')}\0`,
-                maxBuffer: 512 * 1024 * 1024,
-                stdio: ['pipe', 'pipe', 'ignore'],
-            },
-        );
-    } catch {
+export function markedByAttributes(
+    root: string,
+    files: readonly string[],
+    git: GitRunner = runGitWith,
+): Set<string> | undefined {
+    const asked = filesAttributesCanMark(root, files, git);
+    if (asked === undefined) {
+        return undefined;
+    }
+    if (asked.length === 0) {
+        return new Set();
+    }
+    const output = git(
+        root,
+        ['check-attr', '-z', '--stdin', 'linguist-generated', 'linguist-vendored'],
+        `${asked.join('\0')}\0`,
+    );
+    if (output === undefined) {
         return undefined;
     }
     // Records of three fields: the path, the attribute, and its value ("set", "unset", "unspecified" or
