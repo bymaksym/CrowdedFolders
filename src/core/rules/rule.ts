@@ -133,6 +133,11 @@ export interface Problem {
     readonly files?: readonly string[];
     /** Where things could go instead. Never applied: moving files breaks imports, and that is the user's call. */
     readonly moves?: readonly Move[];
+    /**
+     * `"warn"` reports this problem as a warning where the rule is an error: a rule with two limits
+     * (`max-files`' `warnAbove`). A problem can be milder than its rule, never harsher.
+     */
+    readonly severity?: 'warn';
 }
 
 export interface Move {

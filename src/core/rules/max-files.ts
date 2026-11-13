@@ -14,6 +14,7 @@ export interface MaxFilesOptions {
     readonly count: 'files' | 'modules';
     readonly dotfiles: boolean;
     readonly filesPerModule: number;
+    readonly warnAbove: number;
     readonly hint: string;
     readonly hintFor: readonly string[];
 }
@@ -22,7 +23,15 @@ export const maxFiles = defineRule<MaxFilesOptions>({
     meta: {
         description: 'A folder holds at most `max` files (or modules): past that it is scrolled, not read.',
         url: docsUrl('rules/max-files.md'),
-        defaultOptions: { max: 20, count: 'files', dotfiles: false, filesPerModule: 0, hint: '', hintFor: [] },
+        defaultOptions: {
+            max: 20,
+            count: 'files',
+            dotfiles: false,
+            filesPerModule: 0,
+            warnAbove: 0,
+            hint: '',
+            hintFor: [],
+        },
         options: {
             type: 'object',
             additionalProperties: false,
@@ -39,6 +48,12 @@ export const maxFiles = defineRule<MaxFilesOptions>({
                     description:
                         'With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.',
                 },
+                warnAbove: {
+                    type: 'integer',
+                    minimum: 0,
+                    description:
+                        'A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { "max": 20, "warnAbove": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.',
+                },
                 hint: {
                     type: 'string',
                     description: 'Added to the message: how to split in this ecosystem, or what a new folder costs.',
@@ -54,15 +69,21 @@ export const maxFiles = defineRule<MaxFilesOptions>({
     },
     check(folder, { options, report, note }) {
         const { measured, counted } = measureFolder(folder, options, note);
-        if (measured <= options.max) {
+        const warns = options.warnAbove > 0 && options.warnAbove < options.max && measured > options.warnAbove;
+        if (measured <= options.max && !warns) {
             return;
         }
         const unit = options.count === 'modules' ? 'modules' : 'files';
+        const over =
+            measured > options.max
+                ? `over the limit of ${options.max}`
+                : `over the warning limit of ${options.warnAbove} (the limit is ${options.max})`;
         report({
-            message: `${measured} ${unit}, over the limit of ${options.max}: split it into folders by what the files are about.${hintText(options.hint, options.hintFor, counted)}`,
+            message: `${measured} ${unit}, ${over}: split it into folders by what the files are about.${hintText(options.hint, options.hintFor, counted)}`,
             measured,
-            limit: options.max,
+            limit: measured > options.max ? options.max : options.warnAbove,
             files: counted,
+            ...(measured <= options.max && { severity: 'warn' as const }),
         });
     },
 });

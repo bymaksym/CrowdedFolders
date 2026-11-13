@@ -86,7 +86,7 @@ export function toFinding(
 ): Finding {
     return {
         rule,
-        severity,
+        severity: problem.severity === 'warn' ? 'warn' : severity,
         folder,
         message: problem.message,
         key: problem.key,

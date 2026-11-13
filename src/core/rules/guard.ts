@@ -111,6 +111,9 @@ export function reportProblem(problem: unknown): string | undefined {
     if (problem['key'] !== undefined && typeof problem['key'] !== 'string') {
         return 'report(): key must be a string';
     }
+    if (problem['severity'] !== undefined && problem['severity'] !== 'warn') {
+        return `report(): severity can only be "warn" (milder than the rule), not ${shown(problem['severity'])}`;
+    }
     for (const field of ['measured', 'limit'] as const) {
         const value = problem[field];
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value) || value < 0)) {

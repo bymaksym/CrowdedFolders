@@ -103,6 +103,25 @@ describe('the destination of a move', () => {
         assert.equal(moved(check(['java'], files))['core/UserService.java'], 'core/user/UserService.java');
     });
 
+    it('says when a kept name is one redundant-prefix would flag, and how to choose (Ideas Crowded Folders, 4)', () => {
+        const files = [
+            'core/UserService.java',
+            'core/UserRepository.java',
+            'core/UserController.java',
+            'core/UserMapper.java',
+            'core/Order.java',
+        ];
+        const findings = check(['java'], files, { rules: { 'redundant-prefix': 'error' } });
+        const finding = findings.find(found => found.rule === 'prefix-groups');
+        assert.equal(moved(findings)['core/UserService.java'], 'core/user/UserService.java');
+        assert.match(
+            finding?.message ?? '',
+            /redundant-prefix, on here, would then ask to drop it: set dropPrefix: true/u,
+        );
+        // Without redundant-prefix on, there is nothing to choose between.
+        assert.doesNotMatch(check(['java'], files)[0]?.message ?? '', /redundant-prefix/u);
+    });
+
     it('moves into the folder that already exists, and says so (src/render/index.ts)', () => {
         const files = [
             'src/render-json.ts',

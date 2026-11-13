@@ -77,6 +77,7 @@ On in `recommended`: `error`.
 | `max` | integer | `20` | `20` | How many it may hold. |
 | `count` | `"files"` \| `"modules"` | `"files"` | `"modules"` | "files" counts every file; "modules" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one). |
 | `filesPerModule` | integer | `0` | `0` | With count "modules", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has. |
+| `warnAbove` | integer | `0` | `0` | A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { "max": 20, "warnAbove": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit. |
 | `hint` | string | `""` | `""` | Added to the message: how to split in this ecosystem, or what a new folder costs. |
 | `hintFor` | string[] | `[]` | `[]` | Globs of file names: the hint is added only when the files the problem is about include one ("*.java", "*.{c,h}"). A hint about packages is noise on a folder of SQL. Default: always. |
 | `dotfiles` | boolean | `false` | `false` | Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with ".*" in exclude, so for true to see them, exclude only the dot-folders: "exclude": ["!.*", ".*/"]. |

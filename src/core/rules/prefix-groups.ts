@@ -148,6 +148,11 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
                     ? [`${listNames(kept.map(shownName))} stay where they are (naming.keepInPlace).`]
                     : []),
                 ...plan.notes,
+                ...(options.dropPrefix || routes || plan.moves.length === 0 || !settingsOf?.('redundant-prefix')
+                    ? []
+                    : [
+                          `The names keep "${key}" (dropPrefix: false), and redundant-prefix, on here, would then ask to drop it: set dropPrefix: true to move them shortened, or turn redundant-prefix off where a name repeats its folder on purpose.`,
+                      ]),
             ];
             report({
                 message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}${letterHint(key)}`,
