@@ -41,12 +41,24 @@ Split by what the files are _about_ (`checkout/`, `catalog/`), not by what they 
 (`components/`, `services/`): Angular's guide says it outright, and a folder per type just moves the
 crowd. [`prefix-groups`](prefix-groups.md) usually points at the first folder to make.
 
+## Two limits: warn early, fail late
+
+A warning never fails the run, so `{ "max": 20, "warnAbove": 10 }` can go into CI the day it is
+adopted: a folder of 21 fails, and the folders between 11 and 20 are still listed, as warnings, for
+whoever wants to look. Without it, the choice is a limit low enough to be useful and red in CI, or
+one high enough to pass and silent about everything below it.
+
+```jsonc
+"rules": { "max-files": ["error", { "max": 20, "warnAbove": 10 }] }
+```
+
 ## Options
 
-| Option     | Default                                            |                                                                                                              |
-| ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `max`      | `20`                                               | How many it may hold.                                                                                        |
-| `count`    | `"files"` in the rule, `"modules"` in every preset | What is counted.                                                                                             |
-| `dotfiles` | `false`                                            | Whether dot-files count.                                                                                     |
-| `hint`     | `""`                                               | Added to the message: what a folder costs in this ecosystem (presets use it: "In Go a folder is a package"). |
-| `hintFor`  | `[]`                                               | Globs of file names: the hint is added only when the files counted include one (`*.java`). Default: always.  |
+| Option      | Default                                            |                                                                                                               |
+| ----------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `max`       | `20`                                               | How many it may hold.                                                                                         |
+| `count`     | `"files"` in the rule, `"modules"` in every preset | What is counted.                                                                                              |
+| `dotfiles`  | `false`                                            | Whether dot-files count.                                                                                      |
+| `warnAbove` | `0` (none)                                         | A second, lower limit: over it and within `max` is a warning; only over `max` does the rule's severity apply. |
+| `hint`      | `""`                                               | Added to the message: what a folder costs in this ecosystem (presets use it: "In Go a folder is a package").  |
+| `hintFor`   | `[]`                                               | Globs of file names: the hint is added only when the files counted include one (`*.java`). Default: always.   |

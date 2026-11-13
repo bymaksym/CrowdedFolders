@@ -27,6 +27,29 @@ describe('max-files', () => {
         assert.match(result[0]?.message ?? '', /5 files, over the limit of 4/u);
     });
 
+    it('warns past warnAbove and fails only past max: CI can run it without suppressing (Ideas Crowded Folders)', () => {
+        const options = { max: 20, warnAbove: 10 };
+        const result = findings([...many('a', 10), ...many('b', 15), ...many('c', 21)], {
+            rules: { 'max-files': ['error', options] },
+        });
+        assert.deepEqual(
+            result.map(finding => `${finding.folder} ${finding.severity} ${finding.limit}`),
+            ['b warn 10', 'c error 20'],
+        );
+        assert.match(result[0]?.message ?? '', /15 files, over the warning limit of 10 \(the limit is 20\)/u);
+        assert.match(result[1]?.message ?? '', /21 files, over the limit of 20:/u);
+        // A rule that is a warning stays one; a second limit at or over max adds nothing.
+        const warned = findings(many('c', 21), { rules: { 'max-files': ['warn', options] } });
+        assert.deepEqual(
+            warned.map(finding => finding.severity),
+            ['warn'],
+        );
+        assert.deepEqual(
+            findings(many('b', 15), { rules: { 'max-files': ['error', { max: 20, warnAbove: 20 }] } }),
+            [],
+        );
+    });
+
     it('counts a module and its companions once with count: "modules"', () => {
         const files = ['c/a.ts', 'c/a.spec.ts', 'c/a.html', 'c/b.ts', 'c/b.spec.ts'];
         assert.equal(findings(files, { rules: { 'max-files': ['error', { max: 2, count: 'files' }] } }).length, 1);

@@ -106,6 +106,8 @@ describe('what a rule reports', () => {
         assert.match(reportProblem({ message: 'x', moves: [{ from: 'a', to: '../b' }] }) ?? '', /move's to/u);
         assert.match(reportProblem({ message: '' }) ?? '', /needs a message/u);
         assert.match(reportProblem({ message: 'x', key: 3 }) ?? '', /key must be a string/u);
+        assert.equal(reportProblem({ message: 'x', severity: 'warn' }), undefined);
+        assert.match(reportProblem({ message: 'x', severity: 'error' }) ?? '', /severity can only be "warn"/u);
         assert.match(reportProblem('x') ?? '', /takes an object/u);
     });
 

@@ -68,13 +68,14 @@ instead of changing what the next rule or folder sees.
 
 `report({ … })` takes:
 
-| Field               |                                                                                                                            |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `message`           | What is wrong and what to do, in one or two sentences.                                                                     |
-| `key`               | Tells apart two problems of the same rule in one folder. It is part of what a suppression remembers, so it must be stable. |
-| `measured`, `limit` | The number that broke the limit, and the limit. A suppression lets `measured` stay or drop, not grow.                      |
-| `files`             | File names in the folder the problem is about; the first is where annotations and SARIF point.                             |
-| `moves`             | `{ from, to }` paths relative to the root, printed by `--moves`. Never applied.                                            |
+| Field               |                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `message`           | What is wrong and what to do, in one or two sentences.                                                                        |
+| `key`               | Tells apart two problems of the same rule in one folder. It is part of what a suppression remembers, so it must be stable.    |
+| `measured`, `limit` | The number that broke the limit, and the limit. A suppression lets `measured` stay or drop, not grow.                         |
+| `files`             | File names in the folder the problem is about; the first is where annotations and SARIF point.                                |
+| `moves`             | `{ from, to }` paths relative to the root, printed by `--moves`. Never applied.                                               |
+| `severity`          | `"warn"` to report this problem as a warning where the rule is an error (a second, lower limit). Never harsher than the rule. |
 
 What `report()` gets is checked before it reaches a report, SARIF or an annotation: a `message` that is
 text, `measured` and `limit` of at least 0, and `files` and `moves` that are relative paths without

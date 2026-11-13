@@ -270,6 +270,11 @@
                                             "minimum": 0,
                                             "description": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has."
                                         },
+                                        "warnAbove": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "description": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit."
+                                        },
                                         "hint": {
                                             "type": "string",
                                             "description": "Added to the message: how to split in this ecosystem, or what a new folder costs."
@@ -861,6 +866,11 @@
                                                         "type": "integer",
                                                         "minimum": 0,
                                                         "description": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has."
+                                                    },
+                                                    "warnAbove": {
+                                                        "type": "integer",
+                                                        "minimum": 0,
+                                                        "description": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit."
                                                     },
                                                     "hint": {
                                                         "type": "string",
