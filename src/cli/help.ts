@@ -51,11 +51,12 @@ What it prints
                            markdown, gitlab (Code Quality), checkstyle, azure
                            (Azure Pipelines), html (one file: a zoomable map of
                            the folders), badge (a shields.io endpoint: the
-                           share of folders within the limit), tree (the
-                           folders as a tree), auto (github, azure or text, by
-                           the CI it runs in). Repeat it to write several
-                           reports in one run, each to its own file: -f github
-                           -f sarif=out.sarif -f markdown=$GITHUB_STEP_SUMMARY
+                           share of folders within the max-files limit), tree
+                           (the folders as a tree), auto (github, azure or
+                           text, by the CI it runs in). Repeat it to write
+                           several reports in one run, each to its own file:
+                           -f github -f sarif=out.sarif
+                           -f markdown=$GITHUB_STEP_SUMMARY
   -o, --output <file>      write the report to a file instead of standard output
                            (with one -f). No report replaces a file git tracks,
                            or the configuration, without --force

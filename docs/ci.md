@@ -110,7 +110,7 @@ one raises `formatVersion` (now `1`).
   `subfolders`, the `max-files` `limit` in effect, and what that rule counts (`unit`) and compares with it
   (`used`).
 - `--format html` writes one self-contained page with a map of the folders, and `--format badge` a
-  shields.io endpoint with the share of folders within the limit: [tree.md](tree.md).
+  shields.io endpoint with the share of folders within the max-files limit: [tree.md](tree.md).
 
 ## GitHub Actions
 

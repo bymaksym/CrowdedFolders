@@ -12,8 +12,8 @@ cli/
                           render-sarif, render-text): they are a folder that was never made —
                           cli/render/.
 
-✖ 1 error, 0 warnings in 1 folder (2 folders and 7 files checked; 100 % of folders within the limit
-  (2/2)).
+✖ 1 error, 0 warnings in 1 folder (2 folders and 7 files checked; 100 % of folders within the
+  max-files limit (2/2)).
   --moves prints where each file could go; `crowded-folders explain cli` shows how a folder was
     read.
 ```
@@ -42,7 +42,7 @@ git mv cli/render-text.ts cli/render/text.ts
 cli/ args.ts, main.ts
 cli/render/ json.ts, markdown.ts, pr.ts, sarif.ts, text.ts
 
-✔ No crowded folders (3 folders and 7 files checked; 100 % of folders within the limit (3/3)).
+✔ No crowded folders (3 folders and 7 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

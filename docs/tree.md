@@ -16,7 +16,7 @@ The folders as a tree, in the terminal. Each line has the count over the limit, 
    |  `- node/    12/12  ##########   near the limit
    `- tooling/     4/12  ###.......   ok
 
-30 folders; 100 % of folders within the limit (30/30); 0 over the limit; 10 near it.
+30 folders; 100 % of folders within the max-files limit (30/30); 0 over the limit; 10 near it.
 ```
 
 - **Colour is never the only signal.** The word is always printed (`ok`, `near the limit`, `over the
@@ -70,7 +70,7 @@ two levels under the folder you are in.
 The last line of the text report says how many of the folders that have a limit are within it:
 
 ```text
-✖ 2 errors, 1 warning in 3 folders (119 folders and 842 files checked; 95 % of folders within the limit (113/119)).
+✖ 2 errors, 1 warning in 3 folders (119 folders and 842 files checked; 95 % of folders within the max-files limit (113/119)).
 ```
 
 It is measured before suppressions, with each folder's own limit, in the unit `max-files` counts. It is

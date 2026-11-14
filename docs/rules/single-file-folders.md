@@ -15,8 +15,8 @@ src/utils/date/
   ⚠ warn   single-file-folders  holds only format.ts: a folder with nothing to group is one more
                                 level to open.
 
-⚠ 0 errors, 1 warning in 1 folder (4 folders and 3 files checked; 100 % of folders within the limit
-  (4/4)).
+⚠ 0 errors, 1 warning in 1 folder (4 folders and 3 files checked; 100 % of folders within the
+  max-files limit (4/4)).
 ```
 
 <!-- /output -->
@@ -37,7 +37,7 @@ No move makes this decision: it is a person who does. After it, the files are th
 ```text
 src/utils/ array.ts, date-format.ts, string.ts
 
-✔ No crowded folders (3 folders and 3 files checked; 100 % of folders within the limit (3/3)).
+✔ No crowded folders (3 folders and 3 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

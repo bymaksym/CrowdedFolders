@@ -462,7 +462,10 @@ describe('the tree', () => {
         assert.match(out, /\|- docs\/ +1\/20 .* ok$/mu);
         assert.match(out, / src\/ +25\/20 +##########\+ +over the limit$/mu);
         assert.match(out, / a\/ +13\/20 .* near the limit$/mu);
-        assert.match(out, /4 folders; 75 % of folders within the limit \(3\/4\); 1 over the limit; 1 near it\./u);
+        assert.match(
+            out,
+            /4 folders; 75 % of folders within the max-files limit \(3\/4\); 1 over the limit; 1 near it\./u,
+        );
         assert.doesNotMatch(out, /[├└│█]/u);
         assert.equal(out.includes(String.fromCodePoint(27)), false);
     });
