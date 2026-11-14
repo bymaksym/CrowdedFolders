@@ -11,8 +11,8 @@ render/
   ✖ error  redundant-prefix  2 modules repeat the folder's name "render" (render-json, render-text):
                              the folder already says it.
 
-✖ 1 error, 0 warnings in 1 folder (2 folders and 3 files checked; 100 % of folders within the limit
-  (2/2)).
+✖ 1 error, 0 warnings in 1 folder (2 folders and 3 files checked; 100 % of folders within the
+  max-files limit (2/2)).
   --moves prints where each file could go; `crowded-folders explain render` shows how a folder was
     read.
 ```
@@ -51,7 +51,7 @@ git mv render/render-text.ts render/text.ts
 ```text
 render/ json.ts, render.ts, text.ts
 
-✔ No crowded folders (2 folders and 3 files checked; 100 % of folders within the limit (2/2)).
+✔ No crowded folders (2 folders and 3 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

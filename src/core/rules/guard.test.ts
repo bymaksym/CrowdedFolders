@@ -312,8 +312,41 @@ describe('the schema of a rule', () => {
                 },
                 check: () => 0,
             }) ?? '',
-            /its own defaults do not fit its schema/u,
+            /has defaults that do not fit its own schema/u,
         );
+    });
+
+    it('says what is wrong as a sentence that goes on from "the rule" or "it" (not "it check must be")', () => {
+        const rules = [
+            {
+                meta,
+                async check() {
+                    await Promise.resolve();
+                },
+            },
+            {
+                meta,
+                async create() {
+                    await Promise.resolve();
+                },
+            },
+            { meta: { ...meta, url: 1 }, check: () => 0 },
+            { meta: { ...meta, options: { type: 'object', properties: { n: { oneOf: [] } } } }, check: () => 0 },
+            {
+                meta: {
+                    ...meta,
+                    defaultOptions: { n: 'x' },
+                    options: { type: 'object', properties: { n: { type: 'integer' } } },
+                },
+                check: () => 0,
+            },
+            { meta, check: () => 0, create: () => ({}) },
+            { meta },
+            {},
+        ];
+        for (const rule of rules) {
+            assert.match(ruleShapeProblem(rule) ?? '', /^(?:needs|has) /u);
+        }
     });
 
     it('holds for every built-in rule', () => {

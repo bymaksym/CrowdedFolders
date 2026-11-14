@@ -15,8 +15,8 @@ src/main/java/com/laboral/time/
                               src/main/java/com/laboral/time/registro/, one folder for everything
                               about registro.
 
-✖ 1 error, 0 warnings in 1 folder (12 folders and 6 files checked; 100 % of folders within the limit
-  (12/12)).
+✖ 1 error, 0 warnings in 1 folder (12 folders and 6 files checked; 100 % of folders within the
+  max-files limit (12/12)).
   --moves prints where each file could go; `crowded-folders explain src/main/java/com/laboral/time`
     shows how a folder was read.
 ```
@@ -49,7 +49,7 @@ src/main/java/com/laboral/time/registro/ RegistroHorario.java, RegistroHorarioCo
   RegistroHorarioDto.java, RegistroHorarioRepository.java, RegistroHorarioService.java,
   RegistroUsuarioConRol.java
 
-✔ No crowded folders (8 folders and 6 files checked; 100 % of folders within the limit (8/8)).
+✔ No crowded folders (8 folders and 6 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

@@ -144,9 +144,12 @@ export function healthOf(stats: readonly Pick<FolderStat, 'limit' | 'used'>[]): 
     return { within, total, percent: within < total ? Math.min(rounded, 99) : 100 };
 }
 
-/** "95 % of folders within the limit (113/119)": the figure of the summary line. */
+/**
+ * "95 % of folders within the max-files limit (113/119)": the figure of the summary line. It names the
+ * rule because it measures only max-files: a run that fails on prefix-groups can still be at 100 %.
+ */
 export function describeHealth(health: Health): string {
-    return `${health.percent} % of folders within the limit (${health.within}/${health.total})`;
+    return `${health.percent} % of folders within the max-files limit (${health.within}/${health.total})`;
 }
 
 /** What `tree` keeps of the folders. */

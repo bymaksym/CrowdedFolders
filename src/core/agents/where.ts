@@ -263,11 +263,17 @@ function placesFor(
     return { candidates };
 }
 
-/** The verdict in a few words, as `WORSE max-files 14→15`: what a person or an agent reads first. */
-export function whereSummary(result: WhereResult): string {
+/**
+ * The verdict in a few words, as `WORSE max-files 14→15`: what a person or an agent reads first. `arrow`
+ * is ` -> ` where symbols cannot be shown (a pipe, `TERM=dumb`).
+ */
+export function whereSummary(result: WhereResult, arrow = '→'): string {
     const problems = result.changes
         .filter(change => change.change === 'new' || change.change === 'worse')
-        .map(change => `${change.rule}${change.key === undefined ? '' : ` "${change.key}"`} ${measuredOf(change)}`);
+        .map(
+            change =>
+                `${change.rule}${change.key === undefined ? '' : ` "${change.key}"`} ${measuredOf(change, arrow)}`,
+        );
     switch (result.effect) {
         case 'creates': {
             return `CREATES ${problems.join(', ')}`;
@@ -291,11 +297,11 @@ export function whereSummary(result: WhereResult): string {
     }
 }
 
-function measuredOf(change: WhereChange): string {
+function measuredOf(change: WhereChange, arrow: string): string {
     const limit = change.limit === undefined ? '' : ` (limit ${change.limit})`;
     return change.before === undefined
         ? `${change.after ?? 0}${limit}`
-        : `${change.before}→${change.after ?? 0}${limit}`;
+        : `${change.before}${arrow}${change.after ?? 0}${limit}`;
 }
 
 /** The lines that explain a verdict: each problem, where else the file could go, and the group it joins. */

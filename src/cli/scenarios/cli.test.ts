@@ -73,7 +73,9 @@ describe('the command', () => {
         const ran = await cli(root, []);
         assert.equal(ran.code, 1);
         assert.match(ran.out, /cli\/\n {2}error {2}prefix-groups {2}4 modules start with "render"/u);
-        assert.match(ran.err, /No configuration file: used the presets detected — recommended/u);
+        assert.match(ran.err, /No configuration file: used the presets detected - recommended/u);
+        const terminal = await cli(root, [], '', { FORCE_COLOR: '1' });
+        assert.match(terminal.err, /used the presets detected — recommended/u);
     });
 
     it('passes a clean repository', async () => {
@@ -309,6 +311,41 @@ describe('the command', () => {
         const whole = JSON.parse((await cli(root, ['print-config'])).out) as { layers: string[] };
         assert.deepEqual(whole.layers, ['preset "recommended"', '(the command line)']);
         const one = JSON.parse((await cli(root, ['print-config', '.'])).out) as { rules: Record<string, unknown> };
+        // The machine's folders stay out of it: the paths are from where the command was typed.
+        const withFile = repository({
+            ...render,
+            'crowded-folders.config.json': JSON.stringify({
+                extends: ['recommended'],
+                overrides: [
+                    { folders: ['cli'], reason: 'renderers are split later', rules: { 'prefix-groups': 'warn' } },
+                ],
+            }),
+        });
+        const printed = await cli(join(withFile, 'cli'), ['print-config']);
+        const config = JSON.parse(printed.out) as {
+            configFile: string;
+            root: string;
+            layers: string[];
+            overrides: { origin: string; folders: string[] }[];
+        };
+        assert.deepEqual(
+            [
+                config.configFile,
+                config.root,
+                config.layers,
+                config.overrides.find(override => override.folders[0] === 'cli')?.origin,
+            ],
+            [
+                '../crowded-folders.config.json',
+                '..',
+                ['preset "recommended"', '../crowded-folders.config.json'],
+                '../crowded-folders.config.json',
+            ],
+        );
+        const forFolder = await cli(withFile, ['print-config', 'cli']);
+        assert.match(forFolder.out, /"origin": "crowded-folders\.config\.json"/u);
+        assert.equal(printed.out.includes(withFile), false);
+        assert.equal(forFolder.out.includes(withFile), false);
         const [severity, options] = one.rules['max-files'] as [string, { max: number; count: string }];
         assert.deepEqual([severity, options.max, options.count], ['error', 40, 'modules']);
     });
@@ -339,6 +376,31 @@ describe('the command', () => {
         const root = repository({});
         assert.equal((await cli(root, ['--help'])).out, HELP);
         assert.match((await cli(root, ['--version'])).out, /^\d+\.\d+\.\d+\n$/u);
+    });
+
+    it('answers --version from the executable without loading the command (dist/ is not even needed)', () => {
+        // The executable and a package.json, no dist/: loading the command would say it is not built.
+        const copy = mkdtempSync(join(tmpdir(), 'crowded-folders-bin-'));
+        try {
+            mkdirSync(join(copy, 'bin'));
+            const source = readFileSync(new URL('../../../bin/crowded-folders.js', import.meta.url), 'utf8');
+            writeFileSync(join(copy, 'bin', 'crowded-folders.js'), source);
+            writeFileSync(join(copy, 'package.json'), '{ "type": "module", "version": "9.8.7" }');
+            for (const flag of ['--version', '-v']) {
+                const ran = spawnSync(process.execPath, [join(copy, 'bin', 'crowded-folders.js'), flag], {
+                    encoding: 'utf8',
+                });
+                assert.equal(ran.status, 0, ran.stderr);
+                assert.equal(ran.stdout, '9.8.7\n');
+            }
+            const other = spawnSync(process.execPath, [join(copy, 'bin', 'crowded-folders.js'), 'rules'], {
+                encoding: 'utf8',
+            });
+            assert.equal(other.status, 2);
+            assert.match(other.stderr, /not built yet/u);
+        } finally {
+            rmSync(copy, { recursive: true, force: true });
+        }
     });
 });
 
@@ -408,7 +470,7 @@ describe('where it reads the files from', () => {
         const ran = await cli(join(top, 'here'), ['--root', '../other', '--no-git']);
         assert.equal(ran.code, 0, ran.out + ran.err);
         assert.match(ran.out, /the plugin of other/u);
-        assert.doesNotMatch(ran.out, /max-files/u);
+        assert.doesNotMatch(ran.out, /(?:error|warn) +max-files/u);
         assert.match(ran.err, /configuration .*other.crowded-folders\.config\.json, root .*other/u);
     });
 
@@ -502,7 +564,7 @@ describe('where it reads the files from', () => {
             'android/app/src/main/Main.kt': '',
         });
         const ran = await cli(root, []);
-        assert.match(ran.err, /used the presets detected — recommended .*java \(android\/app\/build\.gradle\)/u);
+        assert.match(ran.err, /used the presets detected - recommended .*java \(android\/app\/build\.gradle\)/u);
         assert.doesNotMatch(ran.err, /c-cpp/u);
     });
 });
@@ -624,7 +686,9 @@ describe('--output and the files it writes', () => {
         const root = repository({ ...render, 'out/.keep': '' });
         const folder = await cli(root, ['-o', 'out']);
         assert.equal(folder.code, 2);
-        assert.match(folder.err, /is a folder; give the file to write in it/u);
+        assert.match(folder.err, /--output out: out is a folder; give the file to write in it/u);
+        const refusal = folder.err.split('\n').find(line => line.includes('--output')) ?? '';
+        assert.equal(refusal.includes(root), false, refusal);
         assert.doesNotMatch(folder.err, /this is a bug/u);
         assert.equal((await cli(root, ['-o', 'newdir/'])).code, 2);
     });
@@ -638,7 +702,7 @@ describe('--output and the files it writes', () => {
         git(root, 'add', 'src/other.ts');
         const tracked = await cli(root, ['-o', 'src/other.ts']);
         assert.equal(tracked.code, 2);
-        assert.match(tracked.err, /git tracks .*other\.ts/u);
+        assert.match(tracked.err, /--output src\/other\.ts: git tracks src\/other\.ts,/u);
         assert.equal(readFileSync(join(root, 'src/other.ts'), 'utf8'), 'code');
         const config = await cli(root, ['-o', 'crowded-folders.config.json']);
         assert.equal(config.code, 2);
@@ -672,7 +736,7 @@ describe('--output and the files it writes', () => {
         assert.equal((await cli(sub, ['--suppress-all', '--suppressions-location', 'mine.json'])).code, 0);
         assert.match(readFileSync(join(sub, 'mine.json'), 'utf8'), /prefix-groups#render/u);
         const outside = await cli(sub, ['-o', '../../report.txt']);
-        assert.match(outside.err, /wrote .*report\.txt, outside the folder being checked/u);
+        assert.match(outside.err, /wrote \.\.\/\.\.\/report\.txt, outside the folder being checked \(\.\.\)/u);
         assert.match(readFileSync(join(top, 'report.txt'), 'utf8'), /prefix-groups/u);
     });
 });

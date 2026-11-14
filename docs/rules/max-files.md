@@ -17,8 +17,8 @@ src/components/
   ✖ error  max-files  34 modules, over the limit of 20: split it into folders by what the files are
                       about.
 
-✖ 1 error, 0 warnings in 1 folder (3 folders and 68 files checked; 67 % of folders within the limit
-  (2/3)).
+✖ 1 error, 0 warnings in 1 folder (3 folders and 68 files checked; 67 % of folders within the
+  max-files limit (2/3)).
 ```
 
 <!-- /output -->
@@ -67,7 +67,7 @@ src/components/overlays/ dialog.spec.tsx, dialog.tsx, drawer.spec.tsx, drawer.ts
   dropdown.tsx, menu.spec.tsx, menu.tsx, modal.spec.tsx, modal.tsx, popover.spec.tsx, popover.tsx,
   tooltip.spec.tsx, tooltip.tsx
 
-✔ No crowded folders (8 folders and 68 files checked; 100 % of folders within the limit (8/8)).
+✔ No crowded folders (8 folders and 68 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

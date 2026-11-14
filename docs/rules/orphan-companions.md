@@ -14,8 +14,8 @@ Assets/Scripts/
                               deleted outside the editor, or never committed. Move it with its
                               asset, or delete it if the asset is gone.
 
-✖ 1 error, 0 warnings in 1 folder (3 folders and 3 files checked; 100 % of folders within the limit
-  (3/3)).
+✖ 1 error, 0 warnings in 1 folder (3 folders and 3 files checked; 100 % of folders within the
+  max-files limit (3/3)).
 ```
 
 <!-- /output -->
@@ -47,7 +47,7 @@ No move makes this decision: it is a person who does. After it, the files are th
 ```text
 Assets/Scripts/ Enemy.cs, Enemy.cs.meta, Player.cs, Player.cs.meta
 
-✔ No crowded folders (3 folders and 4 files checked; 100 % of folders within the limit (3/3)).
+✔ No crowded folders (3 folders and 4 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

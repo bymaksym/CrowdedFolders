@@ -52,9 +52,13 @@ export function where(args: Args, io: Io, session: Session): number {
     if (args.format === 'json') {
         io.write(`${JSON.stringify({ version: 1, results }, undefined, 2)}\n`);
     } else {
-        const say = wantsSymbols(io) ? (text: string): string => text : asciiProse;
+        const symbols = wantsSymbols(io);
+        const say = symbols ? (text: string): string => text : asciiProse;
         const blocks = results.map(result =>
-            [result.path, ...[whereSummary(result), ...whereDetails(result)].map(line => `  ${line}`)].join('\n'),
+            [
+                result.path,
+                ...[whereSummary(result, symbols ? '→' : ' -> '), ...whereDetails(result)].map(line => `  ${line}`),
+            ].join('\n'),
         );
         io.write(say(`${blocks.join('\n\n')}\n`));
     }

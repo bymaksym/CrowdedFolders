@@ -103,6 +103,20 @@ describe('explain and the companions it applies', () => {
         const alone = await cli(repository({ 'src/a.ts': '', 'src/b.ts': '' }), ['explain', 'src']);
         assert.match(alone.out, /joined by: +nothing/u);
     });
+
+    it('names a fourth joined module rather than "and 1 more", which takes as much room', async () => {
+        const root = repository(
+            Object.fromEntries(
+                ['a', 'b', 'c', 'd'].flatMap(stem => [
+                    [`src/${stem}.ts`, ''],
+                    [`src/${stem}.spec.ts`, ''],
+                ]),
+            ),
+        );
+        const ran = await cli(root, ['explain', 'src']);
+        assert.match(ran.out, /d\.spec\.ts \+ d\.ts -> d\)/u);
+        assert.doesNotMatch(ran.out, /and 1 more/u);
+    });
 });
 
 describe('explain --prompt', () => {

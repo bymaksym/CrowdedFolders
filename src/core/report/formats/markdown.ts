@@ -176,11 +176,12 @@ function groupSummary(findings: readonly ReportFinding[]): string[] {
         ([nameA, a], [nameB, b]) => b.errors - a.errors || b.warnings - a.warnings || (nameA < nameB ? -1 : 1),
     );
     const lines = ['| Where | Errors | Warnings |', '| --- | ---: | ---: |'];
-    for (const [name, group] of top.slice(0, TOP_GROUPS)) {
+    const shown = shownOf(top.length, TOP_GROUPS);
+    for (const [name, group] of top.slice(0, shown)) {
         lines.push(`| ${codeSpan(folderLabel(name))} | ${group.errors} | ${group.warnings} |`);
     }
-    if (top.length > TOP_GROUPS) {
-        lines.push(`| _… and ${top.length - TOP_GROUPS} more_ | | |`);
+    if (top.length > shown) {
+        lines.push(`| _… and ${top.length - shown} more_ | | |`);
     }
     lines.push('');
     return lines;

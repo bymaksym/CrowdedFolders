@@ -167,7 +167,7 @@ export function formatHtml(report: PageSource): string {
             ? ''
             : `<div class="health">
     <div class="big">${health.percent}<small>%</small></div>
-    <div class="what"><b>of folders within the limit</b><br>${count(health.within)} of ${count(health.total)}
+    <div class="what"><b>of folders within the max-files limit</b><br>${count(health.within)} of ${count(health.total)}
       <div class="split" role="img" aria-label="${escapeHtml(describeHealth(health))}; ${over.length} over, ${near.length} near"><span class="ok" style="width:${share(within)}%"></span><span class="near" style="width:${share(near.length)}%"></span><span class="over" style="width:${share(over.length)}%"></span></div>
       <div class="chips">
         <button type="button" class="chip" data-show="3"><i style="background:var(--c-over)"></i>${over.length} over the limit</button>

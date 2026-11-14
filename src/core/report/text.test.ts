@@ -102,6 +102,25 @@ describe('the width of the terminal', () => {
         assert.ok((formatText(report([finding]), plain).split('\n', 2)[1] ?? '').endsWith('a folder — render/.'));
     });
 
+    it('wraps the note on tiny files too, under its own words', () => {
+        const crowded = { ...finding, rule: 'max-files', folder: 'src/types' };
+        const text = formatText(
+            report([crowded], { tinyFiles: { 'src/types': { tiny: 74, known: 92, bytes: 200 } } }),
+            {
+                ...plain,
+                width: 50,
+            },
+        );
+        const lines = text.split('\n');
+        for (const line of lines) {
+            assert.ok(line.length <= 50, `${line.length} columns: ${line}`);
+        }
+        const note = lines.findIndex(line => line.includes('note: 74 of its 92 files'));
+        assert.ok(note > 0, text);
+        // Four columns, the mark (✖ error) and "note: ": under its own words.
+        assert.match(lines[note + 1] ?? '', /^ {17}\S/u);
+    });
+
     it('never cuts a word that is longer than the room', () => {
         assert.deepEqual(wrapWords(`see ${'x'.repeat(60)} now`, 50, 0, 4), ['see', 'x'.repeat(60), 'now']);
         assert.deepEqual(wrapWords('a b c', undefined, 0, 0), ['a b c']);

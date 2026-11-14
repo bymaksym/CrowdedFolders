@@ -309,7 +309,11 @@ function folderLines(files: readonly string[]): string[] {
 async function fixOf(example: DocsExample): Promise<string> {
     if (example.fixed) {
         const again = await printed(example, example.fixed, []);
-        assert.ok(!again.includes(` ${example.id} `), `${example.id}: the fix leaves the problem\n${again}`);
+        // A finding's line, not the summary: its health figure names the max-files limit.
+        const left = again
+            .split('\n')
+            .some(line => /^ +(?:✖ error|⚠ warn) /u.test(line) && line.includes(` ${example.id} `));
+        assert.ok(!left, `${example.id}: the fix leaves the problem\n${again}`);
         const summary = again.split('\n').find(line => /^[✔⚠✖]/u.test(line)) ?? '';
         return [
             'No move makes this decision: it is a person who does. After it, the files are these, and the run passes:',

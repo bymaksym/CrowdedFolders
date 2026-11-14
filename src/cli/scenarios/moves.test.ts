@@ -84,7 +84,7 @@ describe('--moves', () => {
         const ran = await cli(root, ['--moves', '--no-git']);
         assert.match(
             ran.out,
-            /no group to move out of it — `crowded-folders explain core\/enums` shows the groups that come close/u,
+            /no group to move out of it - `crowded-folders explain core\/enums` shows the groups that come close/u,
         );
     });
 
@@ -130,5 +130,30 @@ describe('explain', () => {
             ran.out,
             /Groups that come close \(prefix-groups needs 4\)\n {2}core\/enums \(14\/10\): page-\* ×3, ws-\* ×2\n/u,
         );
+    });
+
+    it('names a group of min or more that is not reported, with its reason, not "no two modules start with the same word"', async () => {
+        // 62 of the 63 modules of src/user start with "user": the folder's subject, not a group to move.
+        const names = [...Array.from({ length: 62 }, (_, index) => `user-part${index}`), 'main'];
+        const root = repository({
+            ...RECOMMENDED,
+            ...Object.fromEntries(names.map(name => [`src/user/${name}.ts`, ''])),
+        });
+        const ran = await cli(root, ['explain', 'src/user', '--no-git']);
+        assert.doesNotMatch(ran.out, /no two modules start with the same word/u);
+        assert.match(
+            ran.out,
+            /Groups that come close \(prefix-groups needs 4\)\n {2}src\/user \(63\/20\): none of 2 or 3 modules\n {2}user-\* ×62, not reported: "user" \(.*\): \S/u,
+        );
+        const alone = await cli(
+            repository({
+                ...RECOMMENDED,
+                ...Object.fromEntries(
+                    Array.from({ length: 21 }, (_, index) => [`src/x/${String.fromCodePoint(97 + index)}z.ts`, '']),
+                ),
+            }),
+            ['explain', 'src/x', '--no-git'],
+        );
+        assert.match(alone.out, /src\/x \(21\/20\): none: no two modules start with the same word\n/u);
     });
 });

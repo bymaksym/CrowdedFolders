@@ -48,6 +48,19 @@ describe('rules and presets with plugins', () => {
     });
 });
 
+describe('rules and presets in a pipe', () => {
+    it('write their prose in ASCII, like the report, and keep the symbols on a terminal', async () => {
+        const root = repository({ 'a.ts': '' });
+        const prose = /[—→…·]/u;
+        for (const command of ['rules', 'presets']) {
+            const piped = await cli(root, [command]);
+            assert.doesNotMatch(piped.out, prose, command);
+        }
+        assert.match((await cli(root, ['rules'], { FORCE_COLOR: '1' })).out, /render_json\.rs → render/u);
+        assert.match((await cli(root, ['presets'])).out, /continuous native generation - prebuild/u);
+    });
+});
+
 describe('a plugin rule that breaks', () => {
     it('is named with its folder and its package, exit 2, not "crowded-folders broke"', async () => {
         const root = withAcme(`if (folder.path === 'src') throw new TypeError('kaboom');`);

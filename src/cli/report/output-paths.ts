@@ -1,6 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
+import { shownPath } from '../../node/config/error.ts';
 import { realPath } from '../../node/config/file.ts';
 import { isTrackedByGit } from '../../node/files.ts';
 import { type Args, UsageError } from '../args.ts';
@@ -26,7 +27,7 @@ function reportPathOf(option: string, target: string, args: Args, session: Sessi
     const refusal = reportRefusal(path, args.force, session.configPath);
     if (refusal === 'folder') {
         throw new UsageError(
-            `${option}: ${path} is a folder; give the file to write in it, such as ${join(target, 'crowded-folders.sarif')}`,
+            `${option}: ${shownPath(session.cwd, path)} is a folder; give the file to write in it, such as ${join(target, 'crowded-folders.sarif')}`,
         );
     }
     if (refusal === 'configuration') {
@@ -36,7 +37,7 @@ function reportPathOf(option: string, target: string, args: Args, session: Sessi
     }
     if (refusal === 'tracked') {
         throw new UsageError(
-            `${option}: git tracks ${path}, and the report would replace it. Write it elsewhere, or pass --force.`,
+            `${option}: git tracks ${shownPath(session.cwd, path)}, and the report would replace it. Write it elsewhere, or pass --force.`,
         );
     }
     return path;

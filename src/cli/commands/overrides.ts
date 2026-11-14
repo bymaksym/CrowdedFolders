@@ -1,8 +1,10 @@
 import type { OverrideState, RuleSetting } from '../../core/config/types.ts';
 import { overrideCoverage } from '../../core/engine.ts';
+import { shownOf } from '../../core/plural.ts';
 import type { Args } from '../args.ts';
 import type { Io } from '../io.ts';
 import type { Session } from '../session.ts';
+import { originPath } from './provenance.ts';
 
 /**
  * Past this share of the folders, an override that silences a rule is said to be broad: it is the
@@ -10,7 +12,7 @@ import type { Session } from '../session.ts';
  */
 export const BROAD_SHARE = 0.25;
 
-/** How many folders of an override are named before "and N more". */
+/** How many folders of an override are named before "and N more" (all of them when only one would be left out). */
 const SHOWN_FOLDERS = 5;
 
 /**
@@ -37,7 +39,7 @@ export function overrides(args: Args, io: Io, session: Session): number {
             folders: total,
             broadShare: BROAD_SHARE,
             overrides: rows.map(({ state, folders, share, silences, isBroad }) => ({
-                origin: state.origin,
+                origin: originPath(state.origin, session),
                 own: state.own,
                 folders: state.folders,
                 withFiles: state.withFiles,
@@ -62,12 +64,14 @@ export function overrides(args: Args, io: Io, session: Session): number {
     for (const { state, folders, share, silences, isBroad } of rows) {
         if (state.origin !== origin) {
             origin = state.origin;
-            lines.push(lines.length === 0 ? origin : `\n${origin}`);
+            const label = originPath(origin, session);
+            lines.push(lines.length === 0 ? label : `\n${label}`);
         }
         lines.push(`  ${describeFolders(state)}${about(state)}`, `    ${state.reason}`);
         const percent = `${Math.round(share * 100)} %`;
-        const shown = folders.slice(0, SHOWN_FOLDERS).join(', ');
-        const more = folders.length > SHOWN_FOLDERS ? `, and ${folders.length - SHOWN_FOLDERS} more` : '';
+        const count = shownOf(folders.length, SHOWN_FOLDERS);
+        const shown = folders.slice(0, count).join(', ');
+        const more = folders.length > count ? `, and ${folders.length - count} more` : '';
         lines.push(
             folders.length === 0
                 ? '    covers no folder'

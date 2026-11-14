@@ -11,12 +11,13 @@ import { BUILT_IN_PRESETS } from '../../core/presets/index.ts';
 import { asciiProse, wrapWords } from '../../core/report/ascii.ts';
 import { BUILT_IN_RULES } from '../../core/rules/index.ts';
 import type { Rule } from '../../core/rules/rule.ts';
+import { shownPath } from '../../node/config/error.ts';
 import { locate, realPath } from '../../node/config/file.ts';
 import { loadConfigFile } from '../../node/load-config.ts';
 import { type Args, UsageError } from '../args.ts';
 import { type Io, terminalWidth, wantsSymbols } from '../io.ts';
 import { foldersFromPaths, type Session } from '../session.ts';
-import { isEmptyOption, ruleOrigins, withOverrides } from './provenance.ts';
+import { isEmptyOption, originPath, ruleOrigins, withOverrides } from './provenance.ts';
 
 /** Where a pipe wraps: the width of a terminal is not known there, and 100 columns is what a diff or a mail shows. */
 const PIPE_WIDTH = 100;
@@ -103,7 +104,7 @@ export async function listPresets(args: Args, io: Io): Promise<number> {
     for (const [name, preset] of matching(Object.entries(presets), args.paths[0], 'preset')) {
         lines.push(`${name}${origin(name, plugins)}`, ...wrapped(say(preset.description), 2, width));
         for (const source of preset.sources) {
-            lines.push(`  ${wantsSymbols(io) ? '·' : '-'} ${source.title}: ${source.url}`);
+            lines.push(`  ${wantsSymbols(io) ? '·' : '-'} ${say(source.title)}: ${source.url}`);
         }
         lines.push('');
     }
@@ -143,6 +144,7 @@ export async function listRules(args: Args, io: Io): Promise<number> {
     const { rules, plugins } = await listed(args, io);
     const width = terminalWidth(io) ?? PIPE_WIDTH;
     const typed = args.paths[0];
+    const say = wantsSymbols(io) ? (text: string): string => text : asciiProse;
     const naming = namingMatching(typed);
     const lines: string[] = [];
     const found = matching(Object.entries(rules), typed, 'rule', naming.length > 0);
@@ -152,8 +154,8 @@ export async function listRules(args: Args, io: Io): Promise<number> {
             .join(', ');
         lines.push(
             `${name}${origin(name, plugins)}`,
-            ...wrapped(rule.meta.description, 2, width),
-            ...(options === '' ? [] : wrapped(`options (defaults): ${options}`, 2, width)),
+            ...wrapped(say(rule.meta.description), 2, width),
+            ...(options === '' ? [] : wrapped(say(`options (defaults): ${options}`), 2, width)),
         );
         if (rule.meta.url) {
             lines.push(`  ${rule.meta.url}`);
@@ -165,7 +167,7 @@ export async function listRules(args: Args, io: Io): Promise<number> {
             'naming (settings, not a rule: how names are read, in a configuration or an override)',
             ...naming.flatMap(([name, option]) => [
                 `  ${name}${shownDefault(option.default)}`,
-                ...wrapped(option.description ?? '', 4, width),
+                ...wrapped(say(option.description ?? ''), 4, width),
             ]),
             `  ${docsUrl('configuring.md#naming')}`,
             '',
@@ -183,10 +185,20 @@ export async function listRules(args: Args, io: Io): Promise<number> {
 export async function printConfig(args: Args, io: Io, session: Session): Promise<number> {
     const { config } = session.loaded;
     const origins = await ruleOrigins(session);
+    // Paths from where the command was typed: the machine's folders stay out of what is pasted in an issue.
+    const shown = (origin: string): string => originPath(origin, session);
+    const withOrigins = <T extends { readonly origin: string }>(states: readonly T[]): T[] =>
+        states.map(state => ({ ...state, origin: shown(state.origin) }));
     if (args.paths.length === 0) {
-        io.write(
-            `${JSON.stringify({ configFile: session.configPath ?? null, root: session.root, ...config, origins }, undefined, 2)}\n`,
-        );
+        const printed = {
+            configFile: session.configPath === undefined ? null : shown(session.configPath),
+            root: shownPath(session.cwd, session.root),
+            ...config,
+            layers: config.layers.map(origin => shown(origin)),
+            overrides: withOrigins(config.overrides),
+            origins,
+        };
+        io.write(`${JSON.stringify(printed, undefined, 2)}\n`);
         return 0;
     }
     const [folder = '.'] = foldersFromPaths(args.paths, session, io.cwd);
@@ -217,7 +229,7 @@ export async function printConfig(args: Args, io: Io, session: Session): Promise
         : config.naming;
     const overrides = explanation?.overrides ?? [];
     io.write(
-        `${JSON.stringify({ folder, naming, rules, origins: withOverrides(origins, overrides, session), overrides }, undefined, 2)}\n`,
+        `${JSON.stringify({ folder, naming, rules, origins: withOverrides(origins, overrides, session), overrides: withOrigins(overrides) }, undefined, 2)}\n`,
     );
     return 0;
 }

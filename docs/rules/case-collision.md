@@ -15,8 +15,8 @@ src/
                            macOS): git cannot check them out side by side there. Rename one, or join
                            them.
 
-✖ 2 errors, 0 warnings in 1 folder (4 folders and 4 files checked; 100 % of folders within the limit
-  (4/4)).
+✖ 2 errors, 0 warnings in 1 folder (4 folders and 4 files checked; 100 % of folders within the
+  max-files limit (4/4)).
 ```
 
 <!-- /output -->
@@ -42,7 +42,7 @@ No move makes this decision: it is a person who does. After it, the files are th
 src/components/ Button.ts, Card.ts
 src/ foo-helpers.ts, Foo.ts
 
-✔ No crowded folders (3 folders and 4 files checked; 100 % of folders within the limit (3/3)).
+✔ No crowded folders (3 folders and 4 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->
