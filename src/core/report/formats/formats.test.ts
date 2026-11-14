@@ -10,7 +10,7 @@ import { formatAzure, formatCheckstyle, formatGithub, formatGitlab, formatJson, 
 import { prefixGroup, report, tooManyFiles, tooManyFolders, unusedOverride } from '../test-support/fixtures.ts';
 import { formatBadge } from './badge.ts';
 import { formatHtml } from './html.ts';
-import { commandsOf, formatMovesScript, quotePwsh, quoteSh } from './moves.ts';
+import { commandsOf, formatMovesJson, formatMovesScript, quotePwsh, quoteSh } from './moves.ts';
 import { formatTreeText } from './tree.ts';
 
 const schema = JSON.parse(
@@ -424,7 +424,52 @@ describe('the moves as commands', () => {
         ]);
         const renames = { ...prefixGroup, moves: [{ from: 'render/render-json.ts', to: 'render/json.ts' }] };
         assert.equal(formatMovesScript({ findings: [renames] }, 'sh').includes('mkdir'), false);
-        assert.equal(formatMovesScript({ findings: [tooManyFiles] }, 'sh'), '');
+    });
+
+    it('skips a group with a control character in a name, rather than write it raw inside quotes', () => {
+        const names = ['bell\u{7}', 'line\nbreak', 'esc\u{1B}[31m'];
+        const findings = names.map(name => ({
+            ...prefixGroup,
+            key: name,
+            moves: [{ from: `src/cli/${name}-json.ts`, to: `src/cli/${name}/json.ts` }],
+        }));
+        for (const shell of ['sh', 'pwsh'] as const) {
+            const script = formatMovesScript({ findings: [...findings, prefixGroup] }, shell);
+            assert.doesNotMatch(script.replaceAll('\n', ''), /\p{Cc}/u);
+            // A raw newline would start a line of its own, a command nobody wrote.
+            for (const line of script.split('\n')) {
+                assert.match(line, /^(?:# |git mv |mkdir |New-Item |$)/u);
+            }
+            assert.equal(script.match(/^# skipped: a name with control characters/gmu)?.length, 3, script);
+            assert.equal(script.match(/^git mv /gmu)?.length, 1, script);
+            assert.match(script, /^# src\/cli: prefix-groups "esc\\x1b\[31m"$/mu);
+        }
+    });
+
+    it('says why a folder over max-files has nothing to move, in the scripts and in the JSON', () => {
+        assert.equal(
+            formatMovesScript({ findings: [tooManyFiles] }, 'sh'),
+            '# src/components: max-files - no group to move out of it; crowded-folders explain src/components shows the groups that come close\n',
+        );
+        assert.match(
+            formatMovesScript({ findings: [{ ...tooManyFiles, folder: 'my app' }] }, 'pwsh'),
+            /^# my app: max-files - no group to move out of it; crowded-folders explain 'my app' shows/u,
+        );
+        const json = JSON.parse(formatMovesJson({ findings: [tooManyFiles, prefixGroup] })) as {
+            groups: unknown[];
+            unmoved: unknown[];
+        };
+        assert.equal(json.groups.length, 1);
+        assert.deepEqual(json.unmoved, [
+            {
+                folder: 'src/components',
+                rule: 'max-files',
+                reason: 'no group to move out of it; crowded-folders explain src/components shows the groups that come close',
+            },
+        ]);
+        // A folder that has a group to move says nothing more: the group is the way out.
+        const both = formatMovesScript({ findings: [{ ...tooManyFiles, folder: 'src/cli' }, prefixGroup] }, 'sh');
+        assert.doesNotMatch(both, /no group to move/u);
     });
 });
 

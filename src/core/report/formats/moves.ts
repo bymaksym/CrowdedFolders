@@ -64,14 +64,65 @@ export function formatMovesScript(report: Pick<Report, 'findings' | 'references'
             lines.push('');
         }
         const references = group.references ? ` — ${referencesLine(group.references)}` : '';
-        lines.push(`# ${safe(`${groupTitle(group)}${references}`)}`, ...commandsOf(group, shell));
+        lines.push(`# ${safe(`${groupTitle(group)}${references}`)}`);
+        if (hasControlCharacter(group)) {
+            // Inside quotes a newline is still a newline and ESC still reaches the terminal: no quoting
+            // makes such a name safe to paste, so the group is left to a person.
+            lines.push(
+                `# skipped: a name with control characters (a line break, ESC, BEL) cannot be written safely in a ${shell} script; move these files by hand`,
+            );
+        } else {
+            lines.push(...commandsOf(group, shell));
+        }
+    }
+    for (const item of unmovedOf(report, shell === 'sh' ? quoteSh : quotePwsh)) {
+        if (lines.length > 0) {
+            lines.push('');
+        }
+        lines.push(`# ${safe(`${item.folder === '.' ? 'the root' : item.folder}: ${item.rule} - ${item.reason}`)}`);
     }
     return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
 
-/** The moves as JSON, one entry per group: `--moves=json`. */
+/** The moves as JSON, one entry per group, and the findings no group answers: `--moves=json`. */
 export function formatMovesJson(report: Pick<Report, 'findings' | 'references'>): string {
-    return `${JSON.stringify({ version: 1, groups: moveGroups(report) }, undefined, 2)}\n`;
+    return `${JSON.stringify({ version: 1, groups: moveGroups(report), unmoved: unmovedOf(report, quoteSh) }, undefined, 2)}\n`;
+}
+
+/** A finding the moves do not answer, and why: an empty script would read as "nothing to do". */
+export interface Unmoved {
+    readonly folder: string;
+    readonly rule: string;
+    readonly reason: string;
+}
+
+/**
+ * The folders over `max-files` with no group to move out of them (none of the findings of the folder
+ * proposes a move), with the command that shows the groups that come close, quoted with `quote`.
+ */
+function unmovedOf(report: Pick<Report, 'findings'>, quote: (path: string) => string): Unmoved[] {
+    return report.findings
+        .filter(
+            finding =>
+                finding.rule === 'max-files' &&
+                finding.moves.length === 0 &&
+                report.findings.every(other => other.folder !== finding.folder || other.moves.length === 0),
+        )
+        .map(finding => ({
+            folder: finding.folder,
+            rule: finding.rule,
+            reason: `no group to move out of it; crowded-folders explain ${quote(finding.folder)} shows the groups that come close`,
+        }));
+}
+
+/** Control characters: a line break, ESC, BEL. */
+const CONTROL = /\p{Cc}/u;
+
+/** Whether a path a group makes or moves holds a control character. */
+function hasControlCharacter(group: Pick<MoveGroup, 'directories' | 'moves'>): boolean {
+    return [...group.directories, ...group.moves.flatMap(move => [move.from, move.to])].some(path =>
+        CONTROL.test(path),
+    );
 }
 
 /**
