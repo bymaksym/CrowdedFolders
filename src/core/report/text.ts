@@ -87,7 +87,17 @@ export function formatText(report: Report, options: TextOptions): string {
             );
             const tiny = options.quiet ? undefined : report.tinyFiles?.[finding.folder];
             if (tiny !== undefined && finding.rule === 'max-files') {
-                lines.push(`${' '.repeat(4 + words.error.length)}${paint('dim', say(`note: ${describeTiny(tiny)}`))}`);
+                // Under the mark, and when it goes on, under its own words rather than under "note:".
+                const indent = 4 + words.error.length;
+                pushWrapped(
+                    lines,
+                    ' '.repeat(indent),
+                    indent,
+                    say(`note: ${describeTiny(tiny)}`),
+                    options.width,
+                    indent + 'note: '.length,
+                    text => paint('dim', text),
+                );
             }
             if (options.moves) {
                 lines.push(
