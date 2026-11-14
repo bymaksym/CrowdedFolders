@@ -28,12 +28,12 @@ describe('--preset and detection', () => {
     });
 
     it('applies -p java to the whole repository when java was detected only in server/pom.xml', async () => {
-        const classes = Object.fromEntries(
-            Array.from({ length: 12 }, (_, index) => [
-                [`lib/Thing${String.fromCodePoint(65 + index)}.java`, ''],
-                [`lib/Thing${String.fromCodePoint(65 + index)}Impl.java`, ''],
-            ]).flat(),
-        );
+        const classes: Record<string, string> = {};
+        for (let index = 0; index < 12; index++) {
+            const name = `lib/Thing${String.fromCodePoint(65 + index)}`;
+            classes[`${name}.java`] = '';
+            classes[`${name}Impl.java`] = '';
+        }
         const built = files('server/target/classes/Gen', 30, '.java');
         const root = repository({ 'server/pom.xml': '', 'server/src/main/java/App.java': '', ...classes, ...built });
         const ran = await cli(root, ['explain', 'lib', '--no-git', '-p', 'java']);
