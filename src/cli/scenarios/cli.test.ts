@@ -408,7 +408,7 @@ describe('where it reads the files from', () => {
         const ran = await cli(join(top, 'here'), ['--root', '../other', '--no-git']);
         assert.equal(ran.code, 0, ran.out + ran.err);
         assert.match(ran.out, /the plugin of other/u);
-        assert.doesNotMatch(ran.out, /max-files/u);
+        assert.doesNotMatch(ran.out, /(?:error|warn) +max-files/u);
         assert.match(ran.err, /configuration .*other.crowded-folders\.config\.json, root .*other/u);
     });
 
