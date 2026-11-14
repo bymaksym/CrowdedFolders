@@ -5,11 +5,12 @@ import {
     maxWarningsOf,
     refuseAgentMisuse,
     refuseFolder,
+    refuseRepeated,
     usageMessageOf,
     wholeNumber,
     withMovesValue,
 } from './args-values.ts';
-import { optionNotTaken } from './command-options.ts';
+import { optionNotTaken, optionWithoutReport } from './command-options.ts';
 import { UsageError } from './usage-error.ts';
 
 export const COMMANDS = [
@@ -223,6 +224,16 @@ export function parseCommandLine(argv: readonly string[]): Args {
         movesScript !== undefined,
         command === 'tree' ? 'tree' : 'text',
     );
+    const unread =
+        values.help || values.version
+            ? undefined
+            : optionWithoutReport(
+                  tokens,
+                  outputs.map(spec => spec.format),
+              );
+    if (unread !== undefined) {
+        throw new UsageError(unread);
+    }
     if (values.over && values.near) {
         throw new UsageError(
             '--over and --near cannot both be given: --near already shows the folders over their limit',
@@ -437,23 +448,4 @@ function depthOf(value: string | undefined): number {
         return DEFAULT_TREE_DEPTH;
     }
     return value === 'all' ? Number.MAX_SAFE_INTEGER : (wholeNumber('--depth', value, 0) ?? DEFAULT_TREE_DEPTH);
-}
-
-/** The options that may be given more than once; every other is an error the second time. */
-const REPEATABLE = new Set(['preset', 'format', 'owner', 'suppress-rule']);
-
-type Tokens = NonNullable<ReturnType<typeof parseArgs>['tokens']>;
-
-/** `-f json -f sarif` used to keep the last one without a word; so did `-c a -c b`. */
-function refuseRepeated(tokens: Tokens): void {
-    const seen = new Set<string>();
-    for (const token of tokens) {
-        if (token.kind !== 'option' || REPEATABLE.has(token.name)) {
-            continue;
-        }
-        if (seen.has(token.name)) {
-            throw new UsageError(`--${token.name} is given more than once, and it takes one value`);
-        }
-        seen.add(token.name);
-    }
 }

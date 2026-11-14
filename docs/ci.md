@@ -109,6 +109,10 @@ one raises `formatVersion` (now `1`).
   they are most of the report. `--stats` adds `folders`: every folder with its `modules`, `files`,
   `subfolders`, the `max-files` `limit` in effect, and what that rule counts (`unit`) and compares with it
   (`used`).
+- An option of one format is an error (exit 2) when no report of that format is asked for, on standard
+  output or in a file: `--stats` and `--no-files` need `json`, `--depth`, `--over` and `--near` need
+  `tree`, `--group-by` and `--moves` need `text`, `--max-findings` needs `github` or `markdown` (`auto`
+  counts as any of `github`, `azure` and `text`). Ignored, it would look like it did something.
 - `--format html` writes one self-contained page with a map of the folders, and `--format badge` a
   shields.io endpoint with the share of folders within the limit: [tree.md](tree.md).
 

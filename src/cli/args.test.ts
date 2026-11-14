@@ -61,6 +61,36 @@ describe('the options of each command', () => {
     });
 });
 
+describe('an option of one format', () => {
+    it('is a usage error when no report it asks for reads it', () => {
+        assert.equal(usageOf('--stats'), '--stats applies to --format json');
+        assert.equal(usageOf('-f', 'sarif', '--no-files'), '--no-files applies to --format json');
+        assert.equal(usageOf('--depth', '2'), '--depth applies to --format tree');
+        assert.equal(usageOf('-f', 'html', '--over'), '--over applies to --format tree');
+        assert.equal(usageOf('tree', '-f', 'json', '--near'), '--near applies to --format tree');
+        assert.equal(usageOf('-f', 'markdown', '--group-by', 'project'), '--group-by applies to --format text');
+        assert.equal(usageOf('--max-findings', '5'), '--max-findings applies to --format github or markdown');
+        assert.equal(usageOf('-f', 'json', '--moves'), '--moves applies to --format text');
+        assert.equal(usageOf('-f', 'gitlab=gl.json', '-f', 'github', '--stats'), '--stats applies to --format json');
+    });
+
+    it('is taken when one report reads it, on standard output or in a file', () => {
+        parseCommandLine(['-f', 'json', '--stats', '--no-files']);
+        parseCommandLine(['-f', 'github', '-f', 'json=report.json', '--stats']);
+        parseCommandLine(['-f', 'json', '-o', 'report.json', '--stats']);
+        parseCommandLine(['tree', '--depth', '2', '--near']);
+        parseCommandLine(['-f', 'tree', '--over']);
+        parseCommandLine(['--group-by', 'project', '--moves']);
+        parseCommandLine(['-f', 'markdown=summary.md', '-f', 'github', '--max-findings', '20']);
+        // auto is github, azure or text by the CI it runs on: what any of them reads is taken.
+        parseCommandLine(['-f', 'auto', '--max-findings', '20', '--group-by', 'owner']);
+        // --moves=sh writes the moves itself, whatever the reports.
+        parseCommandLine(['--moves=sh', '-f', 'json=report.json']);
+        // The Action's reports with an argument of its documentation.
+        parseCommandLine(['-f', 'github', '-f', 'json=r.json', '-f', 'markdown=s.md', '--new-since', 'origin/main']);
+    });
+});
+
 describe('--max-warnings', () => {
     it('takes digits and -1 for no limit, nothing else', () => {
         assert.equal(parseCommandLine(['--max-warnings', '5']).maxWarnings, 5);
