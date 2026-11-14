@@ -377,6 +377,31 @@ describe('the command', () => {
         assert.equal((await cli(root, ['--help'])).out, HELP);
         assert.match((await cli(root, ['--version'])).out, /^\d+\.\d+\.\d+\n$/u);
     });
+
+    it('answers --version from the executable without loading the command (dist/ is not even needed)', () => {
+        // The executable and a package.json, no dist/: loading the command would say it is not built.
+        const copy = mkdtempSync(join(tmpdir(), 'crowded-folders-bin-'));
+        try {
+            mkdirSync(join(copy, 'bin'));
+            const source = readFileSync(new URL('../../../bin/crowded-folders.js', import.meta.url), 'utf8');
+            writeFileSync(join(copy, 'bin', 'crowded-folders.js'), source);
+            writeFileSync(join(copy, 'package.json'), '{ "type": "module", "version": "9.8.7" }');
+            for (const flag of ['--version', '-v']) {
+                const ran = spawnSync(process.execPath, [join(copy, 'bin', 'crowded-folders.js'), flag], {
+                    encoding: 'utf8',
+                });
+                assert.equal(ran.status, 0, ran.stderr);
+                assert.equal(ran.stdout, '9.8.7\n');
+            }
+            const other = spawnSync(process.execPath, [join(copy, 'bin', 'crowded-folders.js'), 'rules'], {
+                encoding: 'utf8',
+            });
+            assert.equal(other.status, 2);
+            assert.match(other.stderr, /not built yet/u);
+        } finally {
+            rmSync(copy, { recursive: true, force: true });
+        }
+    });
 });
 
 describe('the help', () => {
