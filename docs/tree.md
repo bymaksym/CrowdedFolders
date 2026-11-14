@@ -48,7 +48,7 @@ be attached to a pull request, kept as a CI artifact or mailed. It shows:
 - a **treemap**: each folder is a rectangle whose area is the modules in it and below it, laid out by a
   squarified algorithm (`src/core/report/tree/treemap.ts`, tested without a browser; the page runs the
   same functions again when the window changes size). A folder with files of its own and folders below
-  gets a dashed cell for its files, so a drawer with three small folders in it is still drawn as a drawer.
+  gets a dashed cell for its files, so a junk drawer with three small folders in it is still drawn as one.
 - **colour by closeness to the limit**: teal within, yellow near, orange at the limit, red over, grey
   with no limit; folders over the limit are also hatched, so the colour is not the only signal. Light and
   dark follow the system (`prefers-color-scheme`).

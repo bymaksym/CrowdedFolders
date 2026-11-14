@@ -542,7 +542,7 @@ Sources:
 
 ## docs
 
-Documentation and content sites (Docusaurus, MkDocs, VitePress, Starlight, Astro, Hugo, Jekyll): number prefixes order pages and are not a group, and moving a page changes its URL, so groups in docs/, doc/, content/ and blog/ are warnings that say so; the code next to them keeps its rules. A blog's posts are a dated collection, not a drawer: _posts/, blog/ and content/posts are left as they are. Versioned copies, translations and build output are left out.
+Documentation and content sites (Docusaurus, MkDocs, VitePress, Starlight, Astro, Hugo, Jekyll): number prefixes order pages and are not a group, and moving a page changes its URL, so groups in docs/, doc/, content/ and blog/ are warnings that say so; the code next to them keeps its rules. A blog's posts are a dated collection, not a junk drawer: _posts/, blog/ and content/posts are left as they are. Versioned copies, translations and build output are left out.
 
 - **Extends:** [recommended](#recommended)
 - **Left out:** `versioned_docs`, `versioned_sidebars`, `/i18n`, `.docusaurus`, `/site`, `/build`, `resources/_gen`
