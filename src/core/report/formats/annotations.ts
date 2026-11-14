@@ -18,6 +18,8 @@ interface Annotation {
     readonly text: string;
     readonly file: string | undefined;
     readonly line: number;
+    /** Only the configuration's error knows its column. */
+    readonly column?: number;
 }
 
 /**
@@ -54,7 +56,8 @@ function annotationsOf(report: Report, options: AnnotationOptions): Annotation[]
                   rule: 'config/error',
                   text: failureMessage(report, report.failure.message),
                   file: report.failure.file,
-                  line: 1,
+                  line: report.failure.line ?? 1,
+                  ...(report.failure.column !== undefined && { column: report.failure.column }),
               },
           ]
         : [];
@@ -87,7 +90,11 @@ export function formatGithub(report: Report, options: AnnotationOptions = {}): s
         const properties = [
             ...(annotation.file === undefined
                 ? []
-                : [`file=${escapeProperty(annotation.file)}`, `line=${annotation.line}`]),
+                : [
+                      `file=${escapeProperty(annotation.file)}`,
+                      `line=${annotation.line}`,
+                      ...(annotation.column === undefined ? [] : [`col=${annotation.column}`]),
+                  ]),
             `title=${escapeProperty(`crowded-folders: ${annotation.rule === 'more' ? 'more' : annotation.rule}`)}`,
         ];
         return `::${annotation.level} ${properties.join(',')}::${escapeData(annotation.text)}`;
@@ -102,7 +109,11 @@ export function formatAzure(report: Report): string {
             `type=${annotation.level}`,
             ...(annotation.file === undefined
                 ? []
-                : [`sourcepath=${escapeAzure(annotation.file)}`, `linenumber=${annotation.line}`]),
+                : [
+                      `sourcepath=${escapeAzure(annotation.file)}`,
+                      `linenumber=${annotation.line}`,
+                      ...(annotation.column === undefined ? [] : [`columnnumber=${annotation.column}`]),
+                  ]),
             `code=${escapeAzure(annotation.rule)}`,
         ];
         return `##vso[task.logissue ${properties.join(';')}]${escapeAzureData(annotation.text)}`;

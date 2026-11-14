@@ -14,7 +14,7 @@ import type { Report, ReportRule } from '../report.ts';
 interface Location {
     physicalLocation: {
         artifactLocation: { uri: string; uriBaseId: string };
-        region: { startLine: number };
+        region: { startLine: number; startColumn?: number };
     };
 }
 
@@ -145,17 +145,19 @@ function invocationOf(report: Report): Record<string, unknown> {
             {
                 level: 'error',
                 message: { text: failureMessage(report, report.failure.message) },
-                ...(report.failure.file !== undefined && { locations: [locationOf(report.failure.file, 1)] }),
+                ...(report.failure.file !== undefined && {
+                    locations: [locationOf(report.failure.file, report.failure.line ?? 1, report.failure.column)],
+                }),
             },
         ],
     };
 }
 
-function locationOf(path: string, line: number): Location {
+function locationOf(path: string, line: number, column?: number): Location {
     return {
         physicalLocation: {
             artifactLocation: { uri: encodeUri(path), uriBaseId: '%SRCROOT%' },
-            region: { startLine: line },
+            region: { startLine: line, ...(column !== undefined && { startColumn: column }) },
         },
     };
 }

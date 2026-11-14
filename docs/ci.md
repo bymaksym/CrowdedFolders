@@ -71,8 +71,11 @@ adds go first, so GitHub shows the annotation in the
 diff. SARIF carries a fingerprint of folder, rule and key, so the same problem is the same alert.
 
 A run that cannot be completed (exit code 2) still writes the SARIF, with
-`invocations[0].executionSuccessful` false, and in `github` and `azure` an error on the configuration file,
-so `upload-sarif` does not fail later on a file that does not exist and hide the cause.
+`invocations[0].executionSuccessful` false, so `upload-sarif` does not fail later on a file that does not
+exist and hide the cause; GitLab's report as `[]`, for the same reason with its `codequality` artifact (the
+job fails on the exit code); the reason in `markdown`; and in `github` and `azure` an error on the
+configuration file, on the line and column of its first problem when they are known (line 1 otherwise).
+`json` and `checkstyle` get no file: the scripts and tools that read them look at the exit code first.
 
 **GitHub shows 10 annotations of each kind per step** and drops the rest without a word, so `github`
 writes the 9 worst of each kind (the furthest over the limit first) and a tenth that says how many more
