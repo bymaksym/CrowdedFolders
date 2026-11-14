@@ -2,6 +2,7 @@ import { changeAgainstBase, changeBetween, compareWithBase, foldersOf, type Tree
 import { type Finding, runEngine, selectFiles } from '../../core/engine.ts';
 import { joinPath } from '../../core/paths/tree.ts';
 import { plural } from '../../core/plural.ts';
+import { asciiProse } from '../../core/report/ascii.ts';
 import { exitCodeOf, isOverMaxWarnings, type Report, totalsOf } from '../../core/report/report.ts';
 import {
     addSuppressions,
@@ -14,7 +15,7 @@ import {
 } from '../../core/suppressions.ts';
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
-import type { Io } from '../io.ts';
+import { type Io, wantsSymbols } from '../io.ts';
 import { addedByFolder, buildReport, enrichFindings, tinyFilesOf, wantsAnchors } from '../report/build.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
@@ -192,9 +193,8 @@ export async function check(args: Args, io: Io, session: Session): Promise<numbe
     }
     if (session.detected && textToStdout && !args.quiet) {
         const presets = session.detected.map(detection => `${detection.preset} (${detection.evidence})`).join(', ');
-        io.error(
-            `No configuration file: used the presets ${args.detect ? 'detected' : 'given (--no-detect)'} — ${presets}. \`crowded-folders init\` writes them down.\n`,
-        );
+        const note = `No configuration file: used the presets ${args.detect ? 'detected' : 'given (--no-detect)'} — ${presets}. \`crowded-folders init\` writes them down.\n`;
+        io.error(wantsSymbols(io) ? note : asciiProse(note));
     }
     if (isOverMaxWarnings(report) && !textToStdout) {
         const warnings = totalsOf(report.findings).warnings + hiddenWarnings;

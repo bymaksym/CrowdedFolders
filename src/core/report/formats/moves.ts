@@ -128,21 +128,28 @@ function hasControlCharacter(group: Pick<MoveGroup, 'directories' | 'moves'>): b
 /**
  * What the text report prints under a finding with `--moves`: its commands, for sh, and the files
  * that name what it moves. A folder over `max-files` with nothing to move says so, rather than
- * leaving a blank that reads as "nothing to do".
+ * leaving a blank that reads as "nothing to do". `say` writes its prose lines, not the commands, where
+ * symbols cannot be shown.
  */
-export function moveLines(report: Pick<Report, 'findings' | 'references'>, finding: Finding): string[] {
+export function moveLines(
+    report: Pick<Report, 'findings' | 'references'>,
+    finding: Finding,
+    say: (text: string) => string = text => text,
+): string[] {
     if (finding.moves.length === 0) {
         const proposal = report.findings.some(other => other.folder === finding.folder && other.moves.length > 0);
         return finding.rule === 'max-files' && !proposal
             ? [
-                  `no group to move out of it — \`crowded-folders explain ${finding.folder}\` shows the groups that come close`,
+                  say(
+                      `no group to move out of it — \`crowded-folders explain ${finding.folder}\` shows the groups that come close`,
+                  ),
               ]
             : [];
     }
     const references = report.references?.[referencesKey(finding)];
     return [
         ...commandsOf({ directories: directoriesOf(finding.moves), moves: finding.moves }, 'sh'),
-        ...(references ? [referencesLine(references)] : []),
+        ...(references ? [say(referencesLine(references))] : []),
     ];
 }
 

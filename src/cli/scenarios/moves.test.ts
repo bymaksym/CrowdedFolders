@@ -84,7 +84,7 @@ describe('--moves', () => {
         const ran = await cli(root, ['--moves', '--no-git']);
         assert.match(
             ran.out,
-            /no group to move out of it — `crowded-folders explain core\/enums` shows the groups that come close/u,
+            /no group to move out of it - `crowded-folders explain core\/enums` shows the groups that come close/u,
         );
     });
 

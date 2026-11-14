@@ -73,7 +73,9 @@ describe('the command', () => {
         const ran = await cli(root, []);
         assert.equal(ran.code, 1);
         assert.match(ran.out, /cli\/\n {2}error {2}prefix-groups {2}4 modules start with "render"/u);
-        assert.match(ran.err, /No configuration file: used the presets detected — recommended/u);
+        assert.match(ran.err, /No configuration file: used the presets detected - recommended/u);
+        const terminal = await cli(root, [], '', { FORCE_COLOR: '1' });
+        assert.match(terminal.err, /used the presets detected — recommended/u);
     });
 
     it('passes a clean repository', async () => {
@@ -502,7 +504,7 @@ describe('where it reads the files from', () => {
             'android/app/src/main/Main.kt': '',
         });
         const ran = await cli(root, []);
-        assert.match(ran.err, /used the presets detected — recommended .*java \(android\/app\/build\.gradle\)/u);
+        assert.match(ran.err, /used the presets detected - recommended .*java \(android\/app\/build\.gradle\)/u);
         assert.doesNotMatch(ran.err, /c-cpp/u);
     });
 });

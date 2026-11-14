@@ -103,7 +103,7 @@ export async function listPresets(args: Args, io: Io): Promise<number> {
     for (const [name, preset] of matching(Object.entries(presets), args.paths[0], 'preset')) {
         lines.push(`${name}${origin(name, plugins)}`, ...wrapped(say(preset.description), 2, width));
         for (const source of preset.sources) {
-            lines.push(`  ${wantsSymbols(io) ? '·' : '-'} ${source.title}: ${source.url}`);
+            lines.push(`  ${wantsSymbols(io) ? '·' : '-'} ${say(source.title)}: ${source.url}`);
         }
         lines.push('');
     }
@@ -143,6 +143,7 @@ export async function listRules(args: Args, io: Io): Promise<number> {
     const { rules, plugins } = await listed(args, io);
     const width = terminalWidth(io) ?? PIPE_WIDTH;
     const typed = args.paths[0];
+    const say = wantsSymbols(io) ? (text: string): string => text : asciiProse;
     const naming = namingMatching(typed);
     const lines: string[] = [];
     const found = matching(Object.entries(rules), typed, 'rule', naming.length > 0);
@@ -152,8 +153,8 @@ export async function listRules(args: Args, io: Io): Promise<number> {
             .join(', ');
         lines.push(
             `${name}${origin(name, plugins)}`,
-            ...wrapped(rule.meta.description, 2, width),
-            ...(options === '' ? [] : wrapped(`options (defaults): ${options}`, 2, width)),
+            ...wrapped(say(rule.meta.description), 2, width),
+            ...(options === '' ? [] : wrapped(say(`options (defaults): ${options}`), 2, width)),
         );
         if (rule.meta.url) {
             lines.push(`  ${rule.meta.url}`);
@@ -165,7 +166,7 @@ export async function listRules(args: Args, io: Io): Promise<number> {
             'naming (settings, not a rule: how names are read, in a configuration or an override)',
             ...naming.flatMap(([name, option]) => [
                 `  ${name}${shownDefault(option.default)}`,
-                ...wrapped(option.description ?? '', 4, width),
+                ...wrapped(say(option.description ?? ''), 4, width),
             ]),
             `  ${docsUrl('configuring.md#naming')}`,
             '',

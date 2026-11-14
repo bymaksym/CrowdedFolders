@@ -32,7 +32,7 @@ describe('--preset and detection', () => {
         const explained = await cli(root, ['explain', 'Sources/App', '--no-git', '--no-detect', '-p', 'strict']);
         assert.match(explained.out, /25 files, 25 modules/u);
         const checked = await cli(root, ['--no-git', '--no-detect', '-p', 'strict']);
-        assert.match(checked.err, /used the presets given \(--no-detect\) — strict \(given with --preset\)/u);
+        assert.match(checked.err, /used the presets given \(--no-detect\) - strict \(given with --preset\)/u);
     });
 });
 

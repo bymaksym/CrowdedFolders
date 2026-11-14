@@ -128,3 +128,19 @@ describe('crowded-folders where', () => {
         assert.deepEqual([result?.folder, result?.effect], ['a', 'creates']);
     });
 });
+
+describe('crowded-folders where in a pipe', () => {
+    it('writes the change of a WORSE as "4 -> 5", and keeps the arrow on a terminal', async () => {
+        const root = repository({
+            'crowded-folders.config.json': CONFIG,
+            'core/enums/a.enum.ts': '',
+            'core/enums/b.enum.ts': '',
+            'core/enums/c.enum.ts': '',
+            'core/enums/d.enum.ts': '',
+        });
+        const piped = await cli(root, ['where', 'core/enums/e.enum.ts']);
+        assert.match(piped.out, /WORSE max-files 4 -> 5 \(limit 3\)/u);
+        const terminal = await cli(root, ['where', 'core/enums/e.enum.ts'], { FORCE_COLOR: '1' });
+        assert.match(terminal.out, /WORSE max-files 4\u{2192}5 \(limit 3\)/u);
+    });
+});

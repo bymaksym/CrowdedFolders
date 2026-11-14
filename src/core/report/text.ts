@@ -101,7 +101,7 @@ export function formatText(report: Report, options: TextOptions): string {
             }
             if (options.moves) {
                 lines.push(
-                    ...moveLines(report, finding).map(
+                    ...moveLines(report, finding, say).map(
                         line => `${' '.repeat(4 + words.error.length)}${paint('dim', safe(line))}`,
                     ),
                 );
