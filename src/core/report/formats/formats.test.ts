@@ -223,6 +223,14 @@ describe('markdown', () => {
         assert.match(markdown, /_… and 2 more_/u);
     });
 
+    it('lists an eleventh group rather than "and 1 more" in the summary per group', () => {
+        const markdown = formatMarkdown(
+            report(crowd(11, 'error').map((finding, index) => ({ ...finding, project: `packages/p${index}` }))),
+        );
+        assert.equal(markdown.split('\n').filter(line => /^\| `packages\/p\d+` \| \d/u.test(line)).length, 11);
+        assert.doesNotMatch(markdown, /and 1 more/u);
+    });
+
     it('stays under what GitHub keeps of a job summary, whatever the cap', () => {
         const findings = Array.from({ length: 8000 }, (_, index) => ({
             ...prefixGroup,

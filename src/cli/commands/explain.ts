@@ -4,7 +4,7 @@ import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
 import { compareText, type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
-import { plural } from '../../core/plural.ts';
+import { plural, shownOf } from '../../core/plural.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
 import { describeComparison } from '../../core/report/tree/trial.ts';
 import type { Args } from '../args.ts';
@@ -204,8 +204,9 @@ function joinedBy(modules: readonly Module[], hasCompanions: boolean): string {
     if (joined.length === 0) {
         return 'nothing: every file is a module of its own';
     }
-    const shown = joined.slice(0, 3).map(module => `${module.files.join(' + ')} → ${module.stem}`);
-    const more = joined.length > 3 ? `, and ${joined.length - 3} more` : '';
+    const count = shownOf(joined.length, 3);
+    const shown = joined.slice(0, count).map(module => `${module.files.join(' + ')} → ${module.stem}`);
+    const more = joined.length > count ? `, and ${joined.length - count} more` : '';
     return `the name up to its first dot${hasCompanions ? ', and the companions above' : ''} (${plural(joined.length, 'module')}: ${shown.join('; ')}${more})`;
 }
 
