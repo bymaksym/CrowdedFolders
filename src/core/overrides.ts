@@ -15,8 +15,10 @@ export interface CompiledOverride {
  * The overrides that can match a folder, without trying each: a glob that spells out its folders
  * (`packages/a/**`) is filed under them, one that starts with `**\/name` under that name, and only
  * the rest (`*\/src`, `**`) is tried everywhere. A monorepo with an override per package then costs
- * about the same with 4 000 overrides as with 100. The candidates come back in the configuration's
- * order, which is the order they apply in.
+ * about the same with 4 000 overrides as with 100. When many globs share their folders
+ * (`packages/*\/src/x1/**`, `packages/*\/src/x2/**`), each is filed instead under the plain name after
+ * the wildcard that fewest globs hold (`x1`): 400 of them over 200 000 paths took 75 s, all tried under
+ * `packages`. The candidates come back in the configuration's order, which is the order they apply in.
  */
 export class OverrideIndex {
     private readonly byPrefix = new Map<string, number[]>();
@@ -33,9 +35,16 @@ export class OverrideIndex {
             }
             map.set(key, list);
         };
+        const globs = overrides.flatMap(override => override.globs);
+        const prefixes = countOf(globs.map(glob => glob.prefix));
+        const names = countOf(globs.flatMap(glob => [...new Set(glob.required)]));
         for (const [index, override] of overrides.entries()) {
             for (const glob of override.globs) {
-                if (glob.prefix !== '') {
+                const shared = glob.prefix === '' ? Infinity : (prefixes.get(glob.prefix) ?? 0);
+                const rarest = glob.required.toSorted((a, b) => (names.get(a) ?? 0) - (names.get(b) ?? 0))[0];
+                if (rarest !== undefined && (names.get(rarest) ?? 0) < shared) {
+                    file(this.bySegment, rarest, index);
+                } else if (glob.prefix !== '') {
                     file(this.byPrefix, glob.prefix, index);
                 } else if (glob.segment === undefined) {
                     if (this.everywhere.at(-1) !== index) this.everywhere.push(index);
@@ -57,6 +66,14 @@ export class OverrideIndex {
         }
         return [...found].toSorted((a, b) => a - b).flatMap(index => this.overrides[index] ?? []);
     }
+}
+
+function countOf(keys: readonly string[]): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (const key of keys) {
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
 }
 
 /** The overrides of the user's own files that matched no folder. */
