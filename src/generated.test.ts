@@ -14,13 +14,13 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { run } from './cli/main.ts';
+import { DOCS_EXAMPLES, type DocsExample } from './cli/test-support/docs-examples.ts';
 import { TOOL } from './cli/tool.ts';
 import type { JsonSchema } from './core/config/json-schema.ts';
 import { configSchema, pinnedSchemaUrl } from './core/config/schema.ts';
 import type { Config, Preset, RuleSetting } from './core/config/types.ts';
 import { BUILT_IN_PRESETS } from './core/presets/index.ts';
 import { BUILT_IN_RULES } from './core/rules/index.ts';
-import { DOCS_EXAMPLES, type DocsExample } from './test-support/docs-examples.ts';
 
 const root = (path: string): string => fileURLToPath(new URL(`../${path}`, import.meta.url));
 const NOTICE =

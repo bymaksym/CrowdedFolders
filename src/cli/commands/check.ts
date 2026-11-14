@@ -15,9 +15,9 @@ import {
 } from '../../core/suppressions.ts';
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
-import { ciVariable } from '../ci.ts';
 import { type Io, wantsSymbols } from '../io.ts';
 import { addedByFolder, buildReport, enrichFindings, tinyFilesOf, wantsAnchors } from '../report/build.ts';
+import { ciVariable } from '../report/ci.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
 import { foldersFromPaths, noRuleIsOn, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';

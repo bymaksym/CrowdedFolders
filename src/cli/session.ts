@@ -15,9 +15,9 @@ import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
 import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
-import { ciVariable } from './ci.ts';
 import { presetsWithoutConfiguration } from './detection.ts';
 import type { Io } from './io.ts';
+import { ciVariable } from './report/ci.ts';
 
 /** Deeper than this, a tree is generated, not arranged: its files are left out, and the run says so. */
 export const MAX_DEPTH = 256;

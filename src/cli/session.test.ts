@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-import { ciVariable, isCi } from './ci.ts';
+import { ciVariable, isCi } from './report/ci.ts';
 import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
 
 cleanUpAfterTests();
