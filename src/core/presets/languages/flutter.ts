@@ -2,7 +2,7 @@ import type { Preset } from '../../config/types.ts';
 
 export const flutter: Preset = {
     description:
-        "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.",
+        "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders, localisation files and Lottie animations (assets/animations, assets/lottie: .json exported from After Effects) are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.",
     sources: [
         { title: 'Effective Dart: style (file names)', url: 'https://dart.dev/effective-dart/style' },
         {
@@ -28,6 +28,10 @@ export const flutter: Preset = {
         {
             title: "json_serializable: generated code goes in a part file, part 'example.g.dart'",
             url: 'https://pub.dev/packages/json_serializable',
+        },
+        {
+            title: "lottie: animations 'exported as json with Bodymovin', loaded with Lottie.asset('assets/LottieLogo1.json')",
+            url: 'https://pub.dev/packages/lottie',
         },
     ],
     detect: { files: ['pubspec.yaml'] },
@@ -57,6 +61,9 @@ export const flutter: Preset = {
             '*.chopper.dart',
             // gen-l10n reads one .arb per language, in any folder.
             '*.arb',
+            // A Lottie animation is a .json exported from After Effects: a folder of pictures, not of code.
+            '**/assets/animations',
+            '**/assets/lottie',
         ],
         naming: {
             companions: ['_test$'],

@@ -36,7 +36,7 @@ src/components/
                           are about.
 
 ✖ 2 errors, 0 warnings in 2 folders (4 folders and 40 files checked; 75 % of folders within the
-  limit (3/4)).
+  max-files limit (3/4)).
   --moves prints where each file could go; `crowded-folders explain cli` shows how a folder was
     read.
 ```

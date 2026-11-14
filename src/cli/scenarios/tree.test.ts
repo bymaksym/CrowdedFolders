@@ -37,7 +37,10 @@ describe('crowded-folders tree', () => {
         assert.match(ran.out, /crowded\/ +25\/20 +#{10}\+ +over the limit$/mu);
         assert.match(ran.out, /near\/ +14\/20 +#{7}\.{3} +near the limit$/mu);
         assert.match(ran.out, /calm\/ +2\/20 .* ok$/mu);
-        assert.match(ran.out, /\d+ % of folders within the limit \(\d+\/\d+\); 1 over the limit; 1 near it\./u);
+        assert.match(
+            ran.out,
+            /\d+ % of folders within the max-files limit \(\d+\/\d+\); 1 over the limit; 1 near it\./u,
+        );
         assert.match(
             ran.out,
             /The biggest, src\/crowded: 25 modules: bigger than \d+ % of the folders of \d+ open-source/u,
@@ -100,10 +103,10 @@ describe('the health figure of the summary', () => {
         const clean = await cli(repository({ ...RECOMMENDED, ...folderOf('src', 3) }), []);
         assert.match(
             clean.out,
-            /\(\d+ folders? and \d+ files checked; 100 % of folders within the limit \(\d+\/\d+\)\)\./u,
+            /\(\d+ folders? and \d+ files checked; 100 % of folders within the max-files limit \(\d+\/\d+\)\)\./u,
         );
         const failing = await cli(repository(REPO), []);
-        assert.match(failing.out, /checked; \d+ % of folders within the limit \(\d+\/\d+\)\)\.$/mu);
+        assert.match(failing.out, /checked; \d+ % of folders within the max-files limit \(\d+\/\d+\)\)\.$/mu);
         assert.doesNotMatch(failing.out, /100 %/u);
     });
 

@@ -53,7 +53,7 @@ describe('where a new file would go', () => {
         assert.equal(plural.candidates[0]?.folder, 'ui/users');
     });
 
-    it('says which group a file joins when the folder is not yet a drawer of that name', () => {
+    it('says which group a file joins when the folder is not yet a junk drawer of that name', () => {
         const files = ['api/render-json.ts', 'api/render-text.ts', 'api/main.ts'];
         const result = where(files, 'api/render-pr.ts');
         assert.equal(result.effect, 'neutral');

@@ -19,6 +19,8 @@ export interface ListOptions {
     readonly git: boolean;
     /** Stop instead of reading the disk when git cannot be asked: `--require-git`, and the default on CI. */
     readonly requireGit?: boolean;
+    /** What made the run CI when `requireGit` comes from it, not from `--require-git`: `TF_BUILD=True`. */
+    readonly requiredBy?: string;
     /**
      * Only what git tracks, not the untracked files `.gitignore` does not hide: a file a previous CI
      * step left in the checkout is not part of the repository. `--tracked-only`, and the default on CI.
@@ -63,7 +65,7 @@ export function listFiles(root: string, options: ListOptions): FileList {
     if (!isRepository) {
         if (options.requireGit) {
             throw new GitError(
-                `${root} is not in a git repository, and git's list was required (--require-git, the default when CI is set): pass --no-git to read the files from the disk.`,
+                `${root} is not in a git repository, and git's list was required (${options.requiredBy === undefined ? '--require-git' : `the default in CI, ${options.requiredBy}`}): pass --no-git to read the files from the disk.`,
             );
         }
         return {

@@ -6,8 +6,10 @@ where starting Node and git costs more, a run takes about 0.4 s on this reposito
 on one of 2,400 files: one `git ls-files` instead of four calls took about 0.1 s off each (median of 21
 and 15 runs, measured alternating with the version before).
 
-On CI (`CI` set), the run fails with exit code 2 when git cannot list the files, instead of reading the
-disk: pass `--no-git` for a checkout without `.git`. `--output` will not write over a file git tracks
+On CI, the run fails with exit code 2 when git cannot list the files, instead of reading the
+disk: pass `--no-git` for a checkout without `.git`. A run is on CI when `CI` is set (and not `false` or
+`0`), or, without `CI`, when one of `TF_BUILD`, `JENKINS_URL`, `BUILDKITE`, `GITHUB_ACTIONS`, `GITLAB_CI`,
+`CIRCLECI`, `TEAMCITY_VERSION` or `BITBUCKET_BUILD_NUMBER` is; the messages say which variable it was. `--output` will not write over a file git tracks
 unless `--force` is given.
 
 **Pin an exact version.** Only a major version finds more than the one before (a new preset, a lower
@@ -27,7 +29,7 @@ updates; or use the Action pinned by tag or SHA, which runs the version it was r
 The last line of the text report follows the exit code: `✔` only on `0`, and on `1` it says what failed —
 errors, `N suppressions to prune`, or `over --max-warnings` (warnings `--quiet` hid included).
 
-`--suppress-all`, `--suppress-rule` and `--prune-suppressions` refuse to write when `CI` is set (exit code
+`--suppress-all`, `--suppress-rule` and `--prune-suppressions` refuse to write on CI (exit code
 `2`): a job that writes its own suppressions passes and leaves nothing in the pull request. Run them on a
 machine and commit the file; `--force` is for a job that means it.
 
@@ -71,8 +73,11 @@ adds go first, so GitHub shows the annotation in the
 diff. SARIF carries a fingerprint of folder, rule and key, so the same problem is the same alert.
 
 A run that cannot be completed (exit code 2) still writes the SARIF, with
-`invocations[0].executionSuccessful` false, and in `github` and `azure` an error on the configuration file,
-so `upload-sarif` does not fail later on a file that does not exist and hide the cause.
+`invocations[0].executionSuccessful` false, so `upload-sarif` does not fail later on a file that does not
+exist and hide the cause; GitLab's report as `[]`, for the same reason with its `codequality` artifact (the
+job fails on the exit code); the reason in `markdown`; and in `github` and `azure` an error on the
+configuration file, on the line and column of its first problem when they are known (line 1 otherwise).
+`json` and `checkstyle` get no file: the scripts and tools that read them look at the exit code first.
 
 **GitHub shows 10 annotations of each kind per step** and drops the rest without a word, so `github`
 writes the 9 worst of each kind (the furthest over the limit first) and a tenth that says how many more
@@ -109,8 +114,12 @@ one raises `formatVersion` (now `1`).
   they are most of the report. `--stats` adds `folders`: every folder with its `modules`, `files`,
   `subfolders`, the `max-files` `limit` in effect, and what that rule counts (`unit`) and compares with it
   (`used`).
+- An option of one format is an error (exit 2) when no report of that format is asked for, on standard
+  output or in a file: `--stats` and `--no-files` need `json`, `--depth`, `--over` and `--near` need
+  `tree`, `--group-by` and `--moves` need `text`, `--max-findings` needs `github` or `markdown` (`auto`
+  counts as any of `github`, `azure` and `text`). Ignored, it would look like it did something.
 - `--format html` writes one self-contained page with a map of the folders, and `--format badge` a
-  shields.io endpoint with the share of folders within the limit: [tree.md](tree.md).
+  shields.io endpoint with the share of folders within the max-files limit: [tree.md](tree.md).
 
 ## GitHub Actions
 

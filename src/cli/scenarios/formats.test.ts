@@ -69,9 +69,12 @@ describe('several reports in one run', () => {
 
     it('chooses the format by the CI it runs in with --format auto', async () => {
         const root = repository(RENDER_FILES);
-        assert.match((await cli(root, ['-f', 'auto'], { GITHUB_ACTIONS: 'true' })).out, /^::error /u);
-        assert.match((await cli(root, ['-f', 'auto'], { TF_BUILD: 'True' })).out, /^##vso\[task\.logissue /u);
-        assert.match((await cli(root, ['-f', 'auto'], { GITLAB_CI: 'true' })).out, /^cli\/\n/u);
+        assert.match((await cli(root, ['-f', 'auto', '--no-git'], { GITHUB_ACTIONS: 'true' })).out, /^::error /u);
+        assert.match(
+            (await cli(root, ['-f', 'auto', '--no-git'], { TF_BUILD: 'True' })).out,
+            /^##vso\[task\.logissue /u,
+        );
+        assert.match((await cli(root, ['-f', 'auto', '--no-git'], { GITLAB_CI: 'true' })).out, /^cli\/\n/u);
         assert.match((await cli(root, ['-f', 'auto'])).out, /^cli\/\n/u);
     });
 });
@@ -239,7 +242,36 @@ describe('a run that fails with exit code 2', () => {
         assert.equal(ran.code, 2);
         assert.match(
             ran.out,
-            /^::error file=crowded-folders\.config\.json,line=1,title=crowded-folders%3A config\/error::crowded-folders\.config\.json has a problem/u,
+            /^::error file=crowded-folders\.config\.json,line=1,col=\d+,title=crowded-folders%3A config\/error::crowded-folders\.config\.json has a problem/u,
         );
+    });
+
+    it('puts the annotation on the line of the first problem when it is known', async () => {
+        const root = repository({
+            ...RENDER_FILES,
+            'crowded-folders.config.json':
+                '{\n    "extends": ["recommended"],\n    "overrides": [{ "folders": ["cli"] }]\n}\n',
+        });
+        const github = await cli(root, ['-f', 'github']);
+        assert.equal(github.code, 2);
+        assert.match(github.out, /^::error file=crowded-folders\.config\.json,line=3,col=\d+,title=/u);
+        const azure = await cli(root, ['-f', 'azure']);
+        assert.match(azure.out, /sourcepath=crowded-folders\.config\.json;linenumber=3;columnnumber=\d+;/u);
+        await cli(root, ['-f', 'sarif=out.sarif']);
+        assert.match(readFileSync(join(root, 'out.sarif'), 'utf8'), /"startLine": 3,\s*"startColumn": \d+/u);
+    });
+
+    it('writes an empty GitLab report, so that the job does not also fail on a missing artifact', async () => {
+        const root = repository({
+            ...RENDER_FILES,
+            'crowded-folders.config.json': '{ "overrides": [{ "folders": ["cli"] }] }',
+        });
+        const ran = await cli(root, ['-f', 'text', '-f', 'gitlab=gl-code-quality-report.json']);
+        assert.equal(ran.code, 2);
+        assert.equal(readFileSync(join(root, 'gl-code-quality-report.json'), 'utf8'), '[]\n');
+        // JSON and Checkstyle are read by scripts and tools that look at the exit code first: no file.
+        await cli(root, ['-f', 'json=report.json', '-f', 'checkstyle=checkstyle.xml']);
+        assert.equal(existsSync(join(root, 'report.json')), false);
+        assert.equal(existsSync(join(root, 'checkstyle.xml')), false);
     });
 });

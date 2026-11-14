@@ -15,8 +15,14 @@ export function presetsWithoutConfiguration(args: Args, base: string, files: rea
         found.push(...detection.detected);
     }
     for (const preset of args.presets) {
-        if (found.every(detection => detection.preset !== preset)) {
+        const index = found.findIndex(detection => detection.preset === preset);
+        const scoped = found[index];
+        if (scoped === undefined) {
             found.push({ preset, evidence: 'given with --preset', folders: ['.'] });
+        } else if (!scoped.folders.includes('.')) {
+            // Found only in server/: --preset asks for it everywhere, not only under server/**. Its
+            // folders stay, so that server/target is still left out.
+            found[index] = { ...scoped, evidence: 'given with --preset', folders: ['.', ...scoped.folders] };
         }
     }
     return found.length > 0 ? found : [{ preset: 'recommended', evidence: 'every repository', folders: ['.'] }];

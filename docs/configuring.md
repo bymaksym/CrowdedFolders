@@ -191,8 +191,11 @@ know.
 
 - **companions** are regular expressions removed from each stem, again and again until nothing
   changes, so `foo_linux_amd64_test` becomes `foo` with the Go preset.
-- **ignoreLeadingWords** are skipped before reading what a file is about: `IUserService` is about
-  `user` once `i` is ignored.
+- **ignoreLeadingWords** are skipped before reading what a file is about: `XYZOrder` is about `order`
+  once `xyz` is ignored. A type letter needs nothing: the `I` of `IUserService` (and the `T` of
+  `TProps`) is skipped by default. They change the group a file goes in, not the count: `IProfile` and
+  `MProfile` are still two modules. To count them as one, use a companion, as `crowded-folders explain`
+  suggests: `"companions": ["^(?:I|M)(?=\\p{Lu})"]`.
 - `crowded-folders explain <folder>` prints, for every file, the stem, the words and the group the tool
   read. It is the quickest way to see whether a setting does what you meant.
 

@@ -65,7 +65,7 @@ const NAMING_SETTINGS: JsonSchema = {
             type: 'array',
             items: { type: 'string', minLength: 1 },
             description:
-                'Lowercase words skipped at the start of a name before reading what it is about: "i" for C# interfaces (IUserService), "bp" for Unreal blueprints (BP_Door).',
+                'Lowercase words skipped at the start of a name before reading what it is about: "bp" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion ["^(?:I|M)(?=\\p{Lu})"], as explain suggests.',
         },
         groupNumericPrefixes: {
             type: 'boolean',

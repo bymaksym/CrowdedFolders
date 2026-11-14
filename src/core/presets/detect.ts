@@ -1,6 +1,6 @@
 import type { OverrideConfig, Preset } from '../config/types.ts';
 import { compareText } from '../naming/modules.ts';
-import { compileGlob, type Glob, matchesSelfOrAncestor } from '../paths/glob.ts';
+import { compileGlob, type Glob, matchesSelfOrAncestor, PathMatcher } from '../paths/glob.ts';
 import { parentOf } from '../paths/tree.ts';
 import { TEST_DATA } from './general.ts';
 
@@ -58,14 +58,17 @@ export function detectPresets(
     dependencies: ReadonlyMap<string, readonly string[]>,
     presets: Readonly<Record<string, Preset>>,
 ): Detection[] {
-    const candidates = files.filter(path => isEvidence(path)).toSorted((a, b) => depthOf(a) - depthOf(b));
+    const notEvidence = new PathMatcher(NOT_EVIDENCE);
+    const candidates = files
+        .filter(path => !notEvidence.matchesSelfOrAncestor(parentOf(path)))
+        .toSorted((a, b) => depthOf(a) - depthOf(b));
+    const index = new CandidateIndex(candidates);
     // Nor inside a folder `recommended` leaves out, which every run applies: the CMakeLists.txt in
     // Android's `.cxx` CMake cache is not a C++ project. A pattern that names a dot folder itself
-    // (`.vitepress/config.ts`) still finds its file there.
-    const leftOutByAll = (presets['recommended']?.config.exclude ?? []).map(compileGlob);
-    const kept = new Set(
-        candidates.filter(path => parentOf(path) === '.' || !matchesSelfOrAncestor(parentOf(path), leftOutByAll)),
-    );
+    // (`.vitepress/config.ts`) still finds its file there. Asked only of the files a preset names.
+    const leftOutByAll = new PathMatcher((presets['recommended']?.config.exclude ?? []).map(compileGlob));
+    const isKept = (path: string): boolean =>
+        parentOf(path) === '.' || !leftOutByAll.matchesSelfOrAncestor(parentOf(path));
     const found: { readonly preset: string; readonly evidence: string; readonly files: readonly string[] }[] = [];
     for (const [name, preset] of Object.entries(presets)) {
         const detect = preset.detect;
@@ -78,13 +81,13 @@ export function detectPresets(
             found.push({ preset: name, evidence: `the dependency ${dependency}`, files: manifests });
             continue;
         }
-        const globs = (detect.files ?? []).map(compileGlob);
-        const confirming = confirmingFiles(detect.confirmedBy, candidates);
-        const matching = candidates.filter(
-            path =>
-                globs.some(glob => (kept.has(path) || namesDotFolder(glob)) && glob.test(path)) &&
-                (confirming === undefined || confirming.some(file => isUnder(file, parentOf(path)))),
-        );
+        const confirming =
+            detect.confirmedBy === undefined || detect.confirmedBy.length === 0
+                ? undefined
+                : index.matching(detect.confirmedBy.map(compileGlob));
+        const matching = index
+            .matching((detect.files ?? []).map(compileGlob), (glob, path) => namesDotFolder(glob) || isKept(path))
+            .filter(path => confirming === undefined || confirming.some(file => isUnder(file, parentOf(path))));
         if (matching.length > 0) {
             found.push({ preset: name, evidence: matching[0] ?? '', files: matching });
         }
@@ -311,13 +314,78 @@ function anchoredExcludes(name: string, presets: Readonly<Record<string, Preset>
     );
 }
 
-/** The files that confirm a preset's evidence (`*.py` for a requirements.txt), or `undefined` when it needs none. */
-function confirmingFiles(globs: readonly string[] | undefined, files: readonly string[]): string[] | undefined {
-    if (globs === undefined || globs.length === 0) {
-        return undefined;
+const GLOB_CHARS = /[*?[\]{}]/u;
+
+/**
+ * The candidates by file name, so that a preset's globs are tried on the files they can match, not on
+ * every path: most name one file (`go.mod`), a few an extension (`*.proto`). Testing every one of 200 000
+ * paths against each preset was most of a run without a configuration.
+ */
+class CandidateIndex {
+    private readonly candidates: readonly string[];
+    /** The positions in `candidates` of the paths with each file name. */
+    private readonly byName = new Map<string, number[]>();
+    private readonly byExtension = new Map<string, string[]>();
+
+    constructor(candidates: readonly string[]) {
+        this.candidates = candidates;
+        for (const [position, path] of candidates.entries()) {
+            const name = path.slice(path.lastIndexOf('/') + 1);
+            const positions = this.byName.get(name);
+            if (positions) {
+                positions.push(position);
+                continue;
+            }
+            this.byName.set(name, [position]);
+            const dot = name.lastIndexOf('.');
+            if (dot === -1) {
+                continue;
+            }
+            const extension = name.slice(dot + 1);
+            const names = this.byExtension.get(extension);
+            if (names) {
+                names.push(name);
+            } else {
+                this.byExtension.set(extension, [name]);
+            }
+        }
     }
-    const compiled = globs.map(compileGlob);
-    return files.filter(file => compiled.some(glob => glob.test(file)));
+
+    /** The candidates one of the globs matches and `accept` lets through, in their order. */
+    matching(globs: readonly Glob[], accept: (glob: Glob, path: string) => boolean = () => true): string[] {
+        const found = new Set<number>();
+        for (const glob of globs) {
+            for (const name of this.namesFor(glob)) {
+                for (const position of this.byName.get(name) ?? []) {
+                    const path = this.candidates[position] ?? '';
+                    if (!found.has(position) && accept(glob, path) && glob.test(path)) {
+                        found.add(position);
+                    }
+                }
+            }
+        }
+        return [...found].toSorted((a, b) => a - b).map(position => this.candidates[position] ?? '');
+    }
+
+    /** The file names a glob can match: its last segment read alone, or every name when it cannot be. */
+    private namesFor(glob: Glob): Iterable<string> {
+        const source = glob.source.endsWith('/') ? glob.source.slice(0, -1) : glob.source;
+        const last = source.slice(source.lastIndexOf('/') + 1);
+        // `a/**` ends in any name; a `/` inside braces or a class (`{a/b,c}`) is not between segments.
+        if (last.includes('**') || last.split('{').length !== last.split('}').length || last.includes(']')) {
+            return this.byName.keys();
+        }
+        if (!GLOB_CHARS.test(last)) {
+            return [last];
+        }
+        const extension = last.slice(2);
+        if (last.startsWith('*.') && !GLOB_CHARS.test(extension) && !extension.includes('.')) {
+            return this.byExtension.get(extension) ?? [];
+        }
+        const name = compileGlob(last);
+        const head = last.slice(0, last.search(GLOB_CHARS));
+        return [...this.byName.keys()].filter(candidate => candidate.startsWith(head) && name.test(candidate));
+    }
 }
 
 function isUnder(path: string, folder: string): boolean {
@@ -328,8 +396,13 @@ function namesDotFolder(glob: Glob): boolean {
     return glob.source.startsWith('.') || glob.source.includes('/.');
 }
 
+/** How many segments: counted, not split, because the sort asks it of 200 000 paths several times each. */
 function depthOf(path: string): number {
-    return path.split('/').length;
+    let depth = 1;
+    for (let slash = path.indexOf('/'); slash !== -1; slash = path.indexOf('/', slash + 1)) {
+        depth++;
+    }
+    return depth;
 }
 
 /** What `init` writes, and what a run without a configuration uses, from the presets detected. */
@@ -353,6 +426,7 @@ export function configFromDetections(
 ): DetectedConfig {
     const isScoped = (detection: Detection): boolean =>
         detection.preset !== 'recommended' &&
+        presets[detection.preset]?.detect?.scope !== 'repository' &&
         !detection.folders.includes('.') &&
         !negatesExcludes(detection.preset, presets);
     const top = detections.filter(detection => !isScoped(detection));

@@ -39,7 +39,7 @@ path outside the repository is an error. Each path is asked on its own, against 
 
 Below the verdict: the rule's message; the folders that fit (an existing subfolder whose name matches the
 words the file name starts with, singular or plural, longest first); where the rule that complains would
-put the file (`Move: git mv …`); and, when the file is not yet a drawer's worth, the group it joins (`It
+put the file (`Move: git mv …`); and, when the file is not yet a junk drawer's worth, the group it joins (`It
 joins the group "navbar-*" with 3 modules; prefix-groups asks for a folder at 4`).
 
 Exit code `0` always, because it answers a question; `--fail-on worse` makes it `1` when a file would be

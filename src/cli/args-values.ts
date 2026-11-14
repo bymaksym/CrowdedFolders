@@ -1,3 +1,5 @@
+import type { parseArgs } from 'node:util';
+
 import { closest } from '../core/paths/suggest.ts';
 import { HELP } from './help.ts';
 import { UsageError } from './usage-error.ts';
@@ -116,4 +118,23 @@ export function usageMessageOf(error: Error): string {
             : `${named} needs a value; if the value starts with "-", write it ${named}=<value>`;
     }
     return error.message;
+}
+
+/** The options that may be given more than once; every other is an error the second time. */
+const REPEATABLE = new Set(['preset', 'format', 'owner', 'suppress-rule']);
+
+type Tokens = NonNullable<ReturnType<typeof parseArgs>['tokens']>;
+
+/** `-f json -f sarif` used to keep the last one without a word; so did `-c a -c b`. */
+export function refuseRepeated(tokens: Tokens): void {
+    const seen = new Set<string>();
+    for (const token of tokens) {
+        if (token.kind !== 'option' || REPEATABLE.has(token.name)) {
+            continue;
+        }
+        if (seen.has(token.name)) {
+            throw new UsageError(`--${token.name} is given more than once, and it takes one value`);
+        }
+        seen.add(token.name);
+    }
 }

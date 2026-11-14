@@ -14,8 +14,8 @@ Content/ActionRoguelike/Materials/
                          materials), where the editor's type filter finds it. Allar 2.6.2: "Creating
                          a folder named Meshes, Textures, or Materials is redundant."
 
-⚠ 0 errors, 1 warning in 1 folder (4 folders and 3 files checked; 100 % of folders within the limit
-  (4/4)).
+⚠ 0 errors, 1 warning in 1 folder (4 folders and 3 files checked; 100 % of folders within the
+  max-files limit (4/4)).
 ```
 
 <!-- /output -->
@@ -34,7 +34,7 @@ Content/ActionRoguelike/Effects/HitFlash/ MF_HitFlashDemo.uasset
 Content/ActionRoguelike/UI/Fonts/ M_3DFont.uasset
 Content/ActionRoguelike/UI/RageBar/ MI_RageBar.uasset
 
-✔ No crowded folders (8 folders and 3 files checked; 100 % of folders within the limit (8/8)).
+✔ No crowded folders (8 folders and 3 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

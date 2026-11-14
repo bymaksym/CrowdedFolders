@@ -12,8 +12,8 @@ cli/
                           render-sarif, render-text): they are a folder that was never made —
                           cli/render/.
 
-✖ 1 error, 0 warnings in 1 folder (2 folders and 7 files checked; 100 % of folders within the limit
-  (2/2)).
+✖ 1 error, 0 warnings in 1 folder (2 folders and 7 files checked; 100 % of folders within the
+  max-files limit (2/2)).
   --moves prints where each file could go; `crowded-folders explain cli` shows how a folder was
     read.
 ```
@@ -42,7 +42,7 @@ git mv cli/render-text.ts cli/render/text.ts
 cli/ args.ts, main.ts
 cli/render/ json.ts, markdown.ts, pr.ts, sarif.ts, text.ts
 
-✔ No crowded folders (3 folders and 7 files checked; 100 % of folders within the limit (3/3)).
+✔ No crowded folders (3 folders and 7 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->
@@ -113,6 +113,13 @@ mkdir -p src/render
 git mv src/render-json.ts src/render/json.ts
 git mv src/render-text.ts src/render/text.ts
 ```
+
+A folder over `max-files` with no group to move out of it gets a comment instead of commands
+(`# src/types: max-files - no group to move out of it; crowded-folders explain src/types shows the groups that come close`),
+and in `--moves=json` an entry of `unmoved`, `{ "folder", "rule", "reason" }`, next to `groups`. A group
+whose names hold a control character (a line break, ESC) is not written as commands: no quoting makes
+it safe to paste, so the script says `# skipped: a name with control characters ...` and leaves it to a
+person.
 
 Where a file goes is read from the ecosystem, because a move that does not build is worse than none:
 

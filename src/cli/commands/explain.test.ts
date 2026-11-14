@@ -10,7 +10,11 @@ cleanUpAfterTests();
 const OVERRIDE = JSON.stringify({
     extends: ['recommended'],
     overrides: [
-        { folders: ['src'], reason: 'the app is a drawer on purpose', rules: { 'max-files': ['error', { max: 3 }] } },
+        {
+            folders: ['src'],
+            reason: 'the app is a junk drawer on purpose',
+            rules: { 'max-files': ['error', { max: 3 }] },
+        },
     ],
 });
 
@@ -103,6 +107,20 @@ describe('explain and the companions it applies', () => {
         const alone = await cli(repository({ 'src/a.ts': '', 'src/b.ts': '' }), ['explain', 'src']);
         assert.match(alone.out, /joined by: +nothing/u);
     });
+
+    it('names a fourth joined module rather than "and 1 more", which takes as much room', async () => {
+        const root = repository(
+            Object.fromEntries(
+                ['a', 'b', 'c', 'd'].flatMap(stem => [
+                    [`src/${stem}.ts`, ''],
+                    [`src/${stem}.spec.ts`, ''],
+                ]),
+            ),
+        );
+        const ran = await cli(root, ['explain', 'src']);
+        assert.match(ran.out, /d\.spec\.ts \+ d\.ts -> d\)/u);
+        assert.doesNotMatch(ran.out, /and 1 more/u);
+    });
 });
 
 describe('explain --prompt', () => {
@@ -158,6 +176,8 @@ describe('explain --prompt', () => {
         const drawer = await cli(root, ['explain', 'src', '--prompt']);
         assert.match(drawer.out, /## Proposed moves\nThe tool proposes no move/u);
         assert.doesNotMatch(drawer.out, /## Files that name these paths/u);
+        // The tool's word for it everywhere else; a bare "drawer" reads as furniture.
+        assert.match(drawer.out, /as a folder that has become a junk drawer\./u);
     });
 
     it('is a usage error on a command that has no prompt', async () => {

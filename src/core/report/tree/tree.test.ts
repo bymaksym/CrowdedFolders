@@ -235,7 +235,7 @@ describe('the folder tree', () => {
         assert.equal(health?.percent, 99);
         assert.equal(
             describeHealth({ within: 113, total: 119, percent: 95 }),
-            '95 % of folders within the limit (113/119)',
+            '95 % of folders within the max-files limit (113/119)',
         );
         assert.equal(healthOf([stat('a', 1, null)]), undefined);
         assert.equal(healthOf([stat('a', 1, 20)])?.percent, 100);

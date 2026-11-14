@@ -177,7 +177,8 @@ function pathIssue(path: unknown): string | undefined {
 /**
  * What is wrong with a value that should be a rule, or `undefined` when it is one: `meta` with a
  * description and default options, exactly one of `check` and `create`, neither of them `async`, and
- * an options schema whose every keyword is checked.
+ * an options schema whose every keyword is checked. It goes on from a subject ("the rule", "it"), so it
+ * always starts with what the rule does: "needs …" or "has …".
  */
 export function ruleShapeProblem(rule: unknown): string | undefined {
     if (!isObject(rule) || !isObject(rule['meta'])) {
@@ -188,7 +189,7 @@ export function ruleShapeProblem(rule: unknown): string | undefined {
         return 'needs meta.description and meta.defaultOptions';
     }
     if (meta['url'] !== undefined && typeof meta['url'] !== 'string') {
-        return 'meta.url must be a string';
+        return 'has a meta.url that is not a string';
     }
     const check = rule['check'];
     const create = rule['create'];
@@ -199,16 +200,17 @@ export function ruleShapeProblem(rule: unknown): string | undefined {
     }
     const entry = (typeof check === 'function' ? check : create) as (...args: never[]) => unknown;
     if (isAsync(entry)) {
-        return `${typeof check === 'function' ? 'check' : 'create'} must be synchronous: an async rule reports after the run has returned, and what it finds is lost`;
+        const name = typeof check === 'function' ? 'check' : 'create';
+        return `has an async ${name}: ${name} must be synchronous, since an async rule reports after the run has returned, and what it finds is lost`;
     }
     if (meta['options'] !== undefined) {
         const problems = schemaProblems(meta['options'], 'meta.options');
         if (problems.length > 0) {
-            return problems.join('; ');
+            return `has an options schema that cannot be checked: ${problems.join('; ')}`;
         }
         const defaults = validate(meta['defaultOptions'], meta['options'] as never, 'meta.defaultOptions');
         if (defaults.length > 0) {
-            return `its own defaults do not fit its schema: ${defaults.map(problem => `${problem.at} ${problem.message}`).join('; ')}`;
+            return `has defaults that do not fit its own schema: ${defaults.map(problem => `${problem.at} ${problem.message}`).join('; ')}`;
         }
     }
     return undefined;

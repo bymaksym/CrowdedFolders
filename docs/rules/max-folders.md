@@ -12,7 +12,7 @@ src/features/
                         and 29 more): group them by what they are about.
 
 ✖ 1 error, 0 warnings in 1 folder (37 folders and 68 files checked; 100 % of folders within the
-  limit (37/37)).
+  max-files limit (37/37)).
 ```
 
 <!-- /output -->
@@ -63,7 +63,7 @@ src/features/overlays/modal/ index.ts, modal.ts
 src/features/overlays/popover/ index.ts, popover.ts
 src/features/overlays/tooltip/ index.ts, tooltip.ts
 
-✔ No crowded folders (42 folders and 68 files checked; 100 % of folders within the limit (42/42)).
+✔ No crowded folders (42 folders and 68 files checked; 100 % of folders within the max-files limit
 ```
 
 <!-- /fix -->

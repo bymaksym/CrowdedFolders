@@ -9,6 +9,7 @@ import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
 import { plural } from '../core/plural.ts';
 import { configFromDetections, type Detection } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
+import { shownPath } from '../node/config/error.ts';
 import { gitRootOf, locate, misnamedConfigs, nestedConfigs, realPath } from '../node/config/file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
@@ -16,6 +17,7 @@ import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
 import { presetsWithoutConfiguration } from './detection.ts';
 import type { Io } from './io.ts';
+import { ciVariable } from './report/ci.ts';
 
 /** Deeper than this, a tree is generated, not arranged: its files are left out, and the run says so. */
 export const MAX_DEPTH = 256;
@@ -87,10 +89,12 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         only = read.under === undefined ? only : [joinScope(scope, read.under)];
         fileSource = 'standard input';
     } else {
+        const ci = ciVariable(io.env);
         const list = listFiles(root, {
             git: args.git,
-            requireGit: args.requireGit ?? isCi(io.env),
-            trackedOnly: args.trackedOnly ?? isCi(io.env),
+            requireGit: args.requireGit ?? ci !== undefined,
+            ...(args.requireGit === undefined && ci !== undefined && { requiredBy: ci }),
+            trackedOnly: args.trackedOnly ?? ci !== undefined,
             env: io.env,
         });
         listed = [...list.files];
@@ -205,7 +209,7 @@ export function foldersFromPaths(paths: readonly string[], session: Session, cwd
         }
         const inRoot = realPathInRoot ?? lexicalPath;
         if (inRoot === undefined) {
-            throw new UsageError(`${path} is outside the folder being checked (${session.root})`);
+            throw new UsageError(`${path} is outside the folder being checked (${shownPath(here, session.root)})`);
         }
         const folder = joinScope(session.scope, inRoot);
         if (files.has(folder)) return parentOf(folder);
@@ -235,7 +239,9 @@ export function suppressionsPathOf(args: Args, session: Session, fallback: strin
 /** Says so when a file was written outside the folder being checked: `-o ../../x.json` is allowed, not silent. */
 export function noticeIfOutside(io: Io, session: Session, path: string): void {
     if (within(session.root, path) === undefined) {
-        io.error(`crowded-folders: wrote ${path}, outside the folder being checked (${session.root}).\n`);
+        io.error(
+            `crowded-folders: wrote ${shownPath(session.cwd, path)}, outside the folder being checked (${shownPath(session.cwd, session.root)}).\n`,
+        );
     }
 }
 
@@ -374,7 +380,8 @@ function asksForDotfiles(config: ResolvedConfig): boolean {
     return config.rules['max-files']?.options['dotfiles'] === true || inOverride;
 }
 
-function noRuleIsOn(config: ResolvedConfig): boolean {
+/** Whether the configuration turns no rule on (`{}` without `extends`): nothing is checked. */
+export function noRuleIsOn(config: ResolvedConfig): boolean {
     const isOff = (setting: string | readonly unknown[]): boolean =>
         (typeof setting === 'string' ? setting : setting[0]) === 'off';
     return (
@@ -438,9 +445,4 @@ export function joinScope(scope: string, path: string): string {
 function shown(cwd: string, path: string): string {
     const inside = within(cwd, path);
     return inside ?? path;
-}
-
-export function isCi(env: Readonly<Record<string, string | undefined>>): boolean {
-    const value = env['CI']?.trim().toLowerCase();
-    return value !== undefined && value !== '' && value !== '0' && value !== 'false';
 }

@@ -108,7 +108,7 @@ describe('crowded-folders where', () => {
         assert.match(absolute.out, /\n {2}EXISTS/u);
         const outside = await cli(join(root, 'core'), ['where', '../../x.ts']);
         assert.equal(outside.code, 2);
-        assert.match(outside.err, /is outside the folder being checked/u);
+        assert.match(outside.err, /\.\.\/\.\.\/x\.ts is outside the folder being checked \(\.\.\)/u);
         const folder = await cli(root, ['where', 'core/enums']);
         assert.equal(folder.code, 2);
         assert.match(folder.err, /core\/enums is a folder: give the path of the file to add/u);
@@ -126,5 +126,21 @@ describe('crowded-folders where', () => {
         const ran = await cli(root, ['where', '--format', 'json', 'a/w.ts']);
         const [result] = (JSON.parse(ran.out) as { results: { folder: string; effect: string }[] }).results;
         assert.deepEqual([result?.folder, result?.effect], ['a', 'creates']);
+    });
+});
+
+describe('crowded-folders where in a pipe', () => {
+    it('writes the change of a WORSE as "4 -> 5", and keeps the arrow on a terminal', async () => {
+        const root = repository({
+            'crowded-folders.config.json': CONFIG,
+            'core/enums/a.enum.ts': '',
+            'core/enums/b.enum.ts': '',
+            'core/enums/c.enum.ts': '',
+            'core/enums/d.enum.ts': '',
+        });
+        const piped = await cli(root, ['where', 'core/enums/e.enum.ts']);
+        assert.match(piped.out, /WORSE max-files 4 -> 5 \(limit 3\)/u);
+        const terminal = await cli(root, ['where', 'core/enums/e.enum.ts'], { FORCE_COLOR: '1' });
+        assert.match(terminal.out, /WORSE max-files 4\u{2192}5 \(limit 3\)/u);
     });
 });

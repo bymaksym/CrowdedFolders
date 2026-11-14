@@ -1,10 +1,11 @@
 import { reorganisationPrompt } from '../../core/agents/prompt.ts';
 import { explainFolder, type Finding } from '../../core/engine.ts';
+import type { RuleNote } from '../../core/findings.ts';
 import { groupModules, type GroupWords } from '../../core/naming/groups.ts';
 import { compareText, type Module, type Naming, sameTopics, shownName } from '../../core/naming/modules.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../../core/paths/glob.ts';
 import { normalisePath } from '../../core/paths/tree.ts';
-import { plural } from '../../core/plural.ts';
+import { plural, shownOf } from '../../core/plural.ts';
 import { asciiProse } from '../../core/report/ascii.ts';
 import { describeComparison } from '../../core/report/tree/trial.ts';
 import type { Args } from '../args.ts';
@@ -132,6 +133,16 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
         }
     }
 
+    const generated = generatedPatterns(view.path, view.modules);
+    if (generated.length > 0) {
+        lines.push(
+            '',
+            'Names that look generated',
+            '  if they are generated, mark them in .gitattributes (crowded-folders leaves them out):',
+            ...generated.map(pattern => `    ${pattern} linguist-generated`),
+        );
+    }
+
     const origins = withOverrides(await ruleOrigins(session), overrides, session);
     lines.push('', 'Rules in effect (value ← where it comes from)');
     for (const [name, state] of Object.entries(rules)) {
@@ -154,7 +165,7 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
     for (const finding of findings) {
         lines.push(`  ${finding.severity.padEnd(5)} ${finding.rule}  ${finding.message}`);
     }
-    lines.push(...closeGroups(view.path, findings, view.modules, view.naming, words, min));
+    lines.push(...closeGroups(view.path, { findings, notes }, view.modules, view.naming, words, min));
     if (notes.length > 0) {
         lines.push('', 'Not reported, and why');
         for (const note of notes) {
@@ -168,10 +179,13 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
 /**
  * For a folder over max-files with nothing to move out, the groups that come closest to the
  * minimum of prefix-groups: `core/enums (14/10): page-* ×3, ws-* ×2` says where a cut could start.
+ * A group of `min` or more that prefix-groups did not report follows, with its reason: 62 modules of
+ * 63 that start with the folder's subject are why there is nothing to move, not "no two modules start
+ * with the same word".
  */
 function closeGroups(
     path: string,
-    findings: readonly Finding[],
+    { findings, notes }: { readonly findings: readonly Finding[]; readonly notes: readonly RuleNote[] },
     modules: readonly Module[],
     naming: Naming,
     words: GroupWords,
@@ -181,17 +195,39 @@ function closeGroups(
     if (!crowded || findings.some(finding => finding.moves.length > 0)) {
         return [];
     }
-    const close = [...groupModules(modules, words, min, naming)]
-        .filter(([, members]) => members.length >= 2 && members.length < min)
-        .toSorted(([a, left], [b, right]) => right.length - left.length || (a < b ? -1 : 1))
+    const groups = [...groupModules(modules, words, min, naming)]
+        .filter(([, members]) => members.length >= 2)
+        .toSorted(([a, left], [b, right]) => right.length - left.length || (a < b ? -1 : 1));
+    const close = groups
+        .filter(([, members]) => members.length < min)
         .slice(0, 8)
         .map(([key, members]) => `${key}-* ×${members.length}`);
+    const unreported: string[] = [];
+    for (const [key, members] of groups) {
+        const note = notes.find(candidate => candidate.rule === 'prefix-groups' && candidate.key === key);
+        if (members.length >= min && note !== undefined) {
+            unreported.push(`  ${key}-* ×${members.length}, not reported: ${note.message}`);
+        }
+    }
     const limit = crowded.limit === undefined ? String(crowded.measured) : `${crowded.measured}/${crowded.limit}`;
+    const none = groups.length === 0 ? 'none: no two modules start with the same word' : `none ${smallerThan(min)}`;
     return [
         '',
         `Groups that come close (prefix-groups needs ${min})`,
-        `  ${path} (${limit}): ${close.length > 0 ? close.join(', ') : 'none: no two modules start with the same word'}`,
+        `  ${path} (${limit}): ${close.length > 0 ? close.join(', ') : none}`,
+        ...unreported,
     ];
+}
+
+/** The groups under the minimum, in words: `of 2 or 3 modules` for 4. */
+function smallerThan(min: number): string {
+    if (min <= 2) {
+        return `of fewer than ${min} modules`;
+    }
+    if (min === 3) {
+        return 'of 2 modules';
+    }
+    return `of 2 ${min === 4 ? 'or' : 'to'} ${min - 1} modules`;
 }
 
 /**
@@ -204,8 +240,9 @@ function joinedBy(modules: readonly Module[], hasCompanions: boolean): string {
     if (joined.length === 0) {
         return 'nothing: every file is a module of its own';
     }
-    const shown = joined.slice(0, 3).map(module => `${module.files.join(' + ')} → ${module.stem}`);
-    const more = joined.length > 3 ? `, and ${joined.length - 3} more` : '';
+    const count = shownOf(joined.length, 3);
+    const shown = joined.slice(0, count).map(module => `${module.files.join(' + ')} → ${module.stem}`);
+    const more = joined.length > count ? `, and ${joined.length - count} more` : '';
     return `the name up to its first dot${hasCompanions ? ', and the companions above' : ''} (${plural(joined.length, 'module')}: ${shown.join('; ')}${more})`;
 }
 
@@ -247,4 +284,38 @@ async function notChecked(folder: string, session: Session): Promise<string[]> {
 function compared(modules: number): string[] {
     const sentence = describeComparison(modules);
     return sentence === undefined ? [] : [`  ${sentence}`];
+}
+
+/**
+ * The .gitattributes patterns for the files of a folder whose names look generated: `user_gen.go`,
+ * `client.gen.ts`, `schema.generated.ts`, `mock_store.go`, `zz_generated.deepcopy.go`. Plain string
+ * tests, no regular expression: they run on every file of the folder.
+ */
+function generatedPatterns(folder: string, modules: readonly Module[]): string[] {
+    const prefix = folder === '.' ? '' : `${folder}/`;
+    const patterns = new Set<string>();
+    for (const file of modules.flatMap(module => module.files)) {
+        const name = file.slice(file.lastIndexOf('/') + 1).toLowerCase();
+        const dot = name.lastIndexOf('.');
+        if (dot <= 0) {
+            continue;
+        }
+        const extension = name.slice(dot);
+        const stem = name.slice(0, name.indexOf('.'));
+        const pattern = name.startsWith('zz_')
+            ? `zz_*${extension}`
+            : name.startsWith('mock_')
+              ? `mock_*${extension}`
+              : stem.endsWith('_gen')
+                ? `*_gen${extension}`
+                : name.includes('.gen.')
+                  ? `*.gen${extension}`
+                  : name.includes('generated')
+                    ? `*generated*${extension}`
+                    : undefined;
+        if (pattern !== undefined) {
+            patterns.add(`${prefix}${pattern}`);
+        }
+    }
+    return [...patterns].toSorted(compareText);
 }

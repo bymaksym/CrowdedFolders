@@ -119,7 +119,7 @@ export const unreal: Preset = {
         naming: { ignoreLeadingWords: CLASS_PREFIXES },
         rules: {
             'max-files': ['warn', { max: 50, count: 'modules' }],
-            // A warning like max-files: both are the guide's "should" (rule 2.7), and a drawer of 200
+            // A warning like max-files: both are the guide's "should" (rule 2.7), and a junk drawer of 200
             // assets must not pass while fifteen of one name break the build.
             'prefix-groups': [
                 'warn',

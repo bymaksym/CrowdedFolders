@@ -106,7 +106,16 @@ describe('presets: how names are read', () => {
         const folder = 'Assets/Scripts';
         const files = named(folder, ['Base64.cs', 'Base.cs', 'Sha256.cs', 'Md5.cs', 'Model_1.fbx', 'Model_2.fbx']);
         assert.deepEqual(stems(['unity'], files, folder), ['Base', 'Base64', 'Md5', 'Model', 'Sha256']);
-        // Outside Scripts/ a number is a copy of an asset (UnityTechnologies/open-project-1 Prefabs/Food).
+        // Wherever scripts live, not only in Scripts/: Assets/Code, the Runtime/ of an embedded package.
+        for (const code of ['Assets/Code', 'Packages/com.acme.net/Runtime']) {
+            assert.deepEqual(stems(['unity'], named(code, ['Base64.cs', 'Base.cs', 'Sha256.cs', 'Sha.cs']), code), [
+                'Base',
+                'Base64',
+                'Sha',
+                'Sha256',
+            ]);
+        }
+        // Outside the folders of scripts a number is a copy of an asset (UnityTechnologies/open-project-1 Prefabs/Food).
         const food = 'Assets/Prefabs/Food';
         assert.deepEqual(stems(['unity'], named(food, ['Almond.prefab', 'Almond2.prefab', 'Lemon_03.prefab']), food), [
             'Almond',

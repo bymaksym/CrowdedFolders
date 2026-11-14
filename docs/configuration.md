@@ -4,7 +4,7 @@
 
 Every setting of `crowded-folders.config.json` (or `.jsonc`, `.mjs`, `.config/crowded-folders.json`, or a
 `"crowded-folders"` key in `package.json`). Point `$schema` at
-`https://unpkg.com/crowded-folders/schema.json` and your editor completes and checks all of it.
+`https://unpkg.com/crowded-folders@1/schema.json` and your editor completes and checks all of it.
 
 This page is the reference: every setting, its type and its default. How to use them, with examples, is the
 guide, [configuring.md](configuring.md).
@@ -29,7 +29,7 @@ guide, [configuring.md](configuring.md).
 | Setting | Type | Default | What it does |
 | --- | --- | --- | --- |
 | `companions` | string[] | `[]` | Regular expressions removed from each stem, so that companion files join their module: "_test$" makes foo_test.go part of foo.go; "^test_" makes test_foo.py part of foo.py. |
-| `ignoreLeadingWords` | string[] | `[]` | Lowercase words skipped at the start of a name before reading what it is about: "i" for C# interfaces (IUserService), "bp" for Unreal blueprints (BP_Door). |
+| `ignoreLeadingWords` | string[] | `[]` | Lowercase words skipped at the start of a name before reading what it is about: "bp" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion ["^(?:I\|M)(?=\p{Lu})"], as explain suggests. |
 | `groupNumericPrefixes` | boolean | `false` | Whether names that start with a number (0001_initial, 2024-01-01-post) group by it. |
 | `folderFiles` | string[] | `[]` | Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs. |
 | `folderCompanions` | string[] | `[]` | Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: ".meta" makes the Scripts.meta of Unity part of Scripts/. |

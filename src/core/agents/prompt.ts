@@ -44,7 +44,7 @@ export function reorganisationPrompt(input: PromptInput): string {
     const out: string[] = [
         `# Reorganise ${place}`,
         '',
-        `crowded-folders (\`npx crowded-folders ${input.folder}\`) reports ${place} as a folder that has become a drawer. Reorganise it so that it passes, without changing what the code does.`,
+        `crowded-folders (\`npx crowded-folders ${input.folder}\`) reports ${place} as a folder that has become a junk drawer. Reorganise it so that it passes, without changing what the code does.`,
         '',
         '## What it reports',
         ...input.findings.map(finding => `- ${finding.severity} ${finding.rule}: ${finding.message}`),
