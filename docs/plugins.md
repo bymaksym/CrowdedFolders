@@ -21,7 +21,7 @@ A configuration loads it and uses what it adds by `namespace/name`:
 }
 ```
 
-[examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.0/examples/plugin) is a complete plugin to copy: one rule, one preset, <!-- x-release-please-version -->
+[examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.1/examples/plugin) is a complete plugin to copy: one rule, one preset, <!-- x-release-please-version -->
 typed with JSDoc, no build step. It is in the repository, not in the package: the link names the version.
 
 ## A rule

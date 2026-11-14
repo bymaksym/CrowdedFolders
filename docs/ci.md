@@ -137,7 +137,7 @@ jobs:
             - uses: actions/checkout@v7
             - uses: actions/setup-node@v7
               with: { node-version: 24 }
-            - run: npx --yes crowded-folders@1.0.0 --format github
+            - run: npx --yes crowded-folders@1.0.1 --format github
 ```
 
 <!-- x-release-please-end -->
@@ -153,7 +153,7 @@ steps:
     - uses: actions/setup-node@v7
       with: { node-version: 24 }
     - id: check
-      run: npx --yes crowded-folders@1.0.0 -f github -f sarif=crowded-folders.sarif -f markdown="$GITHUB_STEP_SUMMARY"
+      run: npx --yes crowded-folders@1.0.1 -f github -f sarif=crowded-folders.sarif -f markdown="$GITHUB_STEP_SUMMARY"
       continue-on-error: true # the upload below must run even when this fails
     - uses: github/codeql-action/upload-sarif@v4
       with: { sarif_file: crowded-folders.sarif, category: crowded-folders }
@@ -169,7 +169,7 @@ was released with, so pinning the action pins the tool (`version` runs another):
 <!-- x-release-please-start-version -->
 
 ```yaml
-- uses: bymaksym/CrowdedFolders@v1.0.0
+- uses: bymaksym/CrowdedFolders@v1.0.1
   with:
       args: --max-warnings 0 # anything the command takes
       summary: true # add the Markdown report to the job summary
@@ -202,7 +202,7 @@ jobs:
               with: { fetch-depth: 0 }
             - uses: actions/setup-node@v7
               with: { node-version: 24 }
-            - uses: bymaksym/CrowdedFolders@v1.0.0
+            - uses: bymaksym/CrowdedFolders@v1.0.1
               with:
                   comment: true
                   args: --new-since origin/${{ github.base_ref }} # fail only on what the change adds
@@ -254,7 +254,7 @@ For the merge-request widget, GitLab reads a Code Quality report. Write it next 
 crowded-folders:
     image: node:24
     script:
-        - npx --yes crowded-folders@1.0.0 -f text -f gitlab=gl-code-quality-report.json
+        - npx --yes crowded-folders@1.0.1 -f text -f gitlab=gl-code-quality-report.json
     artifacts:
         when: always
         reports:
@@ -271,7 +271,7 @@ moved.
 <!-- x-release-please-start-version -->
 
 ```yaml
-- script: npx --yes crowded-folders@1.0.0 --format azure
+- script: npx --yes crowded-folders@1.0.1 --format azure
   displayName: crowded-folders
 ```
 
@@ -282,8 +282,8 @@ is set.
 
 ## Other CI (Jenkins, CircleCI, Buildkite…)
 
-Any step that can run Node: `npx --yes crowded-folders@1.0.0`. The exit code does the rest. Jenkins
-warnings-ng and reviewdog read `--format checkstyle` (or SARIF). <!-- x-release-please-version -->
+Any step that can run Node: `npx --yes crowded-folders@1.0.1`. The exit code does the rest. <!-- x-release-please-version -->
+Jenkins warnings-ng and reviewdog read `--format checkstyle` (or SARIF).
 
 ## Only what a pull request changed
 
@@ -327,7 +327,7 @@ jobs:
             #   if: github.event_name == 'pull_request'
             - uses: actions/setup-node@v7
               with: { node-version: 24 }
-            - run: npx --yes crowded-folders@1.0.0 --changed --format github
+            - run: npx --yes crowded-folders@1.0.1 --changed --format github
 ```
 
 <!-- x-release-please-end -->
@@ -403,7 +403,7 @@ published package at the version of the tag (it needs Node, which pre-commit ins
 ```yaml
 repos:
     - repo: https://github.com/bymaksym/CrowdedFolders
-      rev: v1.0.0
+      rev: v1.0.1
       hooks:
           - id: crowded-folders # on pre-push; add `stages: [pre-commit]` to run it on every commit
 ```
@@ -446,7 +446,7 @@ those folders, what is under them, and their suppressions are looked at.
 
 The check reads file names only, so it needs no build: a step before the build, or a task of its own, is
 enough. Each recipe pins the version, like the CI ones. **Renovate and Dependabot do not update a version
-written inside a command** (`npx crowded-folders@1.0.0` in a `run:`, a Makefile or a `pom.xml`). Either
+written inside a command** (`npx crowded-folders@1.2.3` in a `run:`, a Makefile or a `pom.xml`). Either
 install crowded-folders as a devDependency, which they do update, and run `npx --no-install crowded-folders`,
 or give Renovate a [regex manager](https://docs.renovatebot.com/modules/manager/regex/) for the line.
 
@@ -465,7 +465,7 @@ or give Renovate a [regex manager](https://docs.renovatebot.com/modules/manager/
             <goals><goal>exec</goal></goals>
             <configuration>
                 <executable>npx</executable>
-                <arguments><argument>--yes</argument><argument>crowded-folders@1.0.0</argument></arguments>
+                <arguments><argument>--yes</argument><argument>crowded-folders@1.0.1</argument></arguments>
             </configuration>
         </execution>
     </executions>
@@ -479,7 +479,7 @@ On Windows the executable is `npx.cmd`.
 ```kotlin
 val crowdedFolders by tasks.registering(Exec::class) {
     group = "verification"
-    commandLine("npx", "--yes", "crowded-folders@1.0.0")
+    commandLine("npx", "--yes", "crowded-folders@1.0.1")
 }
 tasks.named("check") { dependsOn(crowdedFolders) }
 ```
@@ -491,7 +491,7 @@ already knows the packages, and `--group-by project` says which one is the worst
 {
     "targets": {
         "crowded-folders": {
-            "command": "npx --yes crowded-folders@1.0.0 --group-by project",
+            "command": "npx --yes crowded-folders@1.0.1 --group-by project",
             "cache": false
         }
     }
@@ -516,7 +516,7 @@ repository, which neither tool hashes by default.
 
 ```just
 folders:
-    npx --yes crowded-folders@1.0.0
+    npx --yes crowded-folders@1.0.1
 ```
 
 **make** (`Makefile`):
@@ -524,7 +524,7 @@ folders:
 ```make
 .PHONY: folders
 folders:
-	npx --yes crowded-folders@1.0.0
+	npx --yes crowded-folders@1.0.1
 ```
 
 <!-- x-release-please-end -->

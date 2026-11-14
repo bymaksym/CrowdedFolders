@@ -26,10 +26,10 @@ Each holds the executable and the licence; `SHA256SUMS` lists the checksum of ev
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.0/crowded-folders-v1.0.0-linux-x64.tar.gz
-curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.0/SHA256SUMS
+curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.1/crowded-folders-v1.0.1-linux-x64.tar.gz
+curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.1/SHA256SUMS
 sha256sum --check --ignore-missing SHA256SUMS      # shasum -a 256 -c on macOS
-tar -xzf crowded-folders-v1.0.0-linux-x64.tar.gz
+tar -xzf crowded-folders-v1.0.1-linux-x64.tar.gz
 ./crowded-folders --version
 ```
 
@@ -80,7 +80,7 @@ one, with git, which is the only thing missing:
 
 ```sh
 docker run --rm -v "$PWD":/repo -w /repo node:24-alpine sh -c \
-  'apk add --no-cache git && git config --global --add safe.directory /repo && npx --yes crowded-folders@1.0.0'
+  'apk add --no-cache git && git config --global --add safe.directory /repo && npx --yes crowded-folders@1.0.1'
 ```
 
 `safe.directory` is needed because the mounted folder belongs to another user than the container's, and git
@@ -89,7 +89,7 @@ refuses to list it otherwise. In a Dockerfile of your own, for CI:
 ```dockerfile
 FROM node:24-alpine
 RUN apk add --no-cache git
-ENTRYPOINT ["npx", "--yes", "crowded-folders@1.0.0"]
+ENTRYPOINT ["npx", "--yes", "crowded-folders@1.0.1"]
 ```
 
 <!-- x-release-please-end -->
