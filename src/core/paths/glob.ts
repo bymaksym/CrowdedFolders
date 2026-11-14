@@ -27,6 +27,12 @@ export interface Glob {
     readonly prefix: string;
     /** For a pattern that starts with `**\/` and a plain name (`**\/tests/**`): a segment every match holds. */
     readonly segment: string | undefined;
+    /**
+     * The plain names after the first wildcard that every match holds as a whole segment: `src` and `x1`
+     * for `packages/*\/src/x1/**`. When many globs share a prefix (`packages`), one of these tells them
+     * apart.
+     */
+    readonly required: readonly string[];
     /** For a pattern that is one plain name at any depth (`node_modules`, `**\/locales`): that name. */
     readonly name: string | undefined;
     /** Whether only the last segment of a path decides (`*.png`, `node_modules`). */
@@ -66,6 +72,7 @@ export function compileGlobWith(pattern: string, matcher: 'expression' | 'machin
             test: path => baseNameOf(path) === name,
             prefix: '',
             segment,
+            required: [],
             name,
             lastSegment: true,
             folderOnly,
@@ -79,6 +86,7 @@ export function compileGlobWith(pattern: string, matcher: 'expression' | 'machin
         source: pattern,
         prefix: literalPrefix(anchored),
         segment,
+        required: requiredSegments(anchored),
         name: undefined,
         lastSegment: isOneSegment,
         folderOnly,
@@ -101,6 +109,44 @@ function literalPrefix(anchored: string): string {
         literal.push(part);
     }
     return literal.join('/');
+}
+
+/**
+ * The plain names after the first wildcard that every match holds: whole segments with no wildcard,
+ * outside any `{...}` or `[...]` (whose `/` would make `{a/b,c}` look like the plain name it is not). A
+ * class ends at the first `]`, as `translate` reads it.
+ */
+function requiredSegments(anchored: string): string[] {
+    const required: string[] = [];
+    let braces = 0;
+    let segment = '';
+    let plain = true;
+    let afterWildcard = false;
+    const close = (): void => {
+        if (plain && afterWildcard && segment !== '') {
+            required.push(segment);
+        }
+        afterWildcard ||= !plain;
+        segment = '';
+        plain = braces === 0;
+    };
+    for (let index = 0; index < anchored.length; index++) {
+        const char = anchored[index] ?? '';
+        const classEnd = char === '[' ? anchored.indexOf(']', index + 1) : -1;
+        if (classEnd !== -1) {
+            plain = false;
+            index = classEnd;
+        } else if (char === '/') {
+            close();
+        } else {
+            if (char === '{') braces++;
+            if (char === '}' && braces > 0) braces--;
+            plain &&= !GLOB_CHARS.test(char);
+            segment += char;
+        }
+    }
+    close();
+    return required;
 }
 
 function baseNameOf(path: string): string {

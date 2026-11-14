@@ -35,6 +35,25 @@ export function describeConfigError(error: ConfigError, cwd: string): string {
     return `${name} has ${count}:\n${lines.join('\n')}`;
 }
 
+/**
+ * Where the first problem that the text places is, for an annotation on the file: `undefined` when none is
+ * (a JavaScript configuration, a problem with the whole file).
+ */
+export function firstPlaceOf(error: ConfigError): { readonly line: number; readonly column: number } | undefined {
+    const file = isAbsolute(error.origin) && existsSync(error.origin) ? error.origin : undefined;
+    const text = file === undefined ? undefined : readOrUndefined(file);
+    for (const problem of error.problems) {
+        const place =
+            problem.line === undefined
+                ? placeOf(text, file, problem.at)
+                : { line: problem.line, column: problem.column ?? 1 };
+        if (place !== undefined) {
+            return place;
+        }
+    }
+    return undefined;
+}
+
 function placeOf(
     text: string | undefined,
     file: string | undefined,

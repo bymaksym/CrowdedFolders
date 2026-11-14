@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import { mergeLayer } from './config/merge.ts';
 import { type Config, EMPTY_CONFIG } from './config/types.ts';
 import { explainFolder, runEngine, selectFiles } from './engine.ts';
+import { OverrideIndex } from './overrides.ts';
+import { compileGlob } from './paths/glob.ts';
 import { BUILT_IN_RULES } from './rules/index.ts';
 import { defineRule } from './rules/rule.ts';
 
@@ -96,6 +98,56 @@ describe('runEngine', () => {
             explained?.overrides.map(override => override.reason),
             ['package 7 is allowed more', 'the legacy folders are frozen', 'and p7 is strict again'],
         );
+    });
+
+    it('finds the overrides of a folder by a name after the wildcard when 400 share their folders (75 s before)', () => {
+        const overrides = Array.from({ length: 400 }, (_, index) => ({
+            folders: [`packages/*/src/x${index}/**`],
+            reason: `x${index} is allowed more`,
+            rules: { 'max-files': ['error', { max: 100 }] } as const,
+        }));
+        const config = resolve({
+            rules: { 'max-files': ['error', { max: 2 }] },
+            overrides: [
+                ...overrides,
+                {
+                    folders: ['packages/p7/**'],
+                    reason: 'and p7 is strict again',
+                    rules: { 'max-files': ['warn', { max: 2 }] },
+                },
+            ],
+        });
+        const files = ['p1', 'p7'].flatMap(name =>
+            ['x3', 'x250'].flatMap(x => ['a', 'b', 'c'].map(file => `packages/${name}/src/${x}/${file}.ts`)),
+        );
+        const findings = runEngine({ files, config, rules: BUILT_IN_RULES }).findings.filter(
+            finding => finding.rule === 'max-files',
+        );
+        assert.deepEqual(
+            findings.map(finding => `${finding.folder} ${finding.severity}`),
+            ['packages/p7/src/x250 warn', 'packages/p7/src/x3 warn'],
+        );
+        const explained = explainFolder({ files, config, rules: BUILT_IN_RULES }, 'packages/p7/src/x250');
+        assert.deepEqual(
+            explained?.overrides.map(override => override.reason),
+            ['x250 is allowed more', 'and p7 is strict again'],
+        );
+        // The work, which a clock on a shared machine does not tell: each folder tries the overrides of
+        // its own name, not the 400 filed under "packages".
+        const index = new OverrideIndex(
+            config.overrides.map(state => ({
+                state,
+                globs: state.folders.map(compileGlob),
+                withFiles: [],
+                within: [],
+                used: false,
+            })),
+        );
+        assert.deepEqual(
+            index.candidatesFor('packages/p1/src/x3').map(candidate => candidate.state.reason),
+            ['x3 is allowed more'],
+        );
+        assert.equal(index.candidatesFor('packages/p7/src/x250/deep').length, 2);
     });
 
     it('reports an override past its expires as config/expired-override, and still applies it (Daniel)', () => {

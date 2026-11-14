@@ -136,6 +136,22 @@ describe('PathMatcher', () => {
         assert.equal(compileGlob('locales').name, 'locales');
         assert.equal(compileGlob('*.ts').segment, undefined);
     });
+
+    it('names the plain segments after the first wildcard that every match holds', () => {
+        assert.deepEqual(compileGlob('packages/*/src/x1/**').required, ['src', 'x1']);
+        assert.deepEqual(compileGlob('**/tests/fixtures').required, ['tests', 'fixtures']);
+        assert.deepEqual(compileGlob('packages/a/**').required, []);
+        assert.deepEqual(compileGlob('apps/*.web/src').required, ['src']);
+        // Inside braces or a class a "/" does not end a name the match must hold.
+        assert.deepEqual(compileGlob('a/*/{b/mid/c,d}/e').required, ['e']);
+        assert.deepEqual(compileGlob('a/*/{b,[}]/mid/c}/e').required, ['e']);
+        for (const [glob, path] of [
+            ['a/*/{b/mid/c,d}/e', 'a/x/d/e'],
+            ['a/*/{b,[}]/mid/c}/e', 'a/x/b/e'],
+        ] as const) {
+            assert.equal(compileGlob(glob).test(path), true, glob);
+        }
+    });
 });
 
 describe('normaliseFileList', () => {

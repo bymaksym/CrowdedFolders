@@ -1,6 +1,6 @@
 import type { parseArgs } from 'node:util';
 
-import type { Command } from './args.ts';
+import type { Command, Format } from './args.ts';
 
 const REPOSITORY_OPTIONS = [
     'config',
@@ -64,6 +64,41 @@ export function optionNotTaken(command: Command, tokens: Tokens, commands: reado
         }
         const where = commands.filter(other => takes(other, token.name));
         return `--${token.name} does not apply to ${command}${where.length === 0 ? '' : `; it applies to ${where.join(', ')}`}`;
+    }
+    return undefined;
+}
+
+/**
+ * The options that change one report, and the formats that read them. Given with none of these, the option
+ * would be ignored: `--stats` with the text, `--depth` with the JSON, `--group-by` with the Markdown.
+ */
+const FORMAT_OPTIONS: Readonly<Record<string, readonly Format[]>> = {
+    stats: ['json'],
+    'no-files': ['json'],
+    depth: ['tree'],
+    over: ['tree'],
+    near: ['tree'],
+    'group-by': ['text'],
+    'max-findings': ['github', 'markdown'],
+    // A bare --moves prints the moves in the text; --moves=sh writes them itself, whatever the reports.
+    moves: ['text'],
+};
+
+/** What `auto` can turn into, by the CI it runs on (`resolveFormat`): what any of them reads is read. */
+const AUTO: readonly Format[] = ['github', 'azure', 'text'];
+
+/** The message for the first option that no report asked for reads, or `undefined`. */
+export function optionWithoutReport(tokens: Tokens, formats: readonly Format[]): string | undefined {
+    const given = new Set(formats.flatMap(format => (format === 'auto' ? AUTO : format)));
+    for (const token of tokens) {
+        if (token.kind !== 'option') {
+            continue;
+        }
+        const readers = FORMAT_OPTIONS[token.name];
+        const script = token.name === 'moves' && token.value !== '';
+        if (readers !== undefined && !script && readers.every(format => !given.has(format))) {
+            return `--${token.name} applies to --format ${readers.join(' or ')}`;
+        }
     }
     return undefined;
 }

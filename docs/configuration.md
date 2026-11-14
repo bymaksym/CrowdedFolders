@@ -4,7 +4,7 @@
 
 Every setting of `crowded-folders.config.json` (or `.jsonc`, `.mjs`, `.config/crowded-folders.json`, or a
 `"crowded-folders"` key in `package.json`). Point `$schema` at
-`https://unpkg.com/crowded-folders/schema.json` and your editor completes and checks all of it.
+`https://unpkg.com/crowded-folders@1/schema.json` and your editor completes and checks all of it.
 
 This page is the reference: every setting, its type and its default. How to use them, with examples, is the
 guide, [configuring.md](configuring.md).

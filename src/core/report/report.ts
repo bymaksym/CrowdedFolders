@@ -49,7 +49,13 @@ export interface Report {
     readonly rules: readonly ReportRule[];
     readonly run?: RunInfo;
     /** Set when the run could not be done (exit code 2): what went wrong, and in which file when known. */
-    readonly failure?: { readonly message: string; readonly file?: string };
+    readonly failure?: {
+        readonly message: string;
+        readonly file?: string;
+        /** Where in `file` the first problem is (from 1), when known. */
+        readonly line?: number;
+        readonly column?: number;
+    };
     /** The files that were checked, to find a stable file in a folder for formats that need a file. */
     readonly files?: readonly string[];
     /** Files this change adds (from `--base`), preferred as the place for a finding about their folder. */

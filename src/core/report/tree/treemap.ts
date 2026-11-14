@@ -132,8 +132,8 @@ export interface Cell extends Rect {
 
 /**
  * Lays out the children of `root` (and, while there is room, theirs) in a rectangle. A folder with files of
- * its own and folders below gets a cell for its files beside the cells of its folders, so that a drawer
- * with three small folders in it is still drawn as a drawer.
+ * its own and folders below gets a cell for its files beside the cells of its folders, so that a junk drawer
+ * with three small folders in it is still drawn as one.
  */
 export function layoutTreemap(root: TreemapNode, rect: Rect, options: TreemapOptions): Cell[] {
     const cells: Cell[] = [];

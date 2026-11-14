@@ -10,7 +10,11 @@ cleanUpAfterTests();
 const OVERRIDE = JSON.stringify({
     extends: ['recommended'],
     overrides: [
-        { folders: ['src'], reason: 'the app is a drawer on purpose', rules: { 'max-files': ['error', { max: 3 }] } },
+        {
+            folders: ['src'],
+            reason: 'the app is a junk drawer on purpose',
+            rules: { 'max-files': ['error', { max: 3 }] },
+        },
     ],
 });
 
@@ -172,6 +176,8 @@ describe('explain --prompt', () => {
         const drawer = await cli(root, ['explain', 'src', '--prompt']);
         assert.match(drawer.out, /## Proposed moves\nThe tool proposes no move/u);
         assert.doesNotMatch(drawer.out, /## Files that name these paths/u);
+        // The tool's word for it everywhere else; a bare "drawer" reads as furniture.
+        assert.match(drawer.out, /as a folder that has become a junk drawer\./u);
     });
 
     it('is a usage error on a command that has no prompt', async () => {

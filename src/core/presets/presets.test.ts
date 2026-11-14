@@ -896,6 +896,33 @@ describe('protobuf applies to the whole repository', () => {
 });
 
 describe('detectPresets', () => {
+    // A run with no configuration on 200 000 paths spent 40 % of its time here: every path was tried
+    // against the globs of every preset, and asked whether recommended leaves its folder out.
+    it('tries the globs of each preset on the files they can name: 200 000 paths in well under a second', () => {
+        const kinds = ['ts', 'go', 'py', 'java', 'md', 'json', 'css', 'yaml'];
+        const files = Array.from(
+            { length: 200_000 },
+            (_, index) =>
+                `packages/p${index % 300}/src/m${index % 97}/file_${index}.${kinds[index % kinds.length] ?? ''}`,
+        );
+        files.push('packages/p3/go.mod', 'web/nuxt.config.ts', 'api/v1/api.proto', 'app/App.csproj', 'Cargo.toml');
+        const started = performance.now();
+        const found = detectPresets(files, new Map(), BUILT_IN_PRESETS);
+        // 6.5 to 16 s before; 0.5 s after. The bound leaves room for a slow or busy CI machine.
+        assert.ok(performance.now() - started < 4000, `${Math.round(performance.now() - started)} ms`);
+        assert.deepEqual(
+            found.map(detection => `${detection.preset} ← ${detection.evidence}`),
+            [
+                'recommended ← every repository',
+                'nuxt ← web/nuxt.config.ts',
+                'go ← packages/p3/go.mod',
+                'rust ← Cargo.toml',
+                'dotnet ← app/App.csproj',
+                'protobuf ← api/v1/api.proto',
+            ],
+        );
+    });
+
     it('proposes recommended always, and each preset from a file or a dependency', () => {
         const found = detectPresets(
             ['go.mod', 'web/angular.json', 'app/src/main/AndroidManifest.xml'],

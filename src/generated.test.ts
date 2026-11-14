@@ -14,8 +14,9 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { run } from './cli/main.ts';
+import { TOOL } from './cli/tool.ts';
 import type { JsonSchema } from './core/config/json-schema.ts';
-import { configSchema } from './core/config/schema.ts';
+import { configSchema, pinnedSchemaUrl } from './core/config/schema.ts';
 import type { Config, Preset, RuleSetting } from './core/config/types.ts';
 import { BUILT_IN_PRESETS } from './core/presets/index.ts';
 import { BUILT_IN_RULES } from './core/rules/index.ts';
@@ -96,7 +97,7 @@ function configurationReference(): string {
         '',
         'Every setting of `crowded-folders.config.json` (or `.jsonc`, `.mjs`, `.config/crowded-folders.json`, or a',
         '`"crowded-folders"` key in `package.json`). Point `$schema` at',
-        `\`${schema.$id ?? ''}\` and your editor completes and checks all of it.`,
+        `\`${pinnedSchemaUrl(TOOL.version)}\` and your editor completes and checks all of it.`,
         '',
         'This page is the reference: every setting, its type and its default. How to use them, with examples, is the',
         'guide, [configuring.md](configuring.md).',
@@ -408,6 +409,9 @@ describe('generated files', () => {
                 assert.ok(reference.includes(`| \`${option}\` |`), `${name}.${option}`);
             }
         }
+        // The URL init writes and the README shows: pinned to the major, so a release that renames a
+        // setting does not turn every editor red at once.
+        assert.ok(reference.includes(`\`${pinnedSchemaUrl(TOOL.version)}\``), 'the pinned $schema URL');
         matchesFile('docs/configuration.md', reference);
     });
 
