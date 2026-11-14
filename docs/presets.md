@@ -534,7 +534,7 @@ Sources:
 
 ## protobuf
 
-Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
+Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code; when detected, it applies to the whole repository, even when the .proto files are in a subfolder, because the generated code lives elsewhere. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
 
 - **Extends:** [recommended](#recommended)
 - **Companions:** `_(?:grpc_web_pb|grpc_pb|pb2_grpc|pb2|pb|grpc|connect)$`

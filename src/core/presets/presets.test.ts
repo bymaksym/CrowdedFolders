@@ -6,7 +6,7 @@ import { type Config, EMPTY_CONFIG, type ResolvedConfig } from '../config/types.
 import { validateConfig } from '../config/validate.ts';
 import { explainFolder, type Finding, runEngine } from '../engine.ts';
 import { BUILT_IN_RULES } from '../rules/index.ts';
-import { detectPresets, excludesFor } from './detect.ts';
+import { configFromDetections, detectPresets, excludesFor } from './detect.ts';
 import { BUILT_IN_PRESETS } from './index.ts';
 
 /** Applies a preset the way the loader does: what it extends first, each preset once. */
@@ -882,6 +882,16 @@ describe('protobuf, elixir, scala and bazel', () => {
             found.map(detection => detection.preset),
             ['recommended', 'elixir', 'scala', 'bazel', 'protobuf'],
         );
+    });
+});
+
+describe('protobuf applies to the whole repository', () => {
+    it('proto/user.proto puts protobuf in the root extends: user_pb.ts and user_grpc_pb.ts live in src/', () => {
+        const files = ['package.json', 'proto/user.proto', 'src/user_pb.ts', 'src/user_grpc_pb.ts'];
+        const found = detectPresets(files, new Map(), BUILT_IN_PRESETS);
+        const config = configFromDetections(found, files, BUILT_IN_PRESETS);
+        assert.deepEqual(config.extends, ['recommended', 'protobuf']);
+        assert.deepEqual(config.overrides, []);
     });
 });
 
