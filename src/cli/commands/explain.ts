@@ -132,6 +132,16 @@ export async function explain(args: Args, io: Io, session: Session): Promise<num
         }
     }
 
+    const generated = generatedPatterns(view.path, view.modules);
+    if (generated.length > 0) {
+        lines.push(
+            '',
+            'Names that look generated',
+            '  if they are generated, mark them in .gitattributes (crowded-folders leaves them out):',
+            ...generated.map(pattern => `    ${pattern} linguist-generated`),
+        );
+    }
+
     const origins = withOverrides(await ruleOrigins(session), overrides, session);
     lines.push('', 'Rules in effect (value ← where it comes from)');
     for (const [name, state] of Object.entries(rules)) {
@@ -247,4 +257,38 @@ async function notChecked(folder: string, session: Session): Promise<string[]> {
 function compared(modules: number): string[] {
     const sentence = describeComparison(modules);
     return sentence === undefined ? [] : [`  ${sentence}`];
+}
+
+/**
+ * The .gitattributes patterns for the files of a folder whose names look generated: `user_gen.go`,
+ * `client.gen.ts`, `schema.generated.ts`, `mock_store.go`, `zz_generated.deepcopy.go`. Plain string
+ * tests, no regular expression: they run on every file of the folder.
+ */
+function generatedPatterns(folder: string, modules: readonly Module[]): string[] {
+    const prefix = folder === '.' ? '' : `${folder}/`;
+    const patterns = new Set<string>();
+    for (const file of modules.flatMap(module => module.files)) {
+        const name = file.slice(file.lastIndexOf('/') + 1).toLowerCase();
+        const dot = name.lastIndexOf('.');
+        if (dot <= 0) {
+            continue;
+        }
+        const extension = name.slice(dot);
+        const stem = name.slice(0, name.indexOf('.'));
+        const pattern = name.startsWith('zz_')
+            ? `zz_*${extension}`
+            : name.startsWith('mock_')
+              ? `mock_*${extension}`
+              : stem.endsWith('_gen')
+                ? `*_gen${extension}`
+                : name.includes('.gen.')
+                  ? `*.gen${extension}`
+                  : name.includes('generated')
+                    ? `*generated*${extension}`
+                    : undefined;
+        if (pattern !== undefined) {
+            patterns.add(`${prefix}${pattern}`);
+        }
+    }
+    return [...patterns].toSorted(compareText);
 }

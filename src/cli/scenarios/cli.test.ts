@@ -304,6 +304,35 @@ describe('the command', () => {
         );
     });
 
+    it('suggests linguist-generated for modules that look generated (_gen, .gen., generated, mock_, zz_)', async () => {
+        const root = repository({
+            'pkg/api/user_gen.go': '',
+            'pkg/api/order_gen.go': '',
+            'pkg/api/client.gen.ts': '',
+            'pkg/api/mock_store.go': '',
+            'pkg/api/zz_generated.deepcopy.go': '',
+            'pkg/api/generated_client.go': '',
+            'other/user.go': '',
+            'pkg/api/user.go': '',
+            'pkg/api/genre.go': '',
+        });
+        const ran = await cli(root, ['explain', 'pkg/api', '--no-git']);
+        assert.equal(ran.code, 0, ran.err);
+        assert.match(ran.out, /if they are generated, mark them in \.gitattributes/u);
+        for (const line of [
+            'pkg/api/*_gen.go linguist-generated',
+            'pkg/api/*.gen.ts linguist-generated',
+            'pkg/api/mock_*.go linguist-generated',
+            'pkg/api/zz_*.go linguist-generated',
+            'pkg/api/*generated*.go linguist-generated',
+        ]) {
+            assert.ok(ran.out.includes(line), line);
+        }
+        assert.doesNotMatch(ran.out, /(?:genre|user)\.go linguist/u);
+        const plain = await cli(root, ['explain', 'other', '--no-git']);
+        assert.doesNotMatch(plain.out, /linguist-generated/u);
+    });
+
     it('prints the configuration in effect, for the repository and for one folder', async () => {
         const root = repository(render);
         const whole = JSON.parse((await cli(root, ['print-config'])).out) as { layers: string[] };
