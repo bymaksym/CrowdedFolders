@@ -18,7 +18,15 @@ import type { Io } from '../io.ts';
 import { addedByFolder, buildReport, enrichFindings, tinyFilesOf, wantsAnchors } from '../report/build.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
-import { foldersFromPaths, isCi, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
+import {
+    foldersFromPaths,
+    isCi,
+    noRuleIsOn,
+    noticeIfOutside,
+    type Session,
+    suppressionsPathOf,
+    within,
+} from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
 import { compareConfigAt } from './compare-config.ts';
 
@@ -73,7 +81,23 @@ export async function check(args: Args, io: Io, session: Session): Promise<numbe
         ? result.findings.filter(finding => finding.rule.startsWith('config/') || inScope?.(finding.folder) === true)
         : result.findings;
 
-    let suppressions: readonly Suppression[] = store.read();
+    // With no rule on there are no findings, so every suppression would read as fixed and be pruned.
+    const nothingChecked = noRuleIsOn(config);
+    if (nothingChecked) {
+        const flag = args.pruneSuppressions
+            ? '--prune-suppressions'
+            : args.suppressAll
+              ? '--suppress-all'
+              : args.suppressRules.length > 0
+                ? '--suppress-rule'
+                : undefined;
+        if (flag !== undefined) {
+            throw new UsageError(
+                `${flag}: no rule is on in the configuration, so nothing is checked and the suppressions would be rewritten from nothing. Turn rules on first (missing "extends": ["recommended"]?).`,
+            );
+        }
+    }
+    let suppressions: readonly Suppression[] = nothingChecked ? [] : store.read();
     if (args.suppressAll || args.suppressRules.length > 0) {
         const unknown = args.suppressRules.filter(rule => session.loaded.rules[rule] === undefined);
         if (unknown.length > 0) {

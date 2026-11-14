@@ -374,7 +374,8 @@ function asksForDotfiles(config: ResolvedConfig): boolean {
     return config.rules['max-files']?.options['dotfiles'] === true || inOverride;
 }
 
-function noRuleIsOn(config: ResolvedConfig): boolean {
+/** Whether the configuration turns no rule on (`{}` without `extends`): nothing is checked. */
+export function noRuleIsOn(config: ResolvedConfig): boolean {
     const isOff = (setting: string | readonly unknown[]): boolean =>
         (typeof setting === 'string' ? setting : setting[0]) === 'off';
     return (
