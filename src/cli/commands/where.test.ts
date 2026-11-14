@@ -108,7 +108,7 @@ describe('crowded-folders where', () => {
         assert.match(absolute.out, /\n {2}EXISTS/u);
         const outside = await cli(join(root, 'core'), ['where', '../../x.ts']);
         assert.equal(outside.code, 2);
-        assert.match(outside.err, /is outside the folder being checked/u);
+        assert.match(outside.err, /\.\.\/\.\.\/x\.ts is outside the folder being checked \(\.\.\)/u);
         const folder = await cli(root, ['where', 'core/enums']);
         assert.equal(folder.code, 2);
         assert.match(folder.err, /core\/enums is a folder: give the path of the file to add/u);

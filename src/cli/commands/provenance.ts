@@ -1,3 +1,5 @@
+import { isAbsolute } from 'node:path';
+
 import type { Config, OverrideState, RuleSetting } from '../../core/config/types.ts';
 import { shownPath } from '../../node/config/error.ts';
 import { readConfigFile } from '../../node/config/file.ts';
@@ -13,6 +15,14 @@ export function labelOf(origin: string, session: Session): string {
         return `preset ${preset}`;
     }
     return origin.startsWith('(') ? origin : shownPath(session.cwd, origin);
+}
+
+/**
+ * A layer as JSON shows it: a file from where the command was typed (`shownPath`), a preset or
+ * `(the command line)` as it is. The machine's folders stay out of what is pasted in an issue.
+ */
+export function originPath(origin: string, session: Session): string {
+    return isAbsolute(origin) ? shownPath(session.cwd, origin) : origin;
 }
 
 /** The layers of the configuration as they were written, in the order they were applied. */

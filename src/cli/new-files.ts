@@ -2,6 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 
 import { normalisePath } from '../core/paths/tree.ts';
+import { shownPath } from '../node/config/error.ts';
 import { realPath } from '../node/config/file.ts';
 import { joinScope, type Session, within } from './session.ts';
 import { UsageError } from './usage-error.ts';
@@ -26,7 +27,7 @@ export function newFilesFromPaths(paths: readonly string[], session: Session, cw
         const inRoot = within(session.root, real) ?? within(session.root, lexical);
         const normalised = inRoot === undefined ? undefined : normalisePath(inRoot);
         if (normalised === undefined) {
-            throw new UsageError(`${path} is outside the folder being checked (${session.root})`);
+            throw new UsageError(`${path} is outside the folder being checked (${shownPath(here, session.root)})`);
         }
         return joinScope(session.scope, normalised);
     });

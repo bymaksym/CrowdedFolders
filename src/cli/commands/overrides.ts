@@ -4,6 +4,7 @@ import { shownOf } from '../../core/plural.ts';
 import type { Args } from '../args.ts';
 import type { Io } from '../io.ts';
 import type { Session } from '../session.ts';
+import { originPath } from './provenance.ts';
 
 /**
  * Past this share of the folders, an override that silences a rule is said to be broad: it is the
@@ -38,7 +39,7 @@ export function overrides(args: Args, io: Io, session: Session): number {
             folders: total,
             broadShare: BROAD_SHARE,
             overrides: rows.map(({ state, folders, share, silences, isBroad }) => ({
-                origin: state.origin,
+                origin: originPath(state.origin, session),
                 own: state.own,
                 folders: state.folders,
                 withFiles: state.withFiles,
@@ -63,7 +64,8 @@ export function overrides(args: Args, io: Io, session: Session): number {
     for (const { state, folders, share, silences, isBroad } of rows) {
         if (state.origin !== origin) {
             origin = state.origin;
-            lines.push(lines.length === 0 ? origin : `\n${origin}`);
+            const label = originPath(origin, session);
+            lines.push(lines.length === 0 ? label : `\n${label}`);
         }
         lines.push(`  ${describeFolders(state)}${about(state)}`, `    ${state.reason}`);
         const percent = `${Math.round(share * 100)} %`;

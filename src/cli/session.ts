@@ -9,6 +9,7 @@ import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
 import { plural } from '../core/plural.ts';
 import { configFromDetections, type Detection } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
+import { shownPath } from '../node/config/error.ts';
 import { gitRootOf, locate, misnamedConfigs, nestedConfigs, realPath } from '../node/config/file.ts';
 import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
@@ -205,7 +206,7 @@ export function foldersFromPaths(paths: readonly string[], session: Session, cwd
         }
         const inRoot = realPathInRoot ?? lexicalPath;
         if (inRoot === undefined) {
-            throw new UsageError(`${path} is outside the folder being checked (${session.root})`);
+            throw new UsageError(`${path} is outside the folder being checked (${shownPath(here, session.root)})`);
         }
         const folder = joinScope(session.scope, inRoot);
         if (files.has(folder)) return parentOf(folder);
@@ -235,7 +236,9 @@ export function suppressionsPathOf(args: Args, session: Session, fallback: strin
 /** Says so when a file was written outside the folder being checked: `-o ../../x.json` is allowed, not silent. */
 export function noticeIfOutside(io: Io, session: Session, path: string): void {
     if (within(session.root, path) === undefined) {
-        io.error(`crowded-folders: wrote ${path}, outside the folder being checked (${session.root}).\n`);
+        io.error(
+            `crowded-folders: wrote ${shownPath(session.cwd, path)}, outside the folder being checked (${shownPath(session.cwd, session.root)}).\n`,
+        );
     }
 }
 

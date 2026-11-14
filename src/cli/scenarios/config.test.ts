@@ -208,9 +208,14 @@ describe('crowded-folders overrides', () => {
             /"src\/legacy"\n {4}being rewritten in v3\n {4}covers 1 of 4 folders \(25 %\): src\/legacy\n {4}max-files warn\n/u,
         );
         assert.match(ran.out, /preset "recommended"/u);
+        assert.match(ran.out, /^crowded-folders\.config\.json$/mu);
         const json = JSON.parse((await cli(root, ['overrides', '--no-git', '-f', 'json'])).out) as {
-            overrides: { folders: string[]; broad: boolean; covers: string[] }[];
+            overrides: { folders: string[]; broad: boolean; covers: string[]; origin: string }[];
         };
+        assert.deepEqual(
+            json.overrides.filter(override => override.broad).map(override => override.origin),
+            ['crowded-folders.config.json'],
+        );
         assert.deepEqual(
             json.overrides.filter(override => override.broad).map(override => override.folders),
             [['**']],
