@@ -4,9 +4,12 @@ import { MEDIA } from '../general.ts';
 /** A number at the end of an asset's name: the copies Unity makes, and numbered variants. */
 const NUMBERED = String.raw`_?\d+$`;
 
+const SCRIPTS =
+    'A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.';
+
 export const unity: Preset = {
     description:
-        'Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.',
+        'Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ and in any folder holding .cs scripts only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.',
     sources: [
         {
             title: 'Unity manual: asset metadata (.meta files)',
@@ -49,7 +52,14 @@ export const unity: Preset = {
         overrides: [
             {
                 folders: ['**/Scripts', '**/Scripts/**'],
-                reason: 'A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.',
+                reason: SCRIPTS,
+                naming: { companions: [`!${NUMBERED}`, String.raw`[ _-]\d+$`] },
+            },
+            {
+                // Scripts live wherever the project puts them: Assets/Code, Packages/<name>/Runtime.
+                folders: ['**'],
+                withFiles: ['*.cs'],
+                reason: SCRIPTS,
                 naming: { companions: [`!${NUMBERED}`, String.raw`[ _-]\d+$`] },
             },
         ],
