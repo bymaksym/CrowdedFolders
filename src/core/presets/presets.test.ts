@@ -530,6 +530,15 @@ describe('languages, after the review of 21-10-2026', () => {
         assert.deepEqual(check('android', drawables), []);
     });
 
+    it('java leaves out composeResources too: Kotlin Multiplatform without an AndroidManifest.xml is detected as java', () => {
+        const drawables = series(
+            'composeApp/src/commonMain/composeResources/drawable',
+            40,
+            index => `ic_${pad(index)}.xml`,
+        );
+        assert.deepEqual(check('java', drawables), []);
+    });
+
     it('android reads Platform.kt, Platform.android.kt and Platform.ios.kt as one module', () => {
         const files = inFolder('shared/src', [
             'Platform.kt',

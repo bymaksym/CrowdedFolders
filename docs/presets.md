@@ -271,7 +271,7 @@ Sources:
 
 ## java
 
-Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). A move proposes a package as Java writes them (registrohorario/, never a keyword such as abstract/), keeps the class names, takes src/test along with src/main, and leaves the application-{profile}.yml of Spring where Spring looks for them. One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.
+Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). A move proposes a package as Java writes them (registrohorario/, never a keyword such as abstract/), keeps the class names, takes src/test along with src/main, and leaves the application-{profile}.yml of Spring where Spring looks for them. The composeResources/ of Compose Multiplatform (drawable, font, values, files: a fixed layout) is left out, also in a Kotlin Multiplatform project without an AndroidManifest.xml. One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
@@ -279,7 +279,7 @@ Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classe
 - **`redundant-prefix`:** `off`
 - **Companions:** `Impl$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
-- **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
+- **Left out:** `/target`, `/build`, `.gradle`, `META-INF`, `**/src/*/composeResources`
 - **In `**/src/test`, `**/src/test/**`, `**/src/*Test`, `**/src/*Test/**`:** naming `companions` `["(Test|Tests|IT|IntegrationTest|Spec)$"]`. A test class is named after the class it tests (UserServiceTest, UserServiceIT), and only in test sources: elsewhere SpeedTest and AuditIT are names of their own.
 - **In `**/build-logic`, `**/build-logic/**`, `**/buildSrc`, `**/buildSrc/**`:** naming `ignoreLeadingWords` `["android","ios","jvm"]`. Convention plugins are named after the platform they configure (AndroidApplicationConventionPlugin, AndroidLibraryConventionPlugin): the platform is not what they are about.
 
@@ -294,6 +294,7 @@ Sources:
 - [Kotlin: hard keywords](https://kotlinlang.org/docs/keyword-reference.html#hard-keywords)
 - [Spring Boot: profile-specific files are application-{profile}.properties, looked for next to application.properties](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.files.profile-specific)
 - [Gradle: buildSrc "is a separate build located in the root of your Gradle project"](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html)
+- [Compose Multiplatform resources: images in the drawable directory, fonts in the font directory](https://kotlinlang.org/docs/multiplatform/compose-multiplatform-resources-setup.html)
 - [Spring Boot: auto-configuration is registered in META-INF/spring](https://docs.spring.io/spring-boot/reference/features/developing-auto-configuration.html)
 
 ## android
