@@ -237,6 +237,10 @@ describe('suppressions', () => {
             assert.match(ran.err, new RegExp(`${flag} writes the suppressions file, and this run is in CI`, 'u'));
         }
         assert.equal((await cli(root, ['--suppress-all', '--force', '--no-git'], { CI: 'true' })).code, 0);
+        // Azure Pipelines sets TF_BUILD, not CI.
+        const azure = await cli(root, ['--prune-suppressions', '--no-git'], { TF_BUILD: 'True' });
+        assert.equal(azure.code, 2);
+        assert.match(azure.err, /this run is in CI \(TF_BUILD=True\)/u);
         assert.equal((await cli(root, ['--suppress-all'], { CI: 'false' })).code, 0);
     });
 

@@ -14,19 +14,12 @@ import {
 } from '../../core/suppressions.ts';
 import { type Base, ciBaseOf, readBase } from '../../node/git-base.ts';
 import { type Args, UsageError } from '../args.ts';
+import { ciVariable } from '../ci.ts';
 import type { Io } from '../io.ts';
 import { addedByFolder, buildReport, enrichFindings, tinyFilesOf, wantsAnchors } from '../report/build.ts';
 import { emit, resolveFormat } from '../report/emit.ts';
 import { outputPathsOf } from '../report/output-paths.ts';
-import {
-    foldersFromPaths,
-    isCi,
-    noRuleIsOn,
-    noticeIfOutside,
-    type Session,
-    suppressionsPathOf,
-    within,
-} from '../session.ts';
+import { foldersFromPaths, noRuleIsOn, noticeIfOutside, type Session, suppressionsPathOf, within } from '../session.ts';
 import { SuppressionStore } from '../suppressions-store.ts';
 import { compareConfigAt } from './compare-config.ts';
 
@@ -261,12 +254,13 @@ function wantsClosest(args: Args, io: Io): boolean {
  */
 function refuseWritesInCi(args: Args, io: Io): void {
     const adds = args.suppressAll || args.suppressRules.length > 0;
-    if ((!adds && !args.pruneSuppressions) || args.force || !isCi(io.env)) {
+    const ci = ciVariable(io.env);
+    if ((!adds && !args.pruneSuppressions) || args.force || ci === undefined) {
         return;
     }
     const flag = args.suppressAll ? '--suppress-all' : adds ? '--suppress-rule' : '--prune-suppressions';
     throw new UsageError(
-        `${flag} writes the suppressions file, and this run is in CI (CI=${io.env['CI'] ?? ''}): the run would pass and the pull request would show nothing. Run it on your machine and commit the file, or pass --force.`,
+        `${flag} writes the suppressions file, and this run is in CI (${ci}): the run would pass and the pull request would show nothing. Run it on your machine and commit the file, or pass --force.`,
     );
 }
 

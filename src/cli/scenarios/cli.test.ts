@@ -415,6 +415,11 @@ describe('where it reads the files from', () => {
         const ci = await cli(root, [], '', { CI: 'true' });
         assert.equal(ci.code, 2);
         assert.match(ci.err, /pass --no-git/u);
+        assert.match(ci.err, /the default in CI, CI=true/u);
+        // Jenkins sets JENKINS_URL, not CI.
+        const jenkins = await cli(root, [], '', { JENKINS_URL: 'http://jenkins:8080/' });
+        assert.equal(jenkins.code, 2);
+        assert.match(jenkins.err, /the default in CI, JENKINS_URL=http:\/\/jenkins:8080\//u);
         const disk = await cli(root, ['--no-git'], '', { CI: 'true' });
         assert.equal(disk.code, 1);
         assert.doesNotMatch(disk.err, /not in a git repository/u);

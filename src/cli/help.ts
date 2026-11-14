@@ -39,11 +39,11 @@ Where it looks (paths given to options start from the current folder)
       --no-git             list files from the disk instead of asking git
                            (.gitignore files are read; .gitattributes is not)
       --require-git        fail instead of reading the disk when git cannot list
-                           the files (default when CI is set; inside a
+                           the files (default in CI; inside a
                            repository a failing git always fails)
       --tracked-only       count only the files git tracks, not the ones it
                            would add: a file a previous CI step left behind is
-                           not the repository's (default when CI is set)
+                           not the repository's (default in CI)
       --no-tracked-only    count the untracked files too, on CI as well
 
 What it prints
