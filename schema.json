@@ -41,7 +41,7 @@
                     },
                     {
                         "const": "react-native",
-                        "description": "React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address."
+                        "description": "React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. So are assets/animations and assets/lottie: a Lottie animation is a .json file exported from After Effects, a picture rather than code. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address."
                     },
                     {
                         "const": "vue",
@@ -93,7 +93,7 @@
                     },
                     {
                         "const": "flutter",
-                        "description": "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder."
+                        "description": "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders, localisation files and Lottie animations (assets/animations, assets/lottie: .json exported from After Effects) are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder."
                     },
                     {
                         "const": "rails",
@@ -974,7 +974,7 @@
                                 },
                                 {
                                     "const": "react-native",
-                                    "description": "React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address."
+                                    "description": "React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. So are assets/animations and assets/lottie: a Lottie animation is a .json file exported from After Effects, a picture rather than code. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address."
                                 },
                                 {
                                     "const": "vue",
@@ -1026,7 +1026,7 @@
                                 },
                                 {
                                     "const": "flutter",
-                                    "description": "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder."
+                                    "description": "Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders, localisation files and Lottie animations (assets/animations, assets/lottie: .json exported from After Effects) are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder."
                                 },
                                 {
                                     "const": "rails",

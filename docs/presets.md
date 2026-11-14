@@ -136,11 +136,11 @@ Sources:
 
 ## react-native
 
-React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.
+React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. So are assets/animations and assets/lottie: a Lottie animation is a .json file exported from After Effects, a picture rather than code. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.
 
 - **Extends:** [react](#react)
 - **`single-file-folders`:** `off` `{"allowed":["**/app/**/index.*","**/app/**/[[]*].*"]}`
-- **Left out:** `/ios`, `/android`, `.expo`
+- **Left out:** `/ios`, `/android`, `.expo`, `**/assets/animations`, `**/assets/lottie`
 - **In `app`, `app/**`, `src/app`, `src/app/**`:** naming `routes` `true`. Expo Router: under app/ the path of a file is its address, so /sign-in must not become /sign/in; a route group, (sign)/, groups screens without changing it.
 
 Sources:
@@ -148,6 +148,7 @@ Sources:
 - [Expo Router: "an index.tsx file indicates the default route for a directory"; square brackets in a file or directory name are a dynamic route](https://docs.expo.dev/router/basics/notation/)
 - [Expo: continuous native generation — prebuild "creates the android and ios directories"](https://docs.expo.dev/workflow/continuous-native-generation/)
 - [Expo Router: notation (_layout, +html, +not-found, [param], (group))](https://docs.expo.dev/router/basics/notation/)
+- [lottie-react-native: "animations exported as JSON with bodymovin", loaded with require("../path/to/animation.json")](https://github.com/lottie-react-native/lottie-react-native)
 
 ## vue
 
@@ -349,12 +350,12 @@ Sources:
 
 ## flutter
 
-Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.
+Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders, localisation files and Lottie animations (assets/animations, assets/lottie: .json exported from After Effects) are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.
 
 - **Extends:** [recommended](#recommended)
 - **`prefix-groups`:** `error` `{"dropPrefix":false}`
 - **Companions:** `_test$`
-- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `*.mocks.dart`, `*.config.dart`, `*.gen.dart`, `*.pb*.dart`, `*.chopper.dart`, `*.arb`
+- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `*.mocks.dart`, `*.config.dart`, `*.gen.dart`, `*.pb*.dart`, `*.chopper.dart`, `*.arb`, `**/assets/animations`, `**/assets/lottie`
 - **In `lib/data/**`:** `max-files` `error` `{"max":30}`, `prefix-groups` `warn`. The Flutter architecture guide organises the data layer by type: "The data folder organizes code by type".
 
 Sources:
@@ -366,6 +367,7 @@ Sources:
 - [injectable: the generated file is file_name.config.dart](https://pub.dev/packages/injectable)
 - [Flutter: internationalization, one .arb file per language](https://docs.flutter.dev/ui/accessibility-and-localization/internationalization)
 - [json_serializable: generated code goes in a part file, part 'example.g.dart'](https://pub.dev/packages/json_serializable)
+- [lottie: animations 'exported as json with Bodymovin', loaded with Lottie.asset('assets/LottieLogo1.json')](https://pub.dev/packages/lottie)
 
 ## rails
 

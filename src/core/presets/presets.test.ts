@@ -1013,3 +1013,26 @@ describe('detectPresets', () => {
         assert.deepEqual(excludes, ['modules/m7/build']);
     });
 });
+
+describe('Lottie animations exported as JSON', () => {
+    const animations = Array.from({ length: 25 }, (_, index) => `assets/animations/onboarding-step-${index}.json`);
+
+    for (const preset of ['react-native', 'flutter']) {
+        it(`${preset}: assets/animations/ of 25 .json Lottie files is not a crowded folder`, () => {
+            const files = [...animations, ...animations.map(path => path.replace('animations', 'lottie'))];
+            const crowded = check(preset, files).filter(finding => finding.rule === 'max-files');
+            assert.deepEqual(
+                crowded.map(finding => finding.folder),
+                [],
+            );
+            const nested = check(
+                preset,
+                files.map(path => `app/${path}`),
+            ).filter(finding => finding.rule === 'max-files');
+            assert.deepEqual(
+                nested.map(finding => finding.folder),
+                [],
+            );
+        });
+    }
+});
