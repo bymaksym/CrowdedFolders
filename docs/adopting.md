@@ -125,9 +125,9 @@ already in a file stay in it. The same suppression in two files is an error.
 | `--pass-on-unpruned-suppressions` | Does not fail on stale suppressions (for a branch that is mid-refactor).                                             |
 | `--suppressions-location <file>`  | Another file, or `per-project`; or `"suppressions"` in the configuration.                                            |
 | `--new-since <ref>`               | Fails only on problems that are new or grew since `<ref>`.                                                           |
-| `--force`                         | With `CI` set, lets `--suppress-all`, `--suppress-rule` and `--prune-suppressions` write.                            |
+| `--force`                         | On CI, lets `--suppress-all`, `--suppress-rule` and `--prune-suppressions` write.                                    |
 
-With `CI` set, the three flags that write refuse to (exit code 2) unless `--force` is given: a CI job that
+On CI ([how it is told](ci.md)), the three flags that write refuse to (exit code 2) unless `--force` is given: a CI job that
 writes its own suppressions passes, and the file it wrote is never committed, so the pull request shows
 nothing. Run them on your machine and commit the result.
 

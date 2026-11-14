@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
+import { ciVariable, isCi } from './ci.ts';
 import { cleanUpAfterTests, cli, repository } from './test-support/harness.ts';
 
 cleanUpAfterTests();
@@ -23,6 +24,29 @@ function checkout(): string {
 }
 
 const countOf = (out: string): string => /(\d+) files? checked/u.exec(out)?.[1] ?? out;
+
+describe('isCi', () => {
+    it('recognises the CI systems that do not set CI (Azure Pipelines, Jenkins, TeamCity…), and CI=false still means not CI', () => {
+        for (const name of [
+            'TF_BUILD',
+            'JENKINS_URL',
+            'BUILDKITE',
+            'GITHUB_ACTIONS',
+            'GITLAB_CI',
+            'CIRCLECI',
+            'TEAMCITY_VERSION',
+            'BITBUCKET_BUILD_NUMBER',
+        ]) {
+            assert.equal(isCi({ [name]: 'True' }), true, name);
+            assert.equal(ciVariable({ [name]: 'True' }), `${name}=True`);
+            assert.equal(isCi({ CI: 'false', [name]: 'True' }), false, name);
+            assert.equal(isCi({ CI: '0', [name]: 'True' }), false, name);
+        }
+        assert.equal(ciVariable({ CI: 'true', GITHUB_ACTIONS: 'true' }), 'CI=true');
+        assert.equal(isCi({}), false);
+        assert.equal(isCi({ JENKINS_URL: '' }), false);
+    });
+});
 
 describe('--tracked-only', () => {
     it('counts only the files git tracks; without it, the untracked ones count', async () => {

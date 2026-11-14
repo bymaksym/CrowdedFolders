@@ -6,7 +6,7 @@ import { type Config, EMPTY_CONFIG, type ResolvedConfig } from '../config/types.
 import { validateConfig } from '../config/validate.ts';
 import { explainFolder, type Finding, runEngine } from '../engine.ts';
 import { BUILT_IN_RULES } from '../rules/index.ts';
-import { detectPresets, excludesFor } from './detect.ts';
+import { configFromDetections, detectPresets, excludesFor } from './detect.ts';
 import { BUILT_IN_PRESETS } from './index.ts';
 
 /** Applies a preset the way the loader does: what it extends first, each preset once. */
@@ -530,6 +530,15 @@ describe('languages, after the review of 21-10-2026', () => {
         assert.deepEqual(check('android', drawables), []);
     });
 
+    it('java leaves out composeResources too: Kotlin Multiplatform without an AndroidManifest.xml is detected as java', () => {
+        const drawables = series(
+            'composeApp/src/commonMain/composeResources/drawable',
+            40,
+            index => `ic_${pad(index)}.xml`,
+        );
+        assert.deepEqual(check('java', drawables), []);
+    });
+
     it('android reads Platform.kt, Platform.android.kt and Platform.ios.kt as one module', () => {
         const files = inFolder('shared/src', [
             'Platform.kt',
@@ -593,6 +602,22 @@ describe('languages, after the review of 21-10-2026', () => {
         assert.deepEqual(
             checkAll(['rust', 'strict'], files).map(finding => finding.folder),
             ['crates/cli/src/util'],
+        );
+    });
+
+    it('django lets strict keep shop/management/__init__.py alone, which makes management a package', () => {
+        const files = [
+            'manage.py',
+            'shop/__init__.py',
+            'shop/models.py',
+            'shop/management/__init__.py',
+            'shop/management/commands/__init__.py',
+            'shop/management/commands/import_products.py',
+            'shop/utils/__init__.py',
+        ];
+        assert.deepEqual(
+            checkAll(['django', 'strict'], files).map(finding => `${finding.rule} ${finding.folder}`),
+            ['single-file-folders shop/utils'],
         );
     });
 
@@ -860,6 +885,16 @@ describe('protobuf, elixir, scala and bazel', () => {
     });
 });
 
+describe('protobuf applies to the whole repository', () => {
+    it('proto/user.proto puts protobuf in the root extends: user_pb.ts and user_grpc_pb.ts live in src/', () => {
+        const files = ['package.json', 'proto/user.proto', 'src/user_pb.ts', 'src/user_grpc_pb.ts'];
+        const found = detectPresets(files, new Map(), BUILT_IN_PRESETS);
+        const config = configFromDetections(found, files, BUILT_IN_PRESETS);
+        assert.deepEqual(config.extends, ['recommended', 'protobuf']);
+        assert.deepEqual(config.overrides, []);
+    });
+});
+
 describe('detectPresets', () => {
     it('proposes recommended always, and each preset from a file or a dependency', () => {
         const found = detectPresets(
@@ -1012,4 +1047,27 @@ describe('detectPresets', () => {
         assert.ok(performance.now() - started < 3000, `${Math.round(performance.now() - started)} ms`);
         assert.deepEqual(excludes, ['modules/m7/build']);
     });
+});
+
+describe('Lottie animations exported as JSON', () => {
+    const animations = Array.from({ length: 25 }, (_, index) => `assets/animations/onboarding-step-${index}.json`);
+
+    for (const preset of ['react-native', 'flutter']) {
+        it(`${preset}: assets/animations/ of 25 .json Lottie files is not a crowded folder`, () => {
+            const files = [...animations, ...animations.map(path => path.replace('animations', 'lottie'))];
+            const crowded = check(preset, files).filter(finding => finding.rule === 'max-files');
+            assert.deepEqual(
+                crowded.map(finding => finding.folder),
+                [],
+            );
+            const nested = check(
+                preset,
+                files.map(path => `app/${path}`),
+            ).filter(finding => finding.rule === 'max-files');
+            assert.deepEqual(
+                nested.map(finding => finding.folder),
+                [],
+            );
+        });
+    }
 });

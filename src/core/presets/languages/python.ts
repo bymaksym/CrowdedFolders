@@ -55,12 +55,12 @@ export const python: Preset = {
 
 export const django: Preset = {
     description:
-        "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for.",
+        "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and strict lets management/__init__.py stand alone beside them, and templates/ keeps the <app>/<model>_list.html names ListView looks for.",
     sources: [
         { title: 'Django: applications', url: 'https://docs.djangoproject.com/en/5.2/ref/applications/' },
         { title: 'Django: migrations (squashing)', url: 'https://docs.djangoproject.com/en/5.2/topics/migrations/' },
         {
-            title: 'Django: custom management commands (management/commands/<name>.py, run as manage.py <name>)',
+            title: 'Django: custom management commands (management/__init__.py and management/commands/<name>.py, run as manage.py <name>)',
             url: 'https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/',
         },
         {
@@ -80,5 +80,10 @@ export const django: Preset = {
                 rules: { 'redundant-prefix': 'off' },
             },
         ],
+        rules: {
+            // Off here, and strict turns it on keeping this: management/ holds only its __init__.py and
+            // the commands/ that Django reads by name, which is left out.
+            'single-file-folders': ['off', { allowed: ['**/management/__init__.py'] }],
+        },
     },
 };

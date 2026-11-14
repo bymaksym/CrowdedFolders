@@ -124,6 +124,12 @@ export interface Detect {
      * below it. A requirements.txt is Python only with Python next to it: mkdocs keeps one in docs/.
      */
     readonly confirmedBy?: readonly string[];
+    /**
+     * Where the preset applies when its evidence is in a subfolder only: there (the default, a
+     * pom.xml in server/ is java under server/**), or the whole repository (`proto/user.proto`: the
+     * code generated from it lives elsewhere, src/user_pb.ts).
+     */
+    readonly scope?: 'folder' | 'repository';
 }
 
 /**

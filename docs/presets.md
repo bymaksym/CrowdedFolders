@@ -136,11 +136,11 @@ Sources:
 
 ## react-native
 
-React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.
+React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. So are assets/animations and assets/lottie: a Lottie animation is a .json file exported from After Effects, a picture rather than code. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.
 
 - **Extends:** [react](#react)
 - **`single-file-folders`:** `off` `{"allowed":["**/app/**/index.*","**/app/**/[[]*].*"]}`
-- **Left out:** `/ios`, `/android`, `.expo`
+- **Left out:** `/ios`, `/android`, `.expo`, `**/assets/animations`, `**/assets/lottie`
 - **In `app`, `app/**`, `src/app`, `src/app/**`:** naming `routes` `true`. Expo Router: under app/ the path of a file is its address, so /sign-in must not become /sign/in; a route group, (sign)/, groups screens without changing it.
 
 Sources:
@@ -148,6 +148,7 @@ Sources:
 - [Expo Router: "an index.tsx file indicates the default route for a directory"; square brackets in a file or directory name are a dynamic route](https://docs.expo.dev/router/basics/notation/)
 - [Expo: continuous native generation — prebuild "creates the android and ios directories"](https://docs.expo.dev/workflow/continuous-native-generation/)
 - [Expo Router: notation (_layout, +html, +not-found, [param], (group))](https://docs.expo.dev/router/basics/notation/)
+- [lottie-react-native: "animations exported as JSON with bodymovin", loaded with require("../path/to/animation.json")](https://github.com/lottie-react-native/lottie-react-native)
 
 ## vue
 
@@ -219,9 +220,10 @@ Sources:
 
 ## django
 
-Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for.
+Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and strict lets management/__init__.py stand alone beside them, and templates/ keeps the <app>/<model>_list.html names ListView looks for.
 
 - **Extends:** [python](#python)
+- **`single-file-folders`:** `off` `{"allowed":["**/management/__init__.py"]}`
 - **Left out:** `/static`, `/media`, `/staticfiles`, `**/management/commands`, `**/templatetags`
 - **In `**/templates/**`:** `redundant-prefix` `off`. ListView looks for orders/templates/orders/order_list.html by default (<app>/<model>_list.html): the name repeats the folder because Django asks for it.
 
@@ -229,7 +231,7 @@ Sources:
 
 - [Django: applications](https://docs.djangoproject.com/en/5.2/ref/applications/)
 - [Django: migrations (squashing)](https://docs.djangoproject.com/en/5.2/topics/migrations/)
-- [Django: custom management commands (management/commands/<name>.py, run as manage.py <name>)](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/)
+- [Django: custom management commands (management/__init__.py and management/commands/<name>.py, run as manage.py <name>)](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/)
 - [Django: custom template tags (a templatetags package in the app)](https://docs.djangoproject.com/en/5.2/howto/custom-template-tags/)
 
 ## go
@@ -270,7 +272,7 @@ Sources:
 
 ## java
 
-Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). A move proposes a package as Java writes them (registrohorario/, never a keyword such as abstract/), keeps the class names, takes src/test along with src/main, and leaves the application-{profile}.yml of Spring where Spring looks for them. One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.
+Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classes sharing a name (UserService, UserRepository, UserController) suggest packaging by feature. UserServiceImpl is UserService, and in test sources UserServiceTest and UserServiceIT are too; AbstractUserService, DefaultUserService and FakeUserService are about user; package-info.java and module-info.java describe the package and do not count; and a build/ or target/ is left out only next to the pom.xml or build.gradle that owns it (com/acme/build is a package). A move proposes a package as Java writes them (registrohorario/, never a keyword such as abstract/), keeps the class names, takes src/test along with src/main, and leaves the application-{profile}.yml of Spring where Spring looks for them. The composeResources/ of Compose Multiplatform (drawable, font, values, files: a fixed layout) is left out, also in a Kotlin Multiplatform project without an AndroidManifest.xml. One top-level class per file makes folders larger than in TypeScript, hence 20: across five Java repositories (docs/field-trial.md) the 95th percentile of modules per folder is 9 to 32, median 11.
 
 - **Extends:** [recommended](#recommended)
 - **`max-files`:** `error` `{"max":20,"count":"modules","hint":"A folder is a package: package by feature (user/, order/), not by layer.","hintFor":["*.{java,kt,kts,groovy,scala}"]}`
@@ -278,7 +280,7 @@ Java and Kotlin with Maven or Gradle: a folder is a package, so groups of classe
 - **`redundant-prefix`:** `off`
 - **Companions:** `Impl$`
 - **Leading words skipped:** `fake`, `mock`, `stub`, `spy`, `dummy`, `abstract`, `base`, `default`, `simple`
-- **Left out:** `/target`, `/build`, `.gradle`, `META-INF`
+- **Left out:** `/target`, `/build`, `.gradle`, `META-INF`, `**/src/*/composeResources`
 - **In `**/src/test`, `**/src/test/**`, `**/src/*Test`, `**/src/*Test/**`:** naming `companions` `["(Test|Tests|IT|IntegrationTest|Spec)$"]`. A test class is named after the class it tests (UserServiceTest, UserServiceIT), and only in test sources: elsewhere SpeedTest and AuditIT are names of their own.
 - **In `**/build-logic`, `**/build-logic/**`, `**/buildSrc`, `**/buildSrc/**`:** naming `ignoreLeadingWords` `["android","ios","jvm"]`. Convention plugins are named after the platform they configure (AndroidApplicationConventionPlugin, AndroidLibraryConventionPlugin): the platform is not what they are about.
 
@@ -293,6 +295,7 @@ Sources:
 - [Kotlin: hard keywords](https://kotlinlang.org/docs/keyword-reference.html#hard-keywords)
 - [Spring Boot: profile-specific files are application-{profile}.properties, looked for next to application.properties](https://docs.spring.io/spring-boot/reference/features/external-config.html#features.external-config.files.profile-specific)
 - [Gradle: buildSrc "is a separate build located in the root of your Gradle project"](https://docs.gradle.org/current/userguide/organizing_gradle_projects.html)
+- [Compose Multiplatform resources: images in the drawable directory, fonts in the font directory](https://kotlinlang.org/docs/multiplatform/compose-multiplatform-resources-setup.html)
 - [Spring Boot: auto-configuration is registered in META-INF/spring](https://docs.spring.io/spring-boot/reference/features/developing-auto-configuration.html)
 
 ## android
@@ -349,12 +352,12 @@ Sources:
 
 ## flutter
 
-Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders and localisation files are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.
+Flutter and Dart: feature-first under lib/ui, foo_test.dart is foo, and the generated platform folders, localisation files and Lottie animations (assets/animations, assets/lottie: .json exported from After Effects) are left out. Flutter's own architecture guide organises lib/data by type on purpose, so it is given more room. main.dart and its flavours (main_dev.dart, main_prod.dart) stay where flutter run -t looks for them, and a move keeps the file names (auth/auth_repository.dart, as the guide names them) in a snake_case folder.
 
 - **Extends:** [recommended](#recommended)
 - **`prefix-groups`:** `error` `{"dropPrefix":false}`
 - **Companions:** `_test$`
-- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `*.mocks.dart`, `*.config.dart`, `*.gen.dart`, `*.pb*.dart`, `*.chopper.dart`, `*.arb`
+- **Left out:** `.dart_tool`, `/build`, `/android`, `/ios`, `/web`, `/windows`, `/linux`, `/macos`, `**/lib/l10n`, `**/lib/generated`, `*.g.dart`, `*.freezed.dart`, `*.gr.dart`, `*.mocks.dart`, `*.config.dart`, `*.gen.dart`, `*.pb*.dart`, `*.chopper.dart`, `*.arb`, `**/assets/animations`, `**/assets/lottie`
 - **In `lib/data/**`:** `max-files` `error` `{"max":30}`, `prefix-groups` `warn`. The Flutter architecture guide organises the data layer by type: "The data folder organizes code by type".
 
 Sources:
@@ -366,6 +369,7 @@ Sources:
 - [injectable: the generated file is file_name.config.dart](https://pub.dev/packages/injectable)
 - [Flutter: internationalization, one .arb file per language](https://docs.flutter.dev/ui/accessibility-and-localization/internationalization)
 - [json_serializable: generated code goes in a part file, part 'example.g.dart'](https://pub.dev/packages/json_serializable)
+- [lottie: animations 'exported as json with Bodymovin', loaded with Lottie.asset('assets/LottieLogo1.json')](https://pub.dev/packages/lottie)
 
 ## rails
 
@@ -442,7 +446,7 @@ Sources:
 
 ## unity
 
-Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.
+Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one), Scripts.meta goes with the folder Scripts/, numbered series such as Model1, Model_2 are one asset family (in Scripts/ and in any folder holding .cs scripts only with a separator: Base64.cs is not Base), and Library, Temp, ProjectSettings (one .asset per setting, written by Unity) and third-party code (Plugins, TextMesh Pro, Samples, ThirdParty) are left out. The manifest files of Packages/ are left out, the embedded packages in it are your code and are checked. C# reads as in the dotnet preset. The Unity guide splits by asset type and gives no number: the 15 for groups is borrowed from the Allar guide for Unreal and is an opinion here. A .meta without its asset is an error (orphan-companions): the Unity manual says a .meta "must stay with the asset file", and the .meta of an empty folder, which git cannot store, is not reported.
 
 - **Extends:** [dotnet](#dotnet)
 - **`prefix-groups`:** `warn` `{"min":15,"hint":"Unity's guide splits a project by asset type and gives no number: the 15 is borrowed from Allar's Unreal guide (rule 2.7) and is an opinion here.","hintFor":["!*.{cs,fs,vb}"]}`
@@ -452,6 +456,7 @@ Unity: every asset has a .meta next to it (Player.cs and Player.cs.meta are one)
 - **Left out:** `/Library`, `/Temp`, `/Logs`, `/UserSettings`, `/ProjectSettings`, `/Packages/*.json`, `Assets/Plugins`, `Assets/TextMesh Pro`, `Assets/Samples`, `Assets/ThirdParty`, `*~`
 - **Counted again, though `extends` leaves them out:** `*.{png,jpg,jpeg,gif,svg,webp,avif,ico,icns,bmp,tif,tiff,psd,xcf,exr,hdr,mp3,wav,ogg,flac,m4a,aac,mp4,webm,mov,avi,mkv,ttf,otf,woff,woff2,eot,pdf,riv,lottie,caf,aiff,heic,glb,gltf,fbx,obj,tga,ktx2}`
 - **In `**/Scripts`, `**/Scripts/**`:** naming `companions` `["!_?\\d+$","[ _-]\\d+$"]`. A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
+- **In `**`:** naming `companions` `["!_?\\d+$","[ _-]\\d+$"]`. A script is named after its type, and a number there is part of the name: Base64, Sha256 and Md5 are not copies of Base, Sha and Md. Only a separated number (Spawner_2) is a copy.
 
 Sources:
 
@@ -529,7 +534,7 @@ Sources:
 
 ## protobuf
 
-Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
+Protocol Buffers: user.proto produces user_pb2.py, user_pb2_grpc.py, user_pb.ts, user_grpc_pb.js, user_connect.ts and user_grpc.pb.go, and all of them are the module user. Add it next to the preset of the language that holds the generated code; when detected, it applies to the whole repository, even when the .proto files are in a subfolder, because the generated code lives elsewhere. Proto files follow Buf's layout: a folder per package, one level of folders per package segment.
 
 - **Extends:** [recommended](#recommended)
 - **Companions:** `_(?:grpc_web_pb|grpc_pb|pb2_grpc|pb2|pb|grpc|connect)$`

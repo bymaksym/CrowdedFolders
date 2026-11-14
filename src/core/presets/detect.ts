@@ -353,6 +353,7 @@ export function configFromDetections(
 ): DetectedConfig {
     const isScoped = (detection: Detection): boolean =>
         detection.preset !== 'recommended' &&
+        presets[detection.preset]?.detect?.scope !== 'repository' &&
         !detection.folders.includes('.') &&
         !negatesExcludes(detection.preset, presets);
     const top = detections.filter(detection => !isScoped(detection));

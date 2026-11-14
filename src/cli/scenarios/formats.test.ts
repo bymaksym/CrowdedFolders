@@ -69,9 +69,12 @@ describe('several reports in one run', () => {
 
     it('chooses the format by the CI it runs in with --format auto', async () => {
         const root = repository(RENDER_FILES);
-        assert.match((await cli(root, ['-f', 'auto'], { GITHUB_ACTIONS: 'true' })).out, /^::error /u);
-        assert.match((await cli(root, ['-f', 'auto'], { TF_BUILD: 'True' })).out, /^##vso\[task\.logissue /u);
-        assert.match((await cli(root, ['-f', 'auto'], { GITLAB_CI: 'true' })).out, /^cli\/\n/u);
+        assert.match((await cli(root, ['-f', 'auto', '--no-git'], { GITHUB_ACTIONS: 'true' })).out, /^::error /u);
+        assert.match(
+            (await cli(root, ['-f', 'auto', '--no-git'], { TF_BUILD: 'True' })).out,
+            /^##vso\[task\.logissue /u,
+        );
+        assert.match((await cli(root, ['-f', 'auto', '--no-git'], { GITLAB_CI: 'true' })).out, /^cli\/\n/u);
         assert.match((await cli(root, ['-f', 'auto'])).out, /^cli\/\n/u);
     });
 });

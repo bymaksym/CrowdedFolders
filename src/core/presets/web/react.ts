@@ -59,7 +59,7 @@ export const nextjs: Preset = {
 
 export const reactNative: Preset = {
     description:
-        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.',
+        'React, plus the native projects: ios/ and android/ next to the app are the Xcode and Gradle projects that the template or Expo prebuild generates, not code arranged by hand, so they are left out wherever the app lives in the repository. So are assets/animations and assets/lottie: a Lottie animation is a .json file exported from After Effects, a picture rather than code. The _layout, +html, +not-found and +native-intent files of Expo Router describe their folder and do not count. Under the app/ of Expo Router a file is a route, so strict does not ask to flatten a folder whose only file is index or a [param] (experiences/[id].tsx): moving it changes the address. For the same reason a group of screens there (sign-in, sign-up, sign-out) moves into a route group, (sign)/, with its names, which keeps every address.',
     sources: [
         {
             title: 'Expo Router: "an index.tsx file indicates the default route for a directory"; square brackets in a file or directory name are a dynamic route',
@@ -73,11 +73,17 @@ export const reactNative: Preset = {
             title: 'Expo Router: notation (_layout, +html, +not-found, [param], (group))',
             url: 'https://docs.expo.dev/router/basics/notation/',
         },
+        {
+            title: 'lottie-react-native: "animations exported as JSON with bodymovin", loaded with require("../path/to/animation.json")',
+            url: 'https://github.com/lottie-react-native/lottie-react-native',
+        },
     ],
     detect: { dependencies: ['react-native', 'expo'] },
     config: {
         extends: ['react'],
-        exclude: ['/ios', '/android', '.expo'],
+        // A Lottie animation is a .json exported from After Effects, one per animation: a folder of
+        // them is a folder of pictures, not of code.
+        exclude: ['/ios', '/android', '.expo', '**/assets/animations', '**/assets/lottie'],
         // Expo Router's files for the folder itself: its layout, its HTML shell, its not-found screen
         // and its deep-link handler. A folder of screens is not crowded by them.
         naming: { folderFiles: ['_layout.*', '+html.*', '+not-found.*', '+native-intent.*'] },

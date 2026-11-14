@@ -13,9 +13,9 @@ tenth of a second.
 Inside a repository, a git that fails (missing from the `PATH`, a broken `GIT_DIR`, "dubious
 ownership" in a container) stops the run with exit code 2 and what git said: reading the disk instead
 would count what `.gitignore` hides and look like an ordinary run. Outside a repository the disk is
-walked, and the run says so; with `--require-git`, the default when `CI` is set, that is an error too.
+walked, and the run says so; with `--require-git`, the default on CI, that is an error too.
 
-`--tracked-only` leaves out the untracked files git would add. It is the default when `CI` is set: a
+`--tracked-only` leaves out the untracked files git would add. It is the default on CI: a
 `test-results/` folder or a report an earlier step left in the checkout is not part of the repository,
 and counting it would make the same commit pass on a machine and fail in CI. `--no-tracked-only` brings
 them back. It needs git, as `--require-git` does.

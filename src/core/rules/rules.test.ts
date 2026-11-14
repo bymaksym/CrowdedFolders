@@ -459,6 +459,14 @@ describe('options that can never match', () => {
         assert.deepEqual(problems({ rules: { 'prefix-groups': ['error', { ignore: ['render-json', 'Test'] }] } }), []);
     });
 
+    it('silences with an ignore entry written in capitals: "Test" is the prefix "test"', () => {
+        const tests = ['t/TestA.cs', 't/TestB.cs', 't/TestC.cs', 't/TestD.cs', 't/Other.cs'];
+        assert.equal(findings(tests, { rules: { 'prefix-groups': 'error' } }).length, 1);
+        assert.equal(findings(tests, { rules: { 'prefix-groups': ['error', { ignore: ['Test'] }] } }).length, 0);
+        const render = ['r/render-json.ts', 'r/render-text.ts', 'r/render-sarif.ts', 'r/render-pr.ts', 'r/main.ts'];
+        assert.equal(findings(render, { rules: { 'prefix-groups': ['error', { ignore: ['Render'] }] } }).length, 0);
+    });
+
     it('says that useState is two leading words (Tomás)', () => {
         const [problem = ''] = problems({ naming: { ignoreLeadingWords: ['useState'] } });
         assert.match(problem, /reads as "use", "state" — did you mean "use"/u);

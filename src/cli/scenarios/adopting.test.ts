@@ -143,6 +143,22 @@ describe('suppressions', () => {
         assert.match((await cli(root, ['--prune-suppressions'])).err, /Nothing to prune/u);
     });
 
+    it('refuses --prune-suppressions and --suppress-all when no rule is on ({}), and reports nothing as fixed', async () => {
+        const root = repository({ ...renderers('cli'), ...renderers('lib') });
+        assert.equal((await cli(root, ['--suppress-all'])).code, 0);
+        const before = readJson(root);
+        writeFileSync(join(root, 'crowded-folders.config.json'), '{}');
+        for (const flag of ['--prune-suppressions', '--suppress-all']) {
+            const ran = await cli(root, [flag]);
+            assert.equal(ran.code, 2, ran.err);
+            assert.match(ran.err, new RegExp(`${flag}: no rule is on`, 'u'));
+        }
+        assert.deepEqual(readJson(root), before);
+        const checked = await cli(root, []);
+        assert.equal(checked.code, 0, checked.err);
+        assert.doesNotMatch(checked.out, /fixed|prune/iu);
+    });
+
     // Point 22 (Marta): good news in green, with the command that saves it.
     it('shows a folder that went down as progress, and the summary says the run fails until it is saved', async () => {
         const root = repository({
@@ -221,6 +237,10 @@ describe('suppressions', () => {
             assert.match(ran.err, new RegExp(`${flag} writes the suppressions file, and this run is in CI`, 'u'));
         }
         assert.equal((await cli(root, ['--suppress-all', '--force', '--no-git'], { CI: 'true' })).code, 0);
+        // Azure Pipelines sets TF_BUILD, not CI.
+        const azure = await cli(root, ['--prune-suppressions', '--no-git'], { TF_BUILD: 'True' });
+        assert.equal(azure.code, 2);
+        assert.match(azure.err, /this run is in CI \(TF_BUILD=True\)/u);
         assert.equal((await cli(root, ['--suppress-all'], { CI: 'false' })).code, 0);
     });
 

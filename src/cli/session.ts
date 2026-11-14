@@ -15,6 +15,7 @@ import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
 import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
+import { ciVariable } from './ci.ts';
 import { presetsWithoutConfiguration } from './detection.ts';
 import type { Io } from './io.ts';
 
@@ -88,10 +89,12 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
         only = read.under === undefined ? only : [joinScope(scope, read.under)];
         fileSource = 'standard input';
     } else {
+        const ci = ciVariable(io.env);
         const list = listFiles(root, {
             git: args.git,
-            requireGit: args.requireGit ?? isCi(io.env),
-            trackedOnly: args.trackedOnly ?? isCi(io.env),
+            requireGit: args.requireGit ?? ci !== undefined,
+            ...(args.requireGit === undefined && ci !== undefined && { requiredBy: ci }),
+            trackedOnly: args.trackedOnly ?? ci !== undefined,
             env: io.env,
         });
         listed = [...list.files];
@@ -377,7 +380,8 @@ function asksForDotfiles(config: ResolvedConfig): boolean {
     return config.rules['max-files']?.options['dotfiles'] === true || inOverride;
 }
 
-function noRuleIsOn(config: ResolvedConfig): boolean {
+/** Whether the configuration turns no rule on (`{}` without `extends`): nothing is checked. */
+export function noRuleIsOn(config: ResolvedConfig): boolean {
     const isOff = (setting: string | readonly unknown[]): boolean =>
         (typeof setting === 'string' ? setting : setting[0]) === 'off';
     return (
@@ -441,9 +445,4 @@ export function joinScope(scope: string, path: string): string {
 function shown(cwd: string, path: string): string {
     const inside = within(cwd, path);
     return inside ?? path;
-}
-
-export function isCi(env: Readonly<Record<string, string | undefined>>): boolean {
-    const value = env['CI']?.trim().toLowerCase();
-    return value !== undefined && value !== '' && value !== '0' && value !== 'false';
 }
