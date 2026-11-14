@@ -605,6 +605,22 @@ describe('languages, after the review of 21-10-2026', () => {
         );
     });
 
+    it('django lets strict keep shop/management/__init__.py alone, which makes management a package', () => {
+        const files = [
+            'manage.py',
+            'shop/__init__.py',
+            'shop/models.py',
+            'shop/management/__init__.py',
+            'shop/management/commands/__init__.py',
+            'shop/management/commands/import_products.py',
+            'shop/utils/__init__.py',
+        ];
+        assert.deepEqual(
+            checkAll(['django', 'strict'], files).map(finding => `${finding.rule} ${finding.folder}`),
+            ['single-file-folders shop/utils'],
+        );
+    });
+
     it('django keeps management/commands and templatetags flat, and templates named after the app', () => {
         const files = [
             ...series('zerver/management/commands', 40, index => `import_${pad(index)}.py`),

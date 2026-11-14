@@ -220,9 +220,10 @@ Sources:
 
 ## django
 
-Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for.
+Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and strict lets management/__init__.py stand alone beside them, and templates/ keeps the <app>/<model>_list.html names ListView looks for.
 
 - **Extends:** [python](#python)
+- **`single-file-folders`:** `off` `{"allowed":["**/management/__init__.py"]}`
 - **Left out:** `/static`, `/media`, `/staticfiles`, `**/management/commands`, `**/templatetags`
 - **In `**/templates/**`:** `redundant-prefix` `off`. ListView looks for orders/templates/orders/order_list.html by default (<app>/<model>_list.html): the name repeats the folder because Django asks for it.
 
@@ -230,7 +231,7 @@ Sources:
 
 - [Django: applications](https://docs.djangoproject.com/en/5.2/ref/applications/)
 - [Django: migrations (squashing)](https://docs.djangoproject.com/en/5.2/topics/migrations/)
-- [Django: custom management commands (management/commands/<name>.py, run as manage.py <name>)](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/)
+- [Django: custom management commands (management/__init__.py and management/commands/<name>.py, run as manage.py <name>)](https://docs.djangoproject.com/en/5.2/howto/custom-management-commands/)
 - [Django: custom template tags (a templatetags package in the app)](https://docs.djangoproject.com/en/5.2/howto/custom-template-tags/)
 
 ## go

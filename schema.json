@@ -65,7 +65,7 @@
                     },
                     {
                         "const": "django",
-                        "description": "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for."
+                        "description": "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and strict lets management/__init__.py stand alone beside them, and templates/ keeps the <app>/<model>_list.html names ListView looks for."
                     },
                     {
                         "const": "go",
@@ -998,7 +998,7 @@
                                 },
                                 {
                                     "const": "django",
-                                    "description": "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and templates/ keeps the <app>/<model>_list.html names ListView looks for."
+                                    "description": "Python, plus Django: each app keeps models.py, views.py, admin.py… side by side by convention, and migrations stay flat and numbered (Django's answer to too many is squashing, not folders). management/commands and templatetags stay flat too (the file name is the command, the module the tag library), and strict lets management/__init__.py stand alone beside them, and templates/ keeps the <app>/<model>_list.html names ListView looks for."
                                 },
                                 {
                                     "const": "go",
