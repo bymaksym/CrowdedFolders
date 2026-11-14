@@ -209,7 +209,8 @@ function whyNotReported(
     crowded: CrowdedLimit | undefined,
 ): string | undefined {
     // Written "Render" or "render": checkOptions accepts both, so both match, as ignoreLeadingWords does.
-    if (keyIn(key, options.ignore.map(prefix => prefix.toLowerCase()))) {
+    const ignored = options.ignore.map(prefix => prefix.toLowerCase());
+    if (keyIn(key, ignored)) {
         return "the prefix is in prefix-groups' ignore";
     }
     if (modules.length < options.min) {
