@@ -109,7 +109,7 @@ describe('RuleTester', () => {
                 },
                 {},
             );
-        }, /check must be synchronous/u);
+        }, /^acme\/a is not a valid rule: it has an async check: check must be synchronous/u);
         fails(() => {
             tester.run(
                 'acme/s',
