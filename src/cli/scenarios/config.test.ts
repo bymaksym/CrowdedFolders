@@ -27,6 +27,23 @@ describe('--preset and detection', () => {
         assert.match(ran.out, /25 files, 1 module,/u);
     });
 
+    it('applies -p java to the whole repository when java was detected only in server/pom.xml', async () => {
+        const classes = Object.fromEntries(
+            Array.from({ length: 12 }, (_, index) => [
+                [`lib/Thing${String.fromCodePoint(65 + index)}.java`, ''],
+                [`lib/Thing${String.fromCodePoint(65 + index)}Impl.java`, ''],
+            ]).flat(),
+        );
+        const built = files('server/target/classes/Gen', 30, '.java');
+        const root = repository({ 'server/pom.xml': '', 'server/src/main/java/App.java': '', ...classes, ...built });
+        const ran = await cli(root, ['explain', 'lib', '--no-git', '-p', 'java']);
+        assert.equal(ran.code, 0, ran.err);
+        assert.match(ran.out, /24 files, 12 modules/u);
+        // server/target is still left out next to the pom.xml that owns it.
+        const checked = await cli(root, ['--no-git', '-p', 'java']);
+        assert.doesNotMatch(checked.out, /server\/target/u);
+    });
+
     it('uses only the given presets with --no-detect, and says so', async () => {
         const root = repository(swift);
         const explained = await cli(root, ['explain', 'Sources/App', '--no-git', '--no-detect', '-p', 'strict']);
