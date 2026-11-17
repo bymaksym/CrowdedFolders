@@ -180,10 +180,10 @@ describe('prefix-groups', () => {
         assert.deepEqual(findings(decisions, { rules: { 'prefix-groups': 'error' } }), []);
         // One title that starts with a digit does not make the rest a series (tomlooman/ActionRoguelike).
         const meshes = [
-            'm/SM_1MeterSphere.uasset',
-            'm/SM_Black_Hole.uasset',
-            'm/SM_Coin.uasset',
-            'm/SM_Sphere.uasset',
+            'm/MSH_1MeterSphere.uasset',
+            'm/MSH_Black_Hole.uasset',
+            'm/MSH_Coin.uasset',
+            'm/MSH_Sphere.uasset',
             'm/T_x.uasset',
         ];
         assert.equal(findings(meshes, { rules: { 'prefix-groups': 'error' } }).length, 1);
@@ -585,18 +585,30 @@ describe('single-file-folders', () => {
     });
 });
 
-describe('prefix-groups with a one-letter prefix', () => {
-    it('says which setting skips a letter that only marks the name', () => {
-        const files = ['x-order', 'x-invoice', 'x-user', 'x-item', 'main', 'args', 'util'].map(
-            name => `models/${name}.ts`,
-        );
-        const [problem] = findings(files, { rules: { 'prefix-groups': ['error', { min: 4 }] } });
-        assert.match(problem?.message ?? '', /4 modules start with "x"/u);
-        assert.match(problem?.message ?? '', /"x" is one letter: .*naming\.ignoreLeadingWords: \["x"\]/u);
-        const words = ['render-json', 'render-text', 'render-sarif', 'render-pr'].map(name => `cli/${name}.ts`);
-        assert.doesNotMatch(
-            findings(words, { rules: { 'prefix-groups': ['error', { min: 4 }] } })[0]?.message ?? '',
-            /one letter/u,
-        );
+describe('prefix-groups with a prefix of fewer than three letters', () => {
+    const options = { rules: { 'prefix-groups': ['error', { min: 4 }] } } satisfies Config;
+    const inModels = (names: readonly string[]): string[] => names.map(name => `models/${name}.ts`);
+    const other = ['main', 'args', 'util'];
+
+    // No real name was found in the repository, its history or the notes: this is the pattern `x-…`.
+    it('is not a folder that was never made: "x-order", "x-invoice" mark the name', () => {
+        const files = inModels(['x-order', 'x-invoice', 'x-user', 'x-item', ...other]);
+        assert.deepEqual(findings(files, options), []);
+    });
+
+    it('is not one for a single letter `a-` or `b-` either', () => {
+        for (const letter of ['a', 'b']) {
+            const files = inModels([`${letter}-one`, `${letter}-two`, `${letter}-three`, `${letter}-four`, ...other]);
+            assert.deepEqual(findings(files, options), [], letter);
+        }
+    });
+
+    it('is not one for two letters', () => {
+        assert.deepEqual(findings(inModels(['ab-one', 'ab-two', 'ab-three', 'ab-four', ...other]), options), []);
+    });
+
+    it('is one from three letters, as before', () => {
+        const [problem] = findings(inModels(['abc-one', 'abc-two', 'abc-three', 'abc-four', ...other]), options);
+        assert.match(problem?.message ?? '', /4 modules start with "abc"/u);
     });
 });

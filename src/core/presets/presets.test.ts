@@ -161,10 +161,8 @@ describe('what the presets change', () => {
             'BP_Chest.uasset',
         ]);
         assert.deepEqual(check('unreal', files), []);
-        assert.deepEqual(
-            check('recommended', files).map(finding => finding.key),
-            ['bp'],
-        );
+        // `bp` has two letters, so recommended no longer reports it either: the preset only matters from 15.
+        assert.deepEqual(check('recommended', files), []);
     });
 
     it('rails gives app/models more room, and makes groups there a warning', () => {
@@ -299,10 +297,10 @@ describe('what the presets change', () => {
             'adding-new-post.md',
         ]);
         const pages = many('content/en/methods/pages', [
-            'ByDate.md',
-            'ByLanguage.md',
-            'ByLength.md',
-            'ByTitle.md',
+            'OrderDate.md',
+            'OrderLanguage.md',
+            'OrderLength.md',
+            'OrderTitle.md',
             'Next.md',
         ]);
         assert.deepEqual(
@@ -707,12 +705,8 @@ describe('game engines, after the review of 21-10-2026', () => {
             `Source/Game/${name}.h`,
             `Source/Game/${name}.cpp`,
         ]);
-        assert.deepEqual(
-            check('unreal', [...ai, 'Source/Game/Player.cpp', 'Source/Game/Weapon.cpp']).map(
-                finding => `${finding.rule} ${finding.key ?? ''}`,
-            ),
-            ['prefix-groups ai'],
-        );
+        // `ai` has two letters: prefix-groups no longer takes it for a word a folder is named after.
+        assert.deepEqual(check('unreal', [...ai, 'Source/Game/Player.cpp', 'Source/Game/Weapon.cpp']), []);
         // In Content/ the same prefix is still the asset's type: AI_Guard is about the guard.
         const content = ['AI_Guard', 'AI_Patrol', 'AI_Boss', 'AI_Drone', 'AI_Turret'].map(
             name => `Content/AI/${name}.uasset`,
@@ -860,7 +854,7 @@ describe('protobuf, elixir, scala and bazel', () => {
     });
 
     it('bazel warns that a new folder is a new package, and leaves out the bazel-* links', () => {
-        const files = ['a_x', 'a_y', 'a_z', 'a_w', 'b'].map(name => `pkg/${name}.cc`);
+        const files = ['abc_x', 'abc_y', 'abc_z', 'abc_w', 'b'].map(name => `pkg/${name}.cc`);
         const [finding] = check('bazel', files);
         assert.match(finding?.message ?? '', /needs its own BUILD file and its own visibility/u);
         assert.deepEqual(

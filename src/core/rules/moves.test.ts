@@ -317,8 +317,8 @@ describe('the folder name of a move', () => {
     });
 
     it('proposes no folder when the plural is reserved too, and says to name it', () => {
-        const files = ['x/as-a.ts', 'x/as-b.ts', 'x/as-c.ts', 'x/as-d.ts', 'x/other.ts'];
-        const [finding] = check(['recommended'], files, { naming: { reservedWords: ['as', 'ases', 'ass'] } });
+        const files = ['x/dot-a.ts', 'x/dot-b.ts', 'x/dot-c.ts', 'x/dot-d.ts', 'x/other.ts'];
+        const [finding] = check(['recommended'], files, { naming: { reservedWords: ['dot', 'dots'] } });
         assert.deepEqual(finding?.moves, []);
         assert.match(finding?.message ?? '', /reserved words in this language — name the folder yourself/u);
     });
