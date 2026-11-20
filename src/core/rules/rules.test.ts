@@ -309,13 +309,26 @@ describe('prefix-groups: false positives of the field', () => {
     });
 
     it('stays linear with one prefix shared by many files (Tomás: 30 000 took 3.9 s)', () => {
-        const files = named(
-            'big',
-            Array.from({ length: 30_000 }, (_, index) => `user-${index}.ts`),
-        );
-        const started = performance.now();
-        findings([...files, 'big/other.ts'], { rules: { 'prefix-groups': 'error' } });
-        assert.ok(performance.now() - started < 3000);
+        // Judged by how the time grows, not by a clock: a loaded machine slows both sizes alike (the
+        // full check, with coverage, once took 4.1 s for what takes 0.5 s alone). Eight times the
+        // files take about eight times as long when linear, and sixty-four when quadratic; the best
+        // of three runs leaves out a pause of the garbage collector.
+        const time = (count: number): number => {
+            const files = named(
+                'big',
+                Array.from({ length: count }, (_, index) => `user-${index}.ts`),
+            );
+            let best = Infinity;
+            for (let run = 0; run < 3; run++) {
+                const started = performance.now();
+                findings([...files, 'big/other.ts'], { rules: { 'prefix-groups': 'error' } });
+                best = Math.min(best, performance.now() - started);
+            }
+            return best;
+        };
+        time(3750); // the first runs pay for compiling
+        const ratio = time(30_000) / time(3750);
+        assert.ok(ratio < 24, `30 000 files took ${ratio.toFixed(1)} times as long as 3 750`);
     });
 
     it('groups the plural with the singular: UsersController, UserGroups, UserRoles, UserSettings (Kenji)', () => {
