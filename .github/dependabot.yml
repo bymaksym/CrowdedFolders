@@ -1,6 +1,8 @@
 # Updates come once a month, grouped, as Conventional Commits (commitlint rejects the default prefix).
 # The cooldown has to stay ABOVE pnpm's minimumReleaseAge (3 days, pnpm-workspace.yaml), never equal:
 # the bot picks a version when its job starts, pnpm judges it when it resolves.
+# To look at updates by hand, majors included: `pnpm run deps:check` (npm-check-updates, .ncurc.js,
+# which also holds typescript and @types/node back, to patches, for the reasons given below).
 version: 2
 updates:
   - package-ecosystem: npm
