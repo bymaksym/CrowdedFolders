@@ -51,17 +51,11 @@ export async function compareConfigAt(
     if (raw === undefined) {
         throw new UsageError(`--compare-config ${ref}: package.json had no "${PACKAGE_KEY}" key there`);
     }
-    const before = await loadConfig(
-        raw,
-        `${ref}:${basename(path)}`,
-        dirname(path),
-        {},
-        {
-            code: args.code,
-            base: session.base,
-            nested: nestedConfigs(session.files, session.base, path),
-        },
-    );
+    const before = await loadConfig(raw, `${ref}:${basename(path)}`, dirname(path), {
+        code: args.code,
+        base: session.base,
+        nested: nestedConfigs(session.files, session.base, path),
+    });
     const beforeFindings = runEngine({
         files,
         config: before.config,

@@ -96,7 +96,7 @@ The stem is split into words in one pass, without regular expressions:
 | `getURLs`, `userIDs`, `APIs`                                                 | `get`, `urls`; `user`, `ids`; `apis` (an acronym's plural s stays with it)  |
 | `II18nKey`                                                                   | `i`, `i18n`, `key` (a capital before a word with digits is a word)          |
 | `OAuthClient`, `iOSApp`, `macOS`, `eBay`                                     | `oauth`, `client`; `ios`, `app`; `macos`; `ebay` (a short list of names)    |
-| `v1.25.1`, `हिन्दी`, `١٢٣-post`                                              | `v1.25.1`; `हिन्दी`; `١٢٣`, `post` (marks and digits of every script)       |
+| `v1.25.1`, `हिन्दी`, `١٢٣-post`                                               | `v1.25.1`; `हिन्दी`; `١٢٣`, `post` (marks and digits of every script)        |
 | `ПользовательСервис`, `用户-服务`                                            | any script, cased or not                                                    |
 
 _Why one pass:_ it runs on every file of repositories with a hundred thousand of them, and a regular

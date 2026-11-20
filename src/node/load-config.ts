@@ -47,6 +47,8 @@ export interface LoadOptions {
     readonly base?: string;
     /** Package configurations below the base, the deepest last. */
     readonly nested?: readonly NestedConfig[];
+    /** Rules besides the built-in ones, as the API's `rules` option passes them. */
+    readonly rules?: Readonly<Record<string, Rule>> | undefined;
 }
 
 /**
@@ -60,10 +62,9 @@ export async function loadConfig(
     raw: unknown,
     origin: string,
     dir: string,
-    extraRules: Readonly<Record<string, Rule>> = {},
     options: LoadOptions = {},
 ): Promise<LoadedConfig> {
-    const loader = new Loader(extraRules, options, options.base ?? dir);
+    const loader = new Loader(options, options.base ?? dir);
     await loader.applyLayer(raw, origin, dir, { own: true, chain: [], kind: 'config' });
     await loader.applyNested(options.nested ?? []);
     const own = raw as Config;
@@ -78,11 +79,7 @@ export async function loadConfig(
 }
 
 /** Reads and applies a configuration file. */
-export async function loadConfigFile(
-    path: string,
-    extraRules: Readonly<Record<string, Rule>> = {},
-    options: LoadOptions = {},
-): Promise<LoadedConfig> {
+export async function loadConfigFile(path: string, options: LoadOptions = {}): Promise<LoadedConfig> {
     if (options.code === false && isCode(path)) {
         throw new ConfigError(path, [
             {
@@ -92,7 +89,7 @@ export async function loadConfigFile(
             },
         ]);
     }
-    return loadConfig(await readConfigFile(path), path, dirname(path), extraRules, {
+    return loadConfig(await readConfigFile(path), path, dirname(path), {
         ...options,
         base: options.base ?? projectDirOf(path),
     });
@@ -122,8 +119,8 @@ class Loader {
     private readonly base: string;
 
     /** Extra rules, as `lint({ rules })` passes them: known before the configuration is checked. */
-    constructor(extraRules: Readonly<Record<string, Rule>>, options: LoadOptions, base: string) {
-        this.rules = { ...BUILT_IN_RULES, ...extraRules };
+    constructor(options: LoadOptions, base: string) {
+        this.rules = { ...BUILT_IN_RULES, ...options.rules };
         this.code = options.code !== false;
         this.base = resolve(base);
     }

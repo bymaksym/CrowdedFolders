@@ -119,7 +119,6 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
             { extends: made.extends, exclude: made.exclude, overrides: made.overrides },
             '(the command line)',
             base,
-            {},
             options,
         );
         for (const name of new Set([...misnamedConfigs(base), ...misnamedConfigs(cwd)])) {
@@ -128,14 +127,13 @@ export async function openSession(args: Args, io: Io): Promise<Session> {
             );
         }
     } else {
-        loaded = await loadConfigFile(configPath, {}, options);
+        loaded = await loadConfigFile(configPath, options);
         if (args.presets.length > 0) {
             const own = loaded.own;
             const layered = await loadConfig(
                 { extends: [...args.presets, configPath] },
                 '(the command line)',
                 dirname(configPath),
-                {},
                 options,
             );
             loaded = { ...layered, own };

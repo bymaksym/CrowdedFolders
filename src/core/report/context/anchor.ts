@@ -67,7 +67,7 @@ export function anchors(report: Report): (finding: ReportFinding) => Anchor {
  * of several); a file outside the root falls back to the run's suppressions file.
  */
 export function staleAnchor(report: Report, stale: StaleSuppression): Anchor {
-    const own = stale.file !== '' && !isAbsolutePath(stale.file) ? stale.file : undefined;
+    const own = stale.file === '' || isAbsolutePath(stale.file) ? undefined : stale.file;
     return {
         path: own ?? report.suppressionsFile ?? DEFAULT_SUPPRESSIONS_FILE,
         line: report.suppressionLines?.[`${stale.folder}\0${stale.id}`] ?? 1,

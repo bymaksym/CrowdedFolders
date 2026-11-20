@@ -62,7 +62,7 @@ export function compileGlobWith(pattern: string, matcher: 'expression' | 'machin
     const anchored = isRooted || trimmed.includes('/') ? trimmed : `**/${trimmed}`;
     const rest = anchored.startsWith('**/') ? anchored.slice(3) : undefined;
     const first = rest?.split('/', 1)[0];
-    const segment = first !== undefined && !GLOB_CHARS.test(first) ? first : undefined;
+    const segment = first === undefined || GLOB_CHARS.test(first) ? undefined : first;
     const isOneSegment = rest !== undefined && !rest.includes('/') && !rest.includes('**');
     if (matcher === undefined && isOneSegment && segment !== undefined) {
         // A plain name at any depth is the last segment of the path: no expression to run.

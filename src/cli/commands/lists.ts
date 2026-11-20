@@ -78,7 +78,7 @@ async function listed(args: Args, io: Io): Promise<Listed> {
     if (configPath === undefined) {
         return { rules: BUILT_IN_RULES, presets: BUILT_IN_PRESETS, plugins: [], configPath };
     }
-    const loaded = await loadConfigFile(configPath, {}, { code: args.code });
+    const loaded = await loadConfigFile(configPath, { code: args.code });
     return { rules: loaded.rules, presets: loaded.presets, plugins: loaded.plugins, configPath };
 }
 

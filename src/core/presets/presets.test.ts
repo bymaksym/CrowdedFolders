@@ -10,7 +10,10 @@ import { configFromDetections, detectPresets, excludesFor } from './detect.ts';
 import { BUILT_IN_PRESETS } from './index.ts';
 
 /** Applies a preset the way the loader does: what it extends first, each preset once. */
-function resolvePreset(name: string, applied = new Set<string>(), base: ResolvedConfig = EMPTY_CONFIG): ResolvedConfig {
+function resolvePreset(
+    name: string,
+    { applied = new Set<string>(), base = EMPTY_CONFIG }: { applied?: Set<string>; base?: ResolvedConfig } = {},
+): ResolvedConfig {
     if (applied.has(name)) {
         return base;
     }
@@ -19,7 +22,7 @@ function resolvePreset(name: string, applied = new Set<string>(), base: Resolved
     assert.ok(preset, name);
     let config = base;
     for (const parent of preset.config.extends ?? []) {
-        config = resolvePreset(parent, applied, config);
+        config = resolvePreset(parent, { applied, base: config });
     }
     return mergeLayer(config, preset.config, name, false);
 }
@@ -29,7 +32,7 @@ function checkAll(presets: readonly string[], files: readonly string[]): Finding
     const applied = new Set<string>();
     let config: ResolvedConfig = EMPTY_CONFIG;
     for (const name of presets) {
-        config = resolvePreset(name, applied, config);
+        config = resolvePreset(name, { applied, base: config });
     }
     return [...runEngine({ files, config, rules: BUILT_IN_RULES }).findings];
 }
@@ -324,7 +327,7 @@ describe('what the presets change', () => {
         const once: Config = { extends: ['recommended', 'react'] };
         assert.deepEqual(
             resolvePreset('nextjs').rules,
-            resolvePreset('nextjs', new Set(['recommended']), resolvePreset('recommended')).rules,
+            resolvePreset('nextjs', { applied: new Set(['recommended']), base: resolvePreset('recommended') }).rules,
         );
         assert.ok(once);
     });

@@ -38,8 +38,7 @@ interface Ran {
 async function cli(
     cwd: string,
     args: readonly string[],
-    stdin = '',
-    env: Readonly<Record<string, string>> = {},
+    { stdin = '', env = {} }: { stdin?: string; env?: Readonly<Record<string, string>> } = {},
 ): Promise<Ran> {
     let out = '';
     let error = '';
@@ -74,7 +73,7 @@ describe('the command', () => {
         assert.equal(ran.code, 1);
         assert.match(ran.out, /cli\/\n {2}error {2}prefix-groups {2}4 modules start with "render"/u);
         assert.match(ran.err, /No configuration file: used the presets detected - recommended/u);
-        const terminal = await cli(root, [], '', { FORCE_COLOR: '1' });
+        const terminal = await cli(root, [], { env: { FORCE_COLOR: '1' } });
         assert.match(terminal.err, /used the presets detected — recommended/u);
     });
 
@@ -123,7 +122,7 @@ describe('the command', () => {
 
     it('reads the file list from standard input', async () => {
         const root = repository({});
-        const ran = await cli(root, ['--stdin', '--format', 'json'], Object.keys(render).join('\n'));
+        const ran = await cli(root, ['--stdin', '--format', 'json'], { stdin: Object.keys(render).join('\n') });
         assert.equal(ran.code, 1);
         const json = JSON.parse(ran.out) as { findings: { key: string }[]; summary: { filesChecked: number } };
         assert.equal(json.findings[0]?.key, 'render');
@@ -474,15 +473,15 @@ describe('where it reads the files from', () => {
         const plain = await cli(root, []);
         assert.equal(plain.code, 1);
         assert.match(plain.err, /is not in a git repository: the files were read from the disk/u);
-        const ci = await cli(root, [], '', { CI: 'true' });
+        const ci = await cli(root, [], { env: { CI: 'true' } });
         assert.equal(ci.code, 2);
         assert.match(ci.err, /pass --no-git/u);
         assert.match(ci.err, /the default in CI, CI=true/u);
         // Jenkins sets JENKINS_URL, not CI.
-        const jenkins = await cli(root, [], '', { JENKINS_URL: 'http://jenkins:8080/' });
+        const jenkins = await cli(root, [], { env: { JENKINS_URL: 'http://jenkins:8080/' } });
         assert.equal(jenkins.code, 2);
         assert.match(jenkins.err, /the default in CI, JENKINS_URL=http:\/\/jenkins:8080\//u);
-        const disk = await cli(root, ['--no-git'], '', { CI: 'true' });
+        const disk = await cli(root, ['--no-git'], { env: { CI: 'true' } });
         assert.equal(disk.code, 1);
         assert.doesNotMatch(disk.err, /not in a git repository/u);
         assert.equal((await cli(root, ['--require-git'])).code, 2);
@@ -541,7 +540,9 @@ describe('where it reads the files from', () => {
             ...Object.fromEntries(Object.keys(render).map(path => [`src/${path}`, ''])),
             'src/a.ts': '',
         });
-        const fromHere = await cli(join(root, 'src'), ['--stdin', '--format', 'json'], Object.keys(render).join('\n'));
+        const fromHere = await cli(join(root, 'src'), ['--stdin', '--format', 'json'], {
+            stdin: Object.keys(render).join('\n'),
+        });
         assert.deepEqual(
             (JSON.parse(fromHere.out) as JsonReport).findings.map(finding => finding.folder),
             ['src/cli'],
@@ -549,7 +550,7 @@ describe('where it reads the files from', () => {
         const fromRoot = Object.keys(render)
             .map(path => `src/${path}`)
             .join('\n');
-        const asDiff = await cli(join(root, 'src'), ['--stdin', '--format', 'json'], fromRoot);
+        const asDiff = await cli(join(root, 'src'), ['--stdin', '--format', 'json'], { stdin: fromRoot });
         assert.deepEqual(
             (JSON.parse(asDiff.out) as JsonReport).findings.map(finding => finding.folder),
             ['src/cli'],
@@ -561,12 +562,12 @@ describe('where it reads the files from', () => {
         const absolute = Object.keys(render)
             .map(path => join(root, path))
             .join('\n');
-        const ran = await cli(root, ['--stdin', '--format', 'json'], absolute);
+        const ran = await cli(root, ['--stdin', '--format', 'json'], { stdin: absolute });
         assert.deepEqual(
             (JSON.parse(ran.out) as JsonReport).findings.map(finding => finding.folder),
             ['cli'],
         );
-        const elsewhere = await cli(root, ['--stdin'], `${join(tmpdir(), 'elsewhere', 'a.ts')}\nb.ts`);
+        const elsewhere = await cli(root, ['--stdin'], { stdin: `${join(tmpdir(), 'elsewhere', 'a.ts')}\nb.ts` });
         assert.equal(elsewhere.code, 2);
         assert.match(elsewhere.err, /is absolute and not under the root/u);
     });
@@ -577,7 +578,7 @@ describe('where it reads the files from', () => {
             ...Object.fromEntries(Object.keys(render).map(path => [path.replace('cli/', 'src/__generated__/'), ''])),
         });
         const list = Object.keys(render).map(path => path.replace('cli/', 'src/__generated__/'));
-        const ran = await cli(root, ['--stdin', '--format', 'json'], ['.gitattributes', ...list].join('\n'));
+        const ran = await cli(root, ['--stdin', '--format', 'json'], { stdin: ['.gitattributes', ...list].join('\n') });
         assert.equal(ran.code, 0, ran.out);
         assert.deepEqual((JSON.parse(ran.out) as JsonReport).findings, []);
     });
@@ -585,7 +586,7 @@ describe('where it reads the files from', () => {
     it('leaves out a tree ten thousand folders deep with a notice, instead of overflowing the stack', async () => {
         const root = repository({});
         const deep = `${Array.from({ length: 10_000 }, () => 'd').join('/')}/x.ts`;
-        const ran = await cli(root, ['--stdin'], `${deep}\na.ts\n`);
+        const ran = await cli(root, ['--stdin'], { stdin: `${deep}\na.ts\n` });
         assert.equal(ran.code, 0, ran.err);
         assert.match(ran.err, /1 file deeper than 256 folders left out/u);
         assert.match(ran.out, /1 file checked/u);

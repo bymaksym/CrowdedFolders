@@ -57,7 +57,10 @@ function parseSide(text: string): MirrorSide | string {
             return `"${segment}" is not a folder name: only a "**" at the start or at the end stands for a part of the path`;
         }
     }
-    return fixed.length === 0 && trailing ? 'names no folder' : { leading, trailing, fixed };
+    // Built apart from the return: there the object is typed against `MirrorSide | string`, and
+    // typescript-eslint reads `fixed` as the deprecated String#fixed.
+    const side: MirrorSide = { leading, trailing, fixed };
+    return fixed.length === 0 && trailing ? 'names no folder' : side;
 }
 
 /** The folder that mirrors `path` (`src/test/java/x` for `src/main/java/x`); `undefined` when the mirror does not apply. */

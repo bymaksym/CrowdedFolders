@@ -219,13 +219,9 @@ describe('configurations of packages', () => {
                 ],
             }),
         });
-        const loaded = await loadConfigFile(
-            join(root, 'crowded-folders.config.json'),
-            {},
-            {
-                nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
-            },
-        );
+        const loaded = await loadConfigFile(join(root, 'crowded-folders.config.json'), {
+            nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
+        });
         assert.ok(loaded.config.exclude.includes('apps/web/legacy'));
         const files = [
             ...many('apps/web/src/', 6),
@@ -248,13 +244,9 @@ describe('configurations of packages', () => {
             'crowded-folders.config.json': '{}',
             'apps/web/crowded-folders.config.json': '{ "rules": { "max-files": ["error", { "max": 5 }] } }',
         });
-        const loaded = await loadConfigFile(
-            join(root, 'crowded-folders.config.json'),
-            {},
-            {
-                nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
-            },
-        );
+        const loaded = await loadConfigFile(join(root, 'crowded-folders.config.json'), {
+            nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
+        });
         assert.equal(loaded.warnings.length, 1);
         assert.match(loaded.warnings[0] ?? '', /is not read when checking from .*Add "root": false to it/u);
     });
@@ -265,13 +257,9 @@ describe('configurations of packages', () => {
             'apps/web/crowded-folders.config.json': '{ "root": false, "include": ["src"] }',
         });
         await rejects(
-            loadConfigFile(
-                join(root, 'crowded-folders.config.json'),
-                {},
-                {
-                    nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
-                },
-            ),
+            loadConfigFile(join(root, 'crowded-folders.config.json'), {
+                nested: [{ path: join(root, 'apps/web/crowded-folders.config.json'), folder: 'apps/web' }],
+            }),
             /include: a package configuration \("root": false\) cannot set include/u,
         );
     });
@@ -355,16 +343,10 @@ describe('--no-code and plugins', () => {
             'plugin.mjs': "export default { meta: { name: 'x', namespace: 'x' } };",
         });
         const noCode = { code: false } as const;
-        await rejects(
-            loadConfigFile(join(root, 'crowded-folders.config.mjs'), {}, noCode),
-            /--no-code reads only JSON/u,
-        );
-        await rejects(
-            loadConfig({ extends: ['./base.mjs'] }, 'mine.json', root, {}, noCode),
-            /JavaScript, and --no-code/u,
-        );
-        await rejects(loadConfig({ plugins: ['./plugin.mjs'] }, 'mine.json', root, {}, noCode), /a plugin is code/u);
-        const json = await loadConfig({ extends: ['./base.json'] }, 'mine.json', root, {}, noCode);
+        await rejects(loadConfigFile(join(root, 'crowded-folders.config.mjs'), noCode), /--no-code reads only JSON/u);
+        await rejects(loadConfig({ extends: ['./base.mjs'] }, 'mine.json', root, noCode), /JavaScript, and --no-code/u);
+        await rejects(loadConfig({ plugins: ['./plugin.mjs'] }, 'mine.json', root, noCode), /a plugin is code/u);
+        const json = await loadConfig({ extends: ['./base.json'] }, 'mine.json', root, noCode);
         assert.equal(json.config.rules['max-files']?.severity, 'warn');
     });
 });

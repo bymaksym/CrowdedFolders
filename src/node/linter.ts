@@ -148,15 +148,15 @@ async function open(options: LinterOptions): Promise<{ linter: Linter; listed: r
     let detected: Detection[] | undefined;
     let loaded: LoadedConfig;
     if (configPath !== undefined) {
-        loaded = await loadConfigFile(configPath, options.rules);
+        loaded = await loadConfigFile(configPath, { rules: options.rules });
     } else if (configObject === undefined) {
         // No configuration: the presets of the repository, as the command detects them.
         listed = filesOf(options.files, root);
         const detection = detectConfig(root, listed);
         detected = detection.detected;
-        loaded = await loadConfig(detection.config, ORIGIN, root, options.rules);
+        loaded = await loadConfig(detection.config, ORIGIN, root, { rules: options.rules });
     } else {
-        loaded = await loadConfig(configObject, ORIGIN, root, options.rules);
+        loaded = await loadConfig(configObject, ORIGIN, root, { rules: options.rules });
     }
     const presets = detected?.map(detection => detection.preset) ?? presetsOf(loaded.config.layers);
     const { config, rules } = loaded;
