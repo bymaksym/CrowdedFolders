@@ -245,7 +245,7 @@ describe('what the presets change', () => {
         );
     });
 
-    it('angular gives its hint only to a folder named after a type, and only on TypeScript (espaciot-app, Ideas Crowded Folders 8)', () => {
+    it('angular gives its hint only to a folder named after a type, and only on TypeScript (Ideas Crowded Folders 8)', () => {
         const hinted = /by type|Angular/u;
         const messages = (files: string[]): string[] => check('angular', files).map(finding => finding.message);
         assert.match(messages(series('src/app/components', 25, index => `part${letters(index)}.ts`))[0] ?? '', hinted);
@@ -331,7 +331,7 @@ describe('what the presets change', () => {
 });
 
 describe('recommended, after the review of 21-10-2026', () => {
-    it('reads validate-i18n as being about i18n in scripts/ and tooling/ (espaciot-app), and not in src/', () => {
+    it('reads validate-i18n as being about i18n in scripts/ and tooling/, and not in src/', () => {
         const verbs = ['validate-i18n', 'validate-links', 'validate-schema', 'validate-env', 'check-docs'];
         const names = verbs.map(name => `${name}.mjs`);
         assert.deepEqual(check('recommended', [...inFolder('tooling', names), ...inFolder('scripts', names)]), []);
