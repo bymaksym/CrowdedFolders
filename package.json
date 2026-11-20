@@ -109,7 +109,6 @@
         "@commitlint/config-conventional": "^21.2.4",
         "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
         "@eslint/js": "^10.0.1",
-        "@secretlint/secretlint-rule-preset-recommend": "^13.1.0",
         "@types/node": "~20.19.43",
         "cspell": "^10.5.1",
         "eslint": "^10.15.0",
