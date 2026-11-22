@@ -229,7 +229,7 @@ test('reports a utils folder', async () => {
 
 - **Name:** `crowded-folders-plugin-<name>` or `@scope/crowded-folders-plugin[-<name>]`, with the keyword
   `crowded-folders-plugin` so it can be found.
-- **`peerDependencies`:** `"crowded-folders": "^1.0.0"`, not a dependency: the plugin uses the user's copy.
+- **`peerDependencies`:** `"crowded-folders": "^1.0.1"`, not a dependency: the plugin uses the user's copy. <!-- x-release-please-version -->
   It is read when the plugin loads: a plugin whose range does not take the running version is refused
   with both versions, instead of failing halfway through a run.
 - **`exports`:** a `"."` entry with an `import` or `default` condition; subpath patterns (`"./*"`) work.

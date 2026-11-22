@@ -34,12 +34,15 @@ function pluginPackage(name: string, manifest: Record<string, unknown>, index: s
 
 const RULE = `{ meta: { description: 'd', defaultOptions: {} }, check() {} }`;
 
+/** A range for the major after this one, whatever this one is: "another major" stays another one at every release. */
+const NEXT_MAJOR = `^${Number(OWN_VERSION.split('.', 1)[0]) + 1}.0.0`;
+
 describe('plugin versions (peerDependencies)', () => {
     it('refuses a plugin made for another major version, with both versions, before it runs', async () => {
         const root = folder(
             pluginPackage(
                 'crowded-folders-plugin-future',
-                { version: '3.1.0', peerDependencies: { 'crowded-folders': '^2.0.0' } },
+                { version: '3.1.0', peerDependencies: { 'crowded-folders': NEXT_MAJOR } },
                 `export default { meta: { name: 'crowded-folders-plugin-future', namespace: 'future' }, rules: { a: ${RULE} } };`,
             ),
         );
@@ -50,7 +53,7 @@ describe('plugin versions (peerDependencies)', () => {
                 assert.match(
                     error.message,
                     new RegExp(
-                        String.raw`"crowded-folders-plugin-future" 3\.1\.0 is made for crowded-folders \^2\.0\.0 \(its peerDependencies\), and this is ${OWN_VERSION.replaceAll('.', String.raw`\.`)}`,
+                        String.raw`"crowded-folders-plugin-future" 3\.1\.0 is made for crowded-folders \^${NEXT_MAJOR.slice(1).replaceAll('.', String.raw`\.`)} \(its peerDependencies\), and this is ${OWN_VERSION.replaceAll('.', String.raw`\.`)}`,
                         'u',
                     ),
                 );

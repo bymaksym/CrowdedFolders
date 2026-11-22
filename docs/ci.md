@@ -446,7 +446,7 @@ those folders, what is under them, and their suppressions are looked at.
 
 The check reads file names only, so it needs no build: a step before the build, or a task of its own, is
 enough. Each recipe pins the version, like the CI ones. **Renovate and Dependabot do not update a version
-written inside a command** (`npx crowded-folders@1.2.3` in a `run:`, a Makefile or a `pom.xml`). Either
+written inside a command** (`npx crowded-folders@x.y.z` in a `run:`, a Makefile or a `pom.xml`). Either
 install crowded-folders as a devDependency, which they do update, and run `npx --no-install crowded-folders`,
 or give Renovate a [regex manager](https://docs.renovatebot.com/modules/manager/regex/) for the line.
 

@@ -11,7 +11,20 @@
                 "docs/distribution.md",
                 "docs/plugins.md",
                 ".pre-commit-hooks.yaml",
-                "src/core/docs-url.ts"
+                "src/core/docs-url.ts",
+                "docs/configuring.md",
+                "docs/configuration.md",
+                "docs/presets.md",
+                {
+                    "type": "json",
+                    "path": "schema.json",
+                    "jsonpath": "$..markdownDescription"
+                },
+                {
+                    "type": "json",
+                    "path": "examples/plugin/package.json",
+                    "jsonpath": "$.peerDependencies['crowded-folders']"
+                }
             ]
         }
     }

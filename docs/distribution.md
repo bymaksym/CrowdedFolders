@@ -26,10 +26,11 @@ Each holds the executable and the licence; `SHA256SUMS` lists the checksum of ev
 <!-- x-release-please-start-version -->
 
 ```sh
-curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.1/crowded-folders-v1.0.1-linux-x64.tar.gz
-curl -fsSLO https://github.com/bymaksym/CrowdedFolders/releases/download/v1.0.1/SHA256SUMS
+version=1.0.1
+curl -fsSLO "https://github.com/bymaksym/CrowdedFolders/releases/download/v$version/crowded-folders-v$version-linux-x64.tar.gz"
+curl -fsSLO "https://github.com/bymaksym/CrowdedFolders/releases/download/v$version/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS      # shasum -a 256 -c on macOS
-tar -xzf crowded-folders-v1.0.1-linux-x64.tar.gz
+tar -xzf "crowded-folders-v$version-linux-x64.tar.gz"
 ./crowded-folders --version
 ```
 
@@ -148,9 +149,9 @@ which is most of what the listing asks for.
 - [ ] The account has two-factor authentication and has accepted the Marketplace Developer Agreement (the
       first time it publishes a release this way, GitHub asks).
 - [ ] The README says how to use it: the one in the root is the page the listing shows, so it needs a
-      short `uses: bymaksym/CrowdedFolders@v1` example near the top, which [ci.md](ci.md) has.
+      short `uses: bymaksym/CrowdedFolders@v1` example near the top, which [ci.md](ci.md) has. <!-- x-release-please-major -->
 - [ ] A release exists with a tag that follows semantic versioning (release-please makes them), and the
-      major tag (`v1`) is moved to it, so that `@v1` works. Check that something moves it.
+      major tag is moved to it, so that `@v1` works. Check that something moves it. <!-- x-release-please-major -->
 - [ ] On the release's page: _Publish this Action to the GitHub Marketplace_, with a primary category
       (_Code quality_) and optionally a second one (_Continuous integration_).
 - [ ] `fail-on`, `sarif` and the permissions each needs are documented in [ci.md](ci.md#github-actions).

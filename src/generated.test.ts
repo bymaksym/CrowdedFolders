@@ -19,6 +19,7 @@ import { TOOL } from './cli/tool.ts';
 import type { JsonSchema } from './core/config/json-schema.ts';
 import { configSchema, pinnedSchemaUrl } from './core/config/schema.ts';
 import type { Config, Preset, RuleSetting } from './core/config/types.ts';
+import { REPOSITORY_URL } from './core/docs-url.ts';
 import { BUILT_IN_PRESETS } from './core/presets/index.ts';
 import { BUILT_IN_RULES } from './core/rules/index.ts';
 
@@ -97,7 +98,7 @@ function configurationReference(): string {
         '',
         'Every setting of `crowded-folders.config.json` (or `.jsonc`, `.mjs`, `.config/crowded-folders.json`, or a',
         '`"crowded-folders"` key in `package.json`). Point `$schema` at',
-        `\`${pinnedSchemaUrl(TOOL.version)}\` and your editor completes and checks all of it.`,
+        `\`${pinnedSchemaUrl(TOOL.version)}\` and your editor completes and checks all of it. <!-- x-release-please-major -->`,
         '',
         'This page is the reference: every setting, its type and its default. How to use them, with examples, is the',
         'guide, [configuring.md](configuring.md).',
@@ -245,7 +246,9 @@ function presetsPage(): string {
     for (const [name, preset] of Object.entries(BUILT_IN_PRESETS)) {
         lines.push('', `## ${name}`, '', preset.description, '', ...configSummary(preset.config), '', 'Sources:', '');
         for (const source of preset.sources) {
-            lines.push(`- [${source.title}](${source.url})`);
+            // A page of this repository names the version: release-please moves it with each release.
+            const marker = source.url.startsWith(`${REPOSITORY_URL}/`) ? ' <!-- x-release-please-version -->' : '';
+            lines.push(`- [${source.title}](${source.url})${marker}`);
         }
     }
     return `${lines.join('\n')}\n`;

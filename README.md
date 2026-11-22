@@ -106,7 +106,7 @@ configuration looks like once the team has made it its own:
 ```jsonc
 // crowded-folders.config.json — comments are allowed
 {
-    "$schema": "https://unpkg.com/crowded-folders@1/schema.json",
+    "$schema": "https://unpkg.com/crowded-folders@1/schema.json", // x-release-please-major
     "extends": ["recommended", "react"],
     "rules": {
         "prefix-groups": ["error", { "ignore": ["check"] }],
