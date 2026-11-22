@@ -26,7 +26,7 @@ Each holds the executable and the licence; `SHA256SUMS` lists the checksum of ev
 <!-- x-release-please-start-version -->
 
 ```sh
-version=1.0.1
+version=2.0.0
 curl -fsSLO "https://github.com/bymaksym/CrowdedFolders/releases/download/v$version/crowded-folders-v$version-linux-x64.tar.gz"
 curl -fsSLO "https://github.com/bymaksym/CrowdedFolders/releases/download/v$version/SHA256SUMS"
 sha256sum --check --ignore-missing SHA256SUMS      # shasum -a 256 -c on macOS
@@ -81,7 +81,7 @@ one, with git, which is the only thing missing:
 
 ```sh
 docker run --rm -v "$PWD":/repo -w /repo node:24-alpine sh -c \
-  'apk add --no-cache git && git config --global --add safe.directory /repo && npx --yes crowded-folders@1.0.1'
+  'apk add --no-cache git && git config --global --add safe.directory /repo && npx --yes crowded-folders@2.0.0'
 ```
 
 `safe.directory` is needed because the mounted folder belongs to another user than the container's, and git
@@ -90,7 +90,7 @@ refuses to list it otherwise. In a Dockerfile of your own, for CI:
 ```dockerfile
 FROM node:24-alpine
 RUN apk add --no-cache git
-ENTRYPOINT ["npx", "--yes", "crowded-folders@1.0.1"]
+ENTRYPOINT ["npx", "--yes", "crowded-folders@2.0.0"]
 ```
 
 <!-- x-release-please-end -->
@@ -149,9 +149,9 @@ which is most of what the listing asks for.
 - [ ] The account has two-factor authentication and has accepted the Marketplace Developer Agreement (the
       first time it publishes a release this way, GitHub asks).
 - [ ] The README says how to use it: the one in the root is the page the listing shows, so it needs a
-      short `uses: bymaksym/CrowdedFolders@v1` example near the top, which [ci.md](ci.md) has. <!-- x-release-please-major -->
+      short `uses: bymaksym/CrowdedFolders@v2` example near the top, which [ci.md](ci.md) has. <!-- x-release-please-major -->
 - [ ] A release exists with a tag that follows semantic versioning (release-please makes them), and the
-      major tag is moved to it, so that `@v1` works. Check that something moves it. <!-- x-release-please-major -->
+      major tag is moved to it, so that `@v2` works. Check that something moves it. <!-- x-release-please-major -->
 - [ ] On the release's page: _Publish this Action to the GitHub Marketplace_, with a primary category
       (_Code quality_) and optionally a second one (_Continuous integration_).
 - [ ] `fail-on`, `sarif` and the permissions each needs are documented in [ci.md](ci.md#github-actions).

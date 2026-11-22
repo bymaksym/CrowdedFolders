@@ -68,7 +68,7 @@ The two rules that matter, at limits measured on real repositories: at most 20 m
 
 Sources:
 
-- [docs/field-trial.md: the 20 modules and the 4 of prefix-groups, measured over 36 repositories](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/field-trial.md) <!-- x-release-please-version -->
+- [docs/field-trial.md: the 20 modules and the 4 of prefix-groups, measured over 36 repositories](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/field-trial.md) <!-- x-release-please-version -->
 - [Flyway: versioned migrations are named like V001.002__NewTwitterColumn.sql, repeatable ones R__SetDefaults.sql](https://documentation.red-gate.com/flyway/flyway-concepts/migrations/versioned-migrations)
 - [golang-migrate: {version}_{title}.up.{extension} and {version}_{title}.down.{extension}](https://github.com/golang-migrate/migrate/blob/master/MIGRATIONS.md)
 - [fastlane deliver: "The folder has to be structured like this" (fastlane/metadata/en-US)](https://docs.fastlane.tools/actions/deliver/)

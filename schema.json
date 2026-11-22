@@ -8,12 +8,12 @@
         "$schema": {
             "type": "string",
             "description": "This schema, for editors.",
-            "markdownDescription": "This schema, for editors.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "This schema, for editors.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "root": {
             "type": "boolean",
             "description": "false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true.",
-            "markdownDescription": "false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "false: the configuration of a package in a repository whose own configuration is above. Checked from the top, it applies to this folder (its patterns start here); checked from here, the top configuration is used, with its root and suppressions, and only this folder is checked. It cannot set plugins, include or suppressions. Default: true.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "extends": {
             "type": "array",
@@ -159,7 +159,7 @@
                 ]
             },
             "description": "Presets and configurations applied before this one, in order; later ones win.",
-            "markdownDescription": "Presets and configurations applied before this one, in order; later ones win.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "Presets and configurations applied before this one, in order; later ones win.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "plugins": {
             "type": "array",
@@ -169,7 +169,7 @@
             },
             "uniqueItems": true,
             "description": "Packages or files whose default export is a plugin: more rules and presets.",
-            "markdownDescription": "Packages or files whose default export is a plugin: more rules and presets.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "Packages or files whose default export is a plugin: more rules and presets.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "include": {
             "type": "array",
@@ -178,7 +178,7 @@
                 "minLength": 1
             },
             "description": "Globs of the files looked at; like exclude, a pattern matches a file or any folder above it (\"src\" takes everything in src). Default: every file git knows about, or every file under the root without git.",
-            "markdownDescription": "Globs of the files looked at; like exclude, a pattern matches a file or any folder above it (\"src\" takes everything in src). Default: every file git knows about, or every file under the root without git.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "Globs of the files looked at; like exclude, a pattern matches a file or any folder above it (\"src\" takes everything in src). Default: every file git knows about, or every file under the root without git.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "exclude": {
             "type": "array",
@@ -187,7 +187,7 @@
                 "minLength": 1
             },
             "description": "Globs of files and folders left out, on top of .gitignore. A pattern without \"/\" matches at any depth; \"!x\" removes an inherited x, and brings no file back.",
-            "markdownDescription": "Globs of files and folders left out, on top of .gitignore. A pattern without \"/\" matches at any depth; \"!x\" removes an inherited x, and brings no file back.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "Globs of files and folders left out, on top of .gitignore. A pattern without \"/\" matches at any depth; \"!x\" removes an inherited x, and brings no file back.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "naming": {
             "type": "object",
@@ -214,7 +214,7 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Regular expressions removed from each stem, so that companion files join their module: \"_test$\" makes foo_test.go part of foo.go; \"^test_\" makes test_foo.py part of foo.py.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Regular expressions removed from each stem, so that companion files join their module: \"_test$\" makes foo_test.go part of foo.go; \"^test_\" makes test_foo.py part of foo.py.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "ignoreLeadingWords": {
                     "type": "array",
@@ -224,13 +224,13 @@
                     },
                     "description": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.",
                     "default": [],
-                    "markdownDescription": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "groupNumericPrefixes": {
                     "type": "boolean",
                     "description": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.",
                     "default": false,
-                    "markdownDescription": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "folderFiles": {
                     "type": "array",
@@ -249,7 +249,7 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "folderCompanions": {
                     "type": "array",
@@ -264,7 +264,7 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: \".meta\" makes the Scripts.meta of Unity part of Scripts/.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: \".meta\" makes the Scripts.meta of Unity part of Scripts/.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "folderCase": {
                     "enum": [
@@ -276,7 +276,7 @@
                     ],
                     "description": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).",
                     "default": "kebab",
-                    "markdownDescription": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).\n\nDefault: `\"kebab\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).\n\nDefault: `\"kebab\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "reservedWords": {
                     "type": "array",
@@ -293,7 +293,7 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "keepInPlace": {
                     "type": "array",
@@ -311,19 +311,19 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "routes": {
                     "type": "boolean",
                     "description": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.",
                     "default": false,
-                    "markdownDescription": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "groupFileStays": {
                     "type": "boolean",
                     "description": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.",
                     "default": false,
-                    "markdownDescription": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 },
                 "mirrors": {
                     "type": "array",
@@ -341,10 +341,10 @@
                         ]
                     ],
                     "default": [],
-                    "markdownDescription": "Trees that mirror another one, as \"source => mirror\", where \"**\" stands for the part both share: \"**/src/main/java/** => **/src/test/java/**\". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+                    "markdownDescription": "Trees that mirror another one, as \"source => mirror\", where \"**\" stands for the part both share: \"**/src/main/java/** => **/src/test/java/**\". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
                 }
             },
-            "markdownDescription": "How file names are read. Lists accumulate across presets; \"!x\" removes an inherited \"x\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#naming)"
+            "markdownDescription": "How file names are read. Lists accumulate across presets; \"!x\" removes an inherited \"x\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#naming)"
         },
         "rules": {
             "type": "object",
@@ -381,7 +381,7 @@
                                             "minimum": 1,
                                             "description": "How many it may hold.",
                                             "default": 20,
-                                            "markdownDescription": "How many it may hold.\n\nDefault: `20`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "How many it may hold.\n\nDefault: `20`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "count": {
                                             "enum": [
@@ -390,27 +390,27 @@
                                             ],
                                             "description": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).",
                                             "default": "files",
-                                            "markdownDescription": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).\n\nDefault: `\"files\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).\n\nDefault: `\"files\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "filesPerModule": {
                                             "type": "integer",
                                             "minimum": 0,
                                             "description": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.",
                                             "default": 0,
-                                            "markdownDescription": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "warnAbove": {
                                             "type": "integer",
                                             "minimum": 0,
                                             "description": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.",
                                             "default": 0,
-                                            "markdownDescription": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "hint": {
                                             "type": "string",
                                             "description": "Added to the message: how to split in this ecosystem, or what a new folder costs.",
                                             "default": "",
-                                            "markdownDescription": "Added to the message: how to split in this ecosystem, or what a new folder costs.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "Added to the message: how to split in this ecosystem, or what a new folder costs.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "hintFor": {
                                             "type": "array",
@@ -420,13 +420,13 @@
                                             },
                                             "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.",
                                             "default": [],
-                                            "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         },
                                         "dotfiles": {
                                             "type": "boolean",
                                             "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].",
                                             "default": false,
-                                            "markdownDescription": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-files)"
+                                            "markdownDescription": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-files)"
                                         }
                                     }
                                 }
@@ -435,7 +435,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A folder holds at most `max` files (or modules): past that it is scrolled, not read.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/max-files.md)"
+                    "markdownDescription": "A folder holds at most `max` files (or modules): past that it is scrolled, not read.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/max-files.md)"
                 },
                 "prefix-groups": {
                     "description": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.",
@@ -468,7 +468,7 @@
                                             "minimum": 2,
                                             "description": "How many modules sharing a prefix make a group.",
                                             "default": 4,
-                                            "markdownDescription": "How many modules sharing a prefix make a group.\n\nDefault: `4`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "How many modules sharing a prefix make a group.\n\nDefault: `4`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         },
                                         "words": {
                                             "anyOf": [
@@ -484,7 +484,7 @@
                                             ],
                                             "description": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).",
                                             "default": 1,
-                                            "markdownDescription": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).\n\nDefault: `1`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).\n\nDefault: `1`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         },
                                         "ignore": {
                                             "type": "array",
@@ -495,7 +495,7 @@
                                             "uniqueItems": true,
                                             "description": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.",
                                             "default": [],
-                                            "markdownDescription": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         },
                                         "hintFor": {
                                             "type": "array",
@@ -505,19 +505,19 @@
                                             },
                                             "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.",
                                             "default": [],
-                                            "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         },
                                         "dropPrefix": {
                                             "type": "boolean",
                                             "description": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.",
                                             "default": true,
-                                            "markdownDescription": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.\n\nDefault: `true`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.\n\nDefault: `true`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         },
                                         "hint": {
                                             "type": "string",
                                             "description": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").",
                                             "default": "",
-                                            "markdownDescription": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#prefix-groups)"
+                                            "markdownDescription": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#prefix-groups)"
                                         }
                                     }
                                 }
@@ -526,7 +526,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/prefix-groups.md)"
+                    "markdownDescription": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/prefix-groups.md)"
                 },
                 "max-folders": {
                     "description": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.",
@@ -559,7 +559,7 @@
                                             "minimum": 1,
                                             "description": "How many subfolders it may hold.",
                                             "default": 30,
-                                            "markdownDescription": "How many subfolders it may hold.\n\nDefault: `30`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#max-folders)"
+                                            "markdownDescription": "How many subfolders it may hold.\n\nDefault: `30`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#max-folders)"
                                         }
                                     }
                                 }
@@ -568,7 +568,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/max-folders.md)"
+                    "markdownDescription": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/max-folders.md)"
                 },
                 "redundant-prefix": {
                     "description": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.",
@@ -601,7 +601,7 @@
                                             "minimum": 1,
                                             "description": "How many modules have to repeat the name before it is reported: 1 reports every one.",
                                             "default": 2,
-                                            "markdownDescription": "How many modules have to repeat the name before it is reported: 1 reports every one.\n\nDefault: `2`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#redundant-prefix)"
+                                            "markdownDescription": "How many modules have to repeat the name before it is reported: 1 reports every one.\n\nDefault: `2`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#redundant-prefix)"
                                         }
                                     }
                                 }
@@ -610,7 +610,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/redundant-prefix.md)"
+                    "markdownDescription": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/redundant-prefix.md)"
                 },
                 "single-file-folders": {
                     "description": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.",
@@ -646,7 +646,7 @@
                                             },
                                             "description": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.",
                                             "default": [],
-                                            "markdownDescription": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#single-file-folders)"
+                                            "markdownDescription": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#single-file-folders)"
                                         }
                                     }
                                 }
@@ -655,7 +655,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/single-file-folders.md)"
+                    "markdownDescription": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/single-file-folders.md)"
                 },
                 "case-collision": {
                     "description": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.",
@@ -689,7 +689,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/case-collision.md)"
+                    "markdownDescription": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/case-collision.md)"
                 },
                 "scattered-feature": {
                     "description": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.",
@@ -736,14 +736,14 @@
                                                 "entity",
                                                 "mapper"
                                             ],
-                                            "markdownDescription": "Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`.\n\nDefault: `[\"controller\",\"service\",\"repository\",\"repo\",\"dao\",\"dto\",\"model\",\"entity\",\"mapper\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#scattered-feature)"
+                                            "markdownDescription": "Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`.\n\nDefault: `[\"controller\",\"service\",\"repository\",\"repo\",\"dao\",\"dto\",\"model\",\"entity\",\"mapper\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#scattered-feature)"
                                         },
                                         "min": {
                                             "type": "integer",
                                             "minimum": 2,
                                             "description": "In how many layer folders of one folder a word has to start a name to be reported.",
                                             "default": 3,
-                                            "markdownDescription": "In how many layer folders of one folder a word has to start a name to be reported.\n\nDefault: `3`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#scattered-feature)"
+                                            "markdownDescription": "In how many layer folders of one folder a word has to start a name to be reported.\n\nDefault: `3`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#scattered-feature)"
                                         },
                                         "ignore": {
                                             "type": "array",
@@ -754,13 +754,13 @@
                                             "uniqueItems": true,
                                             "description": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.",
                                             "default": [],
-                                            "markdownDescription": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#scattered-feature)"
+                                            "markdownDescription": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#scattered-feature)"
                                         },
                                         "hint": {
                                             "type": "string",
                                             "description": "Added to the message: what a feature folder is in this ecosystem.",
                                             "default": "",
-                                            "markdownDescription": "Added to the message: what a feature folder is in this ecosystem.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#scattered-feature)"
+                                            "markdownDescription": "Added to the message: what a feature folder is in this ecosystem.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#scattered-feature)"
                                         }
                                     }
                                 }
@@ -769,7 +769,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/scattered-feature.md)"
+                    "markdownDescription": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/scattered-feature.md)"
                 },
                 "orphan-companions": {
                     "description": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.",
@@ -811,13 +811,13 @@
                                                 ".import",
                                                 ".uid"
                                             ],
-                                            "markdownDescription": "The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. \"!.uid\" takes one out.\n\nDefault: `[\".meta\",\".import\",\".uid\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#orphan-companions)"
+                                            "markdownDescription": "The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. \"!.uid\" takes one out.\n\nDefault: `[\".meta\",\".import\",\".uid\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#orphan-companions)"
                                         },
                                         "emptyFolders": {
                                             "type": "boolean",
                                             "description": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.",
                                             "default": false,
-                                            "markdownDescription": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#orphan-companions)"
+                                            "markdownDescription": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#orphan-companions)"
                                         }
                                     }
                                 }
@@ -826,7 +826,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/orphan-companions.md)"
+                    "markdownDescription": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/orphan-companions.md)"
                 },
                 "type-folders": {
                     "description": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.",
@@ -868,13 +868,13 @@
                                                 "textures",
                                                 "materials"
                                             ],
-                                            "markdownDescription": "Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`.\n\nDefault: `[\"assets\",\"meshes\",\"textures\",\"materials\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#type-folders)"
+                                            "markdownDescription": "Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`.\n\nDefault: `[\"assets\",\"meshes\",\"textures\",\"materials\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#type-folders)"
                                         },
                                         "hint": {
                                             "type": "string",
                                             "description": "Added to the message: the guide's words, where they come from.",
                                             "default": "",
-                                            "markdownDescription": "Added to the message: the guide's words, where they come from.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#type-folders)"
+                                            "markdownDescription": "Added to the message: the guide's words, where they come from.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#type-folders)"
                                         }
                                     }
                                 }
@@ -883,7 +883,7 @@
                             "maxItems": 2
                         }
                     ],
-                    "markdownDescription": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/rules/type-folders.md)"
+                    "markdownDescription": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/rules/type-folders.md)"
                 }
             },
             "additionalProperties": {
@@ -916,7 +916,7 @@
                     }
                 ]
             },
-            "markdownDescription": "Rules by name, built-in or \"namespace/rule\" from a plugin.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "Rules by name, built-in or \"namespace/rule\" from a plugin.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         },
         "overrides": {
             "type": "array",
@@ -937,7 +937,7 @@
                             "minLength": 1
                         },
                         "description": "Globs matched against folder paths relative to the root; the root itself is \".\".",
-                        "markdownDescription": "Globs matched against folder paths relative to the root; the root itself is \".\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Globs matched against folder paths relative to the root; the root itself is \".\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "withFiles": {
                         "type": "array",
@@ -946,7 +946,7 @@
                             "minLength": 1
                         },
                         "description": "Globs of file names: the override applies only to the folders that hold one of them directly (\"package.json\" is the root of a package). Default: every folder matching \"folders\".",
-                        "markdownDescription": "Globs of file names: the override applies only to the folders that hold one of them directly (\"package.json\" is the root of a package). Default: every folder matching \"folders\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Globs of file names: the override applies only to the folders that hold one of them directly (\"package.json\" is the root of a package). Default: every folder matching \"folders\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "extends": {
                         "type": "array",
@@ -1092,13 +1092,13 @@
                             ]
                         },
                         "description": "Presets applied to these folders only, before the settings of the override: [\"java\"] under \"server/**\". Their root-anchored patterns (\"/target\") start at each folder of \"folders\", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration.",
-                        "markdownDescription": "Presets applied to these folders only, before the settings of the override: [\"java\"] under \"server/**\". Their root-anchored patterns (\"/target\") start at each folder of \"folders\", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Presets applied to these folders only, before the settings of the override: [\"java\"] under \"server/**\". Their root-anchored patterns (\"/target\") start at each folder of \"folders\", and their names match at any depth below it. Presets only: a file or package applies to the whole configuration.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "reason": {
                         "type": "string",
                         "minLength": 10,
                         "description": "Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed.",
-                        "markdownDescription": "Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Why these folders are different, in at least 10 characters once trimmed. Required: an override is a silence, and a silence without a reason cannot be reviewed.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "expires": {
                         "type": "string",
@@ -1107,19 +1107,19 @@
                         "examples": [
                             "2027-03-31"
                         ],
-                        "markdownDescription": "A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "A date (YYYY-MM-DD, UTC) after which the override is reported as config/expired-override, a warning: it still applies, and says it is due for review.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "owner": {
                         "type": "string",
                         "minLength": 1,
                         "description": "Who answers for it (a person or a team, such as @org/team): shown with it.",
-                        "markdownDescription": "Who answers for it (a person or a team, such as @org/team): shown with it.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Who answers for it (a person or a team, such as @org/team): shown with it.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "ticket": {
                         "type": "string",
                         "minLength": 1,
                         "description": "Where the work that removes it is tracked (an issue number or a link): shown with it.",
-                        "markdownDescription": "Where the work that removes it is tracked (an issue number or a link): shown with it.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Where the work that removes it is tracked (an issue number or a link): shown with it.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "rules": {
                         "type": "object",
@@ -1156,7 +1156,7 @@
                                                         "minimum": 1,
                                                         "description": "How many it may hold.",
                                                         "default": 20,
-                                                        "markdownDescription": "How many it may hold.\n\nDefault: `20`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "How many it may hold.\n\nDefault: `20`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "count": {
                                                         "enum": [
@@ -1165,27 +1165,27 @@
                                                         ],
                                                         "description": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).",
                                                         "default": "files",
-                                                        "markdownDescription": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).\n\nDefault: `\"files\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "\"files\" counts every file; \"modules\" counts a module and its companions once (`foo.ts`, `foo.spec.ts`, `foo.html` are one).\n\nDefault: `\"files\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "filesPerModule": {
                                                         "type": "integer",
                                                         "minimum": 0,
                                                         "description": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.",
                                                         "default": 0,
-                                                        "markdownDescription": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "With count \"modules\", a module of more files than this counts once for every this many: 25 View+X.swift extensions folded into View count as 5 with 5. Default: 0, a module counts once however many files it has.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "warnAbove": {
                                                         "type": "integer",
                                                         "minimum": 0,
                                                         "description": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.",
                                                         "default": 0,
-                                                        "markdownDescription": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "A second, lower limit: a folder over it and within `max` is a warning, and only over `max` does it take the severity of the rule. { \"max\": 20, \"warnAbove\": 10 } fails CI at 21 and still shows the folders past 10. Default: 0, no second limit.\n\nDefault: `0`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hint": {
                                                         "type": "string",
                                                         "description": "Added to the message: how to split in this ecosystem, or what a new folder costs.",
                                                         "default": "",
-                                                        "markdownDescription": "Added to the message: how to split in this ecosystem, or what a new folder costs.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Added to the message: how to split in this ecosystem, or what a new folder costs.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hintFor": {
                                                         "type": "array",
@@ -1195,13 +1195,13 @@
                                                         },
                                                         "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.",
                                                         "default": [],
-                                                        "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "dotfiles": {
                                                         "type": "boolean",
                                                         "description": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].",
                                                         "default": false,
-                                                        "markdownDescription": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Whether files whose name starts with a dot count. Default: false — they are mostly tool settings (.gitignore, .editorconfig) that have to live where the tool looks. recommended leaves every dot-file out with \".*\" in exclude, so for true to see them, exclude only the dot-folders: \"exclude\": [\"!.*\", \".*/\"].\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1210,7 +1210,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A folder holds at most `max` files (or modules): past that it is scrolled, not read.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A folder holds at most `max` files (or modules): past that it is scrolled, not read.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "prefix-groups": {
                                 "description": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.",
@@ -1243,7 +1243,7 @@
                                                         "minimum": 2,
                                                         "description": "How many modules sharing a prefix make a group.",
                                                         "default": 4,
-                                                        "markdownDescription": "How many modules sharing a prefix make a group.\n\nDefault: `4`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "How many modules sharing a prefix make a group.\n\nDefault: `4`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "words": {
                                                         "anyOf": [
@@ -1259,7 +1259,7 @@
                                                         ],
                                                         "description": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).",
                                                         "default": 1,
-                                                        "markdownDescription": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).\n\nDefault: `1`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "How many leading words form the prefix: 1 groups `user-list` with `user-card`; 2 needs `user-list-*`; \"auto\" takes the longest prefix that still has `min` modules and more than half of the group (`RegistroHorario*` rather than `Registro*`).\n\nDefault: `1`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "ignore": {
                                                         "type": "array",
@@ -1270,7 +1270,7 @@
                                                         "uniqueItems": true,
                                                         "description": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.",
                                                         "default": [],
-                                                        "markdownDescription": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Prefixes that are never a group, lowercase, words joined with \"-\": a verb shared by unrelated files, or a convention such as `use`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hintFor": {
                                                         "type": "array",
@@ -1280,19 +1280,19 @@
                                                         },
                                                         "description": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.",
                                                         "default": [],
-                                                        "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Globs of file names: the hint is added only when the files the problem is about include one (\"*.java\", \"*.{c,h}\"). A hint about packages is noise on a folder of SQL. Default: always.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "dropPrefix": {
                                                         "type": "boolean",
                                                         "description": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.",
                                                         "default": true,
-                                                        "markdownDescription": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.\n\nDefault: `true`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Whether a move drops the prefix the new folder already says: render-json.ts goes to render/json.ts, as redundant-prefix asks. False where a file is named after the type it holds (a Java or C# class, a Unity script): renaming the file would rename the type. Default: true.\n\nDefault: `true`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hint": {
                                                         "type": "string",
                                                         "description": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").",
                                                         "default": "",
-                                                        "markdownDescription": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Added to the message: what making a folder costs in this ecosystem (\"In Go a folder is a package: …\").\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1301,7 +1301,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "At least `min` modules whose names start with the same word belong in a folder named after it: `render-json`, `render-text`, `render-sarif`, `render-pr` are a `render/` folder that was never made.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "max-folders": {
                                 "description": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.",
@@ -1334,7 +1334,7 @@
                                                         "minimum": 1,
                                                         "description": "How many subfolders it may hold.",
                                                         "default": 30,
-                                                        "markdownDescription": "How many subfolders it may hold.\n\nDefault: `30`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "How many subfolders it may hold.\n\nDefault: `30`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1343,7 +1343,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A folder holds at most `max` subfolders: a long list of folders is a junk drawer too.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "redundant-prefix": {
                                 "description": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.",
@@ -1376,7 +1376,7 @@
                                                         "minimum": 1,
                                                         "description": "How many modules have to repeat the name before it is reported: 1 reports every one.",
                                                         "default": 2,
-                                                        "markdownDescription": "How many modules have to repeat the name before it is reported: 1 reports every one.\n\nDefault: `2`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "How many modules have to repeat the name before it is reported: 1 reports every one.\n\nDefault: `2`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1385,7 +1385,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Modules inside a folder do not repeat the folder's name: `render/render-json.ts` says render twice; `render/json.ts` says it once. A module named exactly like its folder (`render/render.ts`) is its main file and is fine.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "single-file-folders": {
                                 "description": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.",
@@ -1421,7 +1421,7 @@
                                                         },
                                                         "description": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.",
                                                         "default": [],
-                                                        "markdownDescription": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Globs of files that may be alone in their folder because something outside requires it: `main.go` of a Go command, `lib.rs` of a crate. Matched like `exclude`: a pattern without \"/\" is a file name at any depth, one with \"/\" is a path from the root.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1430,7 +1430,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A folder that holds one file and no subfolders is a level of nesting with nothing to group: keep the file in its parent until it has company. The other side of `max-files`, for those who split too early.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "case-collision": {
                                 "description": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.",
@@ -1464,7 +1464,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Two files or folders of one folder whose names differ only in case or in Unicode normalisation (`Components/` and `components/`, `Foo.ts` and `foo.ts`, `café` written two ways) are one name on Windows and macOS: git cannot check both out there, and one silently overwrites the other.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "scattered-feature": {
                                 "description": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.",
@@ -1511,14 +1511,14 @@
                                                             "entity",
                                                             "mapper"
                                                         ],
-                                                        "markdownDescription": "Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`.\n\nDefault: `[\"controller\",\"service\",\"repository\",\"repo\",\"dao\",\"dto\",\"model\",\"entity\",\"mapper\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Names of the folders that hold a layer, in any case, singular or plural: `service` matches `service/`, `services/` and `Services/`.\n\nDefault: `[\"controller\",\"service\",\"repository\",\"repo\",\"dao\",\"dto\",\"model\",\"entity\",\"mapper\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "min": {
                                                         "type": "integer",
                                                         "minimum": 2,
                                                         "description": "In how many layer folders of one folder a word has to start a name to be reported.",
                                                         "default": 3,
-                                                        "markdownDescription": "In how many layer folders of one folder a word has to start a name to be reported.\n\nDefault: `3`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "In how many layer folders of one folder a word has to start a name to be reported.\n\nDefault: `3`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "ignore": {
                                                         "type": "array",
@@ -1529,13 +1529,13 @@
                                                         "uniqueItems": true,
                                                         "description": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.",
                                                         "default": [],
-                                                        "markdownDescription": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Words that start names in every layer and are no feature, lowercase: `base`, `api`, `app`.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hint": {
                                                         "type": "string",
                                                         "description": "Added to the message: what a feature folder is in this ecosystem.",
                                                         "default": "",
-                                                        "markdownDescription": "Added to the message: what a feature folder is in this ecosystem.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Added to the message: what a feature folder is in this ecosystem.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1544,7 +1544,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A feature is one folder, not a word repeated in every layer folder: `RegistroController`, `RegistroService`, `RegistroRepository`, `RegistroDto` and `Registro` in `controller/`, `service/`, `repository/`, `dto/` and `model/` are a `registro/` package nobody made. Reported once, at the folder that holds the layers, with every move.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "orphan-companions": {
                                 "description": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.",
@@ -1586,13 +1586,13 @@
                                                             ".import",
                                                             ".uid"
                                                         ],
-                                                        "markdownDescription": "The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. \"!.uid\" takes one out.\n\nDefault: `[\".meta\",\".import\",\".uid\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "The endings of the files that go with an asset, each a dot and a word: `X.meta` goes with the file or folder `X`. \"!.uid\" takes one out.\n\nDefault: `[\".meta\",\".import\",\".uid\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "emptyFolders": {
                                                         "type": "boolean",
                                                         "description": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.",
                                                         "default": false,
-                                                        "markdownDescription": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Whether to report a companion of a folder that is not there (`Glade.meta` with no `Glade/`). Git stores no empty folder, so an empty folder's `.meta` is committed alone, and Unity makes the folder again when it sees it. Default: false. A companion of a name without an extension is taken for a folder's.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1601,7 +1601,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A file an engine keeps next to an asset (Unity's `Player.cs.meta`, Godot's `icon.png.import` and `player.gd.uid`) has its asset beside it. One without it is what is left when the asset was moved, renamed or deleted outside the editor, or committed without it: the ID it held is gone, and every reference to the asset breaks.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "type-folders": {
                                 "description": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.",
@@ -1643,13 +1643,13 @@
                                                             "textures",
                                                             "materials"
                                                         ],
-                                                        "markdownDescription": "Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`.\n\nDefault: `[\"assets\",\"meshes\",\"textures\",\"materials\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Folder names that are an asset type, in any case, singular or plural: `textures` matches `Textures/` and `texture/`, not `MaterialLibrary/`.\n\nDefault: `[\"assets\",\"meshes\",\"textures\",\"materials\"]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     },
                                                     "hint": {
                                                         "type": "string",
                                                         "description": "Added to the message: the guide's words, where they come from.",
                                                         "default": "",
-                                                        "markdownDescription": "Added to the message: the guide's words, where they come from.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                                        "markdownDescription": "Added to the message: the guide's words, where they come from.\n\nDefault: `\"\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                                                     }
                                                 }
                                             }
@@ -1658,7 +1658,7 @@
                                         "maxItems": 2
                                     }
                                 ],
-                                "markdownDescription": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "A folder is named after what its assets are for, not what type they are: `Rocks/` holds the mesh, textures and materials of the rocks, where `Textures/`, `Materials/` and `Meshes/` spread one rock over three folders. For game engines, whose editors already filter by type.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             }
                         },
                         "additionalProperties": {
@@ -1691,7 +1691,7 @@
                                 }
                             ]
                         },
-                        "markdownDescription": "Rules by name, built-in or \"namespace/rule\" from a plugin.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "Rules by name, built-in or \"namespace/rule\" from a plugin.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     },
                     "naming": {
                         "type": "object",
@@ -1718,7 +1718,7 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Regular expressions removed from each stem, so that companion files join their module: \"_test$\" makes foo_test.go part of foo.go; \"^test_\" makes test_foo.py part of foo.py.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Regular expressions removed from each stem, so that companion files join their module: \"_test$\" makes foo_test.go part of foo.go; \"^test_\" makes test_foo.py part of foo.py.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "ignoreLeadingWords": {
                                 "type": "array",
@@ -1728,13 +1728,13 @@
                                 },
                                 "description": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.",
                                 "default": [],
-                                "markdownDescription": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Lowercase words skipped at the start of a name before reading what it is about: \"bp\" for Unreal blueprints (BP_Door), a product code (XYZOrder). A type letter (the I of IUserService, the T of TProps) is skipped without it. They change the group a file goes in, not the count: to count IProfile and MProfile as one module, add the companion [\"^(?:I|M)(?=\\p{Lu})\"], as explain suggests.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "groupNumericPrefixes": {
                                 "type": "boolean",
                                 "description": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.",
                                 "default": false,
-                                "markdownDescription": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Whether names that start with a number (0001_initial, 2024-01-01-post) group by it.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "folderFiles": {
                                 "type": "array",
@@ -1753,7 +1753,7 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Globs of file names that describe their folder instead of being one more thing in it, and are not counted: package-info.java, __init__.py, doc.go, mod.rs.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "folderCompanions": {
                                 "type": "array",
@@ -1768,7 +1768,7 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: \".meta\" makes the Scripts.meta of Unity part of Scripts/.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Endings that, after the name of a sibling folder, make a file that goes with that folder and is not counted: \".meta\" makes the Scripts.meta of Unity part of Scripts/.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "folderCase": {
                                 "enum": [
@@ -1780,7 +1780,7 @@
                                 ],
                                 "description": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).",
                                 "default": "kebab",
-                                "markdownDescription": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).\n\nDefault: `\"kebab\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "How the folder a move proposes is written from the words of its group: \"kebab\" user-list, \"snake\" user_list, \"camel\" userList, \"pascal\" UserList (C# namespaces, PSR-4), \"lower\" userlist (Java and Go packages).\n\nDefault: `\"kebab\"`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "reservedWords": {
                                 "type": "array",
@@ -1797,7 +1797,7 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Words a folder cannot be called, because it would be a package or module name and the language reserves it (abstract in Java, async in Python, type in Go): a move proposes the plural (abstracts/), or no folder when that is reserved too. Compared with the folder name as folderCase writes it.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "keepInPlace": {
                                 "type": "array",
@@ -1815,19 +1815,19 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Globs of paths (or of a folder above them) that a move never touches, because a tool reads them by name and place: Spring's application-*.yml, Flutter's main_*.dart, patch-package's patches. They are left out of the groups prefix-groups proposes and of what redundant-prefix renames.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "routes": {
                                 "type": "boolean",
                                 "description": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.",
                                 "default": false,
-                                "markdownDescription": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Whether a file's path is its address (Expo Router's and Next.js's app/): a group then moves into a route group, (sign)/, which does not change the address, the names are kept, and redundant-prefix does not shorten them.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "groupFileStays": {
                                 "type": "boolean",
                                 "description": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.",
                                 "default": false,
-                                "markdownDescription": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Whether the module named exactly like a group stays beside the folder it gets: in Rust, render.rs declares the module whose files go in render/ (render_json.rs → render/json.rs). When false, render.ts goes into render/.\n\nDefault: `false`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             },
                             "mirrors": {
                                 "type": "array",
@@ -1845,20 +1845,20 @@
                                     ]
                                 ],
                                 "default": [],
-                                "markdownDescription": "Trees that mirror another one, as \"source => mirror\", where \"**\" stands for the part both share: \"**/src/main/java/** => **/src/test/java/**\". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                                "markdownDescription": "Trees that mirror another one, as \"source => mirror\", where \"**\" stands for the part both share: \"**/src/main/java/** => **/src/test/java/**\". A problem found in both trees is reported once, in the source, and its moves take the mirrored files along.\n\nDefault: `[]`\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                             }
                         },
-                        "markdownDescription": "How file names are read. Lists accumulate across presets; \"!x\" removes an inherited \"x\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+                        "markdownDescription": "How file names are read. Lists accumulate across presets; \"!x\" removes an inherited \"x\".\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
                     }
                 }
             },
-            "markdownDescription": "Settings for some folders only. Every override says why.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#overrides)"
+            "markdownDescription": "Settings for some folders only. Every override says why.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#overrides)"
         },
         "suppressions": {
             "type": "string",
             "minLength": 1,
             "description": "The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or \"per-project\": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project.",
-            "markdownDescription": "The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or \"per-project\": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v1.0.1/docs/configuration.md#top-level)"
+            "markdownDescription": "The suppressions file, relative to this configuration (default: crowded-folders-suppressions.json), or \"per-project\": one crowded-folders-suppressions.json in each project (the nearest folder with a package manifest, such as package.json, go.mod or Cargo.toml), its keys relative to the project.\n\n[Documentation](https://github.com/bymaksym/CrowdedFolders/blob/v2.0.0/docs/configuration.md#top-level)"
         }
     }
 }

@@ -43,7 +43,7 @@ starts from the configuration's folder.
 
 ```jsonc
 {
-    "$schema": "https://unpkg.com/crowded-folders@1/schema.json", // x-release-please-major
+    "$schema": "https://unpkg.com/crowded-folders@2/schema.json", // x-release-please-major
     "extends": ["recommended", "react"],
 }
 ```

@@ -8,7 +8,7 @@
         ".": "./index.js"
     },
     "peerDependencies": {
-        "crowded-folders": "^1.0.1"
+        "crowded-folders": "^2.0.0"
     },
     "keywords": [
         "crowded-folders-plugin"

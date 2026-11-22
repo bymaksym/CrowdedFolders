@@ -21,7 +21,7 @@ A configuration loads it and uses what it adds by `namespace/name`:
 }
 ```
 
-[examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.1/examples/plugin) is a complete plugin to copy: one rule, one preset, <!-- x-release-please-version -->
+[examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v2.0.0/examples/plugin) is a complete plugin to copy: one rule, one preset, <!-- x-release-please-version -->
 typed with JSDoc, no build step. It is in the repository, not in the package: the link names the version.
 
 ## A rule
@@ -229,7 +229,7 @@ test('reports a utils folder', async () => {
 
 - **Name:** `crowded-folders-plugin-<name>` or `@scope/crowded-folders-plugin[-<name>]`, with the keyword
   `crowded-folders-plugin` so it can be found.
-- **`peerDependencies`:** `"crowded-folders": "^1.0.1"`, not a dependency: the plugin uses the user's copy. <!-- x-release-please-version -->
+- **`peerDependencies`:** `"crowded-folders": "^2.0.0"`, not a dependency: the plugin uses the user's copy. <!-- x-release-please-version -->
   It is read when the plugin loads: a plugin whose range does not take the running version is refused
   with both versions, instead of failing halfway through a run.
 - **`exports`:** a `"."` entry with an `import` or `default` condition; subpath patterns (`"./*"`) work.
