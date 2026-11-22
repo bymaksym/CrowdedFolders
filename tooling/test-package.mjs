@@ -30,6 +30,35 @@ function expect(name, ok, detail = '') {
 }
 
 /**
+ * Makes a folder a git repository with its files committed: the repositories the tool meets are, and on
+ * CI (CI is set on the runner) it refuses a folder outside one unless --no-git says to read the disk.
+ * @param {string} folder
+ */
+function commitAll(folder) {
+    for (const args of [
+        ['init', '--quiet'],
+        ['add', '--all'],
+        [
+            '-c',
+            'user.name=test',
+            '-c',
+            'user.email=test@example.invalid',
+            '-c',
+            'commit.gpgsign=false',
+            'commit',
+            '--quiet',
+            '-m',
+            'sample',
+        ],
+    ]) {
+        const git = spawnSync('git', ['-C', folder, ...args], { encoding: 'utf8' });
+        if (git.status !== 0) {
+            throw new Error(`git ${args.join(' ')} in ${folder}: ${git.stderr}`);
+        }
+    }
+}
+
+/**
  * npm is a .cmd on Windows, which only a shell runs, so the command is one quoted string.
  *
  * @param {string[]} args
@@ -98,6 +127,7 @@ try {
         mkdirSync(join(sample, 'cli'), { recursive: true });
         writeFileSync(join(sample, 'cli', name), '');
     }
+    commitAll(sample);
     const found = run(['--no-color'], sample);
     expect(
         'it finds the render group and exits 1',
@@ -168,6 +198,7 @@ try {
     mkdirSync(broken);
     writeFileSync(join(broken, 'crowded-folders.config.json'), '{ "overrides": [{ "folders": ["a"] }] }');
     writeFileSync(join(broken, 'a.ts'), '');
+    commitAll(broken);
     const rejected = run([], broken);
     expect(
         'a configuration without a reason exits 2',
