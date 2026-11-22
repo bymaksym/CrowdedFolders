@@ -106,7 +106,7 @@ configuration looks like once the team has made it its own:
 ```jsonc
 // crowded-folders.config.json — comments are allowed
 {
-    "$schema": "https://unpkg.com/crowded-folders@1/schema.json", // x-release-please-major
+    "$schema": "https://unpkg.com/crowded-folders@2/schema.json", // x-release-please-major
     "extends": ["recommended", "react"],
     "rules": {
         "prefix-groups": ["error", { "ignore": ["check"] }],
@@ -150,7 +150,7 @@ Details: [docs/adopting.md](docs/adopting.md).
 ```yaml
 # .github/workflows/structure.yml
 - uses: actions/checkout@v7
-- run: npx --yes crowded-folders@1.0.1 --format github # annotations on the pull request
+- run: npx --yes crowded-folders@2.0.0 --format github # annotations on the pull request
 ```
 
 <!-- x-release-please-end -->
@@ -175,7 +175,7 @@ the agent without blocking it; the package also ships a skill and a plugin
 ## Plugins
 
 A plugin is an npm package that exports rules and presets; a rule is one function that looks at a
-folder and reports. [examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v1.0.1/examples/plugin) is a complete one to copy, and <!-- x-release-please-version -->
+folder and reports. [examples/plugin](https://github.com/bymaksym/CrowdedFolders/tree/v2.0.0/examples/plugin) is a complete one to copy, and <!-- x-release-please-version -->
 [docs/plugins.md](docs/plugins.md) explains every part, from the folder a rule receives to publishing.
 
 ```js
