@@ -212,14 +212,14 @@ try {
         spawnSync(process.execPath, ['--input-type=module', '-e', code], { cwd: consumer, encoding: 'utf8' });
     const api = node(
         "import { lint, defineRule, BUILT_IN_PRESETS } from 'crowded-folders';" +
-            "const r = await lint({ files: ['a/x-1.ts','a/x-2.ts','a/x-3.ts','a/x-4.ts','a/y.ts'], config: { extends: ['recommended'] } });" +
-            "if (typeof defineRule !== 'function' || !BUILT_IN_PRESETS.go || r.findings[0]?.key !== 'x') process.exit(1);",
+            "const r = await lint({ files: ['a/xyz-1.ts','a/xyz-2.ts','a/xyz-3.ts','a/xyz-4.ts','a/y.ts'], config: { extends: ['recommended'] } });" +
+            "if (typeof defineRule !== 'function' || !BUILT_IN_PRESETS.go || r.findings[0]?.key !== 'xyz') process.exit(1);",
     );
     expect('the API imports and runs', api.status === 0, api.stderr);
     const engine = node(
         "import { runEngine, resolveConfig } from 'crowded-folders/engine';" +
-            "const r = runEngine({ files: ['a/x-1.ts','a/x-2.ts','a/x-3.ts','a/x-4.ts','a/y.ts'], ...resolveConfig({ extends: ['recommended'] }) });" +
-            "if (r.findings[0]?.key !== 'x') process.exit(1);",
+            "const r = runEngine({ files: ['a/xyz-1.ts','a/xyz-2.ts','a/xyz-3.ts','a/xyz-4.ts','a/y.ts'], ...resolveConfig({ extends: ['recommended'] }) });" +
+            "if (r.findings[0]?.key !== 'xyz') process.exit(1);",
     );
     expect('crowded-folders/engine imports and runs', engine.status === 0, engine.stderr);
     const testing = node(
