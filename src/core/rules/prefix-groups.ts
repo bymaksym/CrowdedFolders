@@ -23,6 +23,12 @@ export interface PrefixGroupsOptions {
  */
 const SUBJECT_SHARE = 0.85;
 
+/**
+ * A Latin-script prefix of fewer letters than this is not a word: `a-`, `b-`, `x-` mark the name (a product
+ * code, a variant), and `ab-` says nothing about a folder. Not for CJK, where two characters are a word.
+ */
+const MIN_PREFIX_LETTERS = 3;
+
 export const prefixGroups = defineRule<PrefixGroupsOptions>({
     meta: {
         description:
@@ -155,7 +161,7 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
                       ]),
             ];
             report({
-                message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}${letterHint(key)}`,
+                message: `${opening}: ${where}${reserved}.${after.map(sentence => ` ${sentence}`).join('')}${hint}`,
                 key,
                 measured: modules.length,
                 limit: options.min - 1,
@@ -166,15 +172,9 @@ export const prefixGroups = defineRule<PrefixGroupsOptions>({
     },
 });
 
-/**
- * A prefix of one letter is rarely a word: it is a convention that marks the name (`x-order`, `x-invoice` with a
- * product code). Say which setting skips it, because `rules` and `explain` are where that
- * setting is found otherwise.
- */
-function letterHint(key: string): string {
-    return /^\p{L}$/u.test(key)
-        ? ` "${key}" is one letter: if it marks the name and says nothing about what the file is, naming.ignoreLeadingWords: ["${key}"] skips it (crowded-folders rules naming).`
-        : '';
+/** Whether a one-word key is Latin letters, fewer than {@link MIN_PREFIX_LETTERS}. */
+function isShortLatinWord(key: string): boolean {
+    return /^\p{Script=Latin}+$/u.test(key) && key.length < MIN_PREFIX_LETTERS;
 }
 
 interface CrowdedLimit {
@@ -212,6 +212,9 @@ function whyNotReported(
     const ignored = options.ignore.map(prefix => prefix.toLowerCase());
     if (keyIn(key, ignored)) {
         return "the prefix is in prefix-groups' ignore";
+    }
+    if (isShortLatinWord(key)) {
+        return `"${key}" has fewer than ${MIN_PREFIX_LETTERS} letters: it marks the name, it is not a word a folder is named after`;
     }
     if (modules.length < options.min) {
         return `${modules.length} modules, and ${options.min} make a group (min)`;
