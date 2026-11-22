@@ -237,7 +237,7 @@ describe('runEngine', () => {
     });
 
     it('sorts findings by folder, then rule, then key', () => {
-        const files = ['b/x-1.ts', 'b/x-2.ts', 'b/x-3.ts', 'b/x-4.ts', 'b/y.ts', ...crowded];
+        const files = ['b/ext-1.ts', 'b/ext-2.ts', 'b/ext-3.ts', 'b/ext-4.ts', 'b/y.ts', ...crowded];
         const config = resolve({ rules: { 'max-files': ['error', { max: 4 }], 'prefix-groups': 'error' } });
         assert.deepEqual(
             runEngine({ files, config, rules: BUILT_IN_RULES }).findings.map(
