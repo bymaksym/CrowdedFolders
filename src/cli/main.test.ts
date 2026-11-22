@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -150,6 +150,18 @@ describe('what the user caused', () => {
     it('a report that cannot be written', async () => {
         const root = repository({ 'a.ts': '', 'crowded-folders.config.json': RECOMMENDED });
         await mistake(root, ['-f', 'json', '-o', 'a.ts/out.json'], /cannot write .*out\.json/u);
+    });
+
+    it('a report that cannot be written, where tidying up after it fails too (ENOTDIR on Linux)', async () => {
+        // The temporary file's name is taken by a folder: writing fails, and so does removing what was never
+        // written. On Linux `-o a.ts/out.json` is that same case, and it said "this is a bug".
+        const root = repository({
+            'a.ts': '',
+            'crowded-folders.config.json': RECOMMENDED,
+            [`out.json.${process.pid}.tmp/keep.txt`]: '',
+        });
+        await mistake(root, ['-f', 'json', '-o', 'out.json'], /cannot write .*out\.json/u);
+        assert.ok(existsSync(join(root, `out.json.${process.pid}.tmp`, 'keep.txt')), 'what was there is left alone');
     });
 
     it('a rule of a plugin that throws', async () => {

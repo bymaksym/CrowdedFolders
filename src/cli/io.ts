@@ -37,12 +37,18 @@ export function processIo(): Io {
  */
 export function writeFileAtomic(path: string, content: string): void {
     const temporary = `${path}.${process.pid}.tmp`;
+    let written = false;
     try {
         mkdirSync(dirname(path), { recursive: true });
         writeFileSync(temporary, content, 'utf8');
+        written = true;
         renameSync(temporary, path);
     } catch (error) {
-        rmSync(temporary, { force: true });
+        // Only what this call wrote is removed: before that, the name can be a folder or under a file
+        // (ENOTDIR on Linux), and removing it would fail and hide why the file could not be written.
+        if (written) {
+            rmSync(temporary, { force: true });
+        }
         throw new WriteError(path, error);
     }
 }
