@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -379,7 +379,13 @@ describe('listFiles when git cannot answer', () => {
             () => listFiles(root, { git: true }),
             (error: unknown) => {
                 assert.ok(error instanceof GitError, String(error));
-                assert.match(error.message, /git could not list the files of .*\n {2}fatal: not a git repository/u);
+                // git's own words, whatever they are in this version (2.56 stopped saying "not a git repository").
+                const said = spawnSync('git', ['-C', root, 'ls-files'], { encoding: 'utf8' }).stderr.trim();
+                assert.match(said, /^fatal: /u);
+                assert.ok(
+                    error.message.includes(`git could not list the files of ${root}:\n  ${said}\n`),
+                    error.message,
+                );
                 assert.match(error.message, /--no-git/u);
                 return true;
             },

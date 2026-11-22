@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, describe, it } from 'node:test';
@@ -465,7 +465,11 @@ describe('where it reads the files from', () => {
         const ran = await cli(root, []);
         assert.equal(ran.code, 2);
         assert.equal(ran.out, '');
-        assert.match(ran.err, /git could not list the files .*\n {2}fatal: not a git repository/u);
+        // git's own words, whatever they are in this version (2.56 stopped saying "not a git repository").
+        const real = realpathSync.native(root);
+        const said = spawnSync('git', ['-C', real, 'ls-files'], { encoding: 'utf8' }).stderr.trim();
+        assert.match(said, /^fatal: /u);
+        assert.ok(ran.err.includes(`git could not list the files of ${real}:\n  ${said}\n`), ran.err);
     });
 
     it('says it read the disk outside a repository, and fails on CI unless --no-git says to', async () => {
