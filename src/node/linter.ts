@@ -5,14 +5,15 @@ import { foldersOf } from '../core/changes.ts';
 import type { Config, Plugin, Preset, ResolvedConfig } from '../core/config/types.ts';
 import { ConfigError } from '../core/config/validate.ts';
 import { type EngineResult, type Finding, runEngine, selectFiles } from '../core/engine.ts';
-import { FileListError, normaliseFileList } from '../core/paths/input.ts';
+import { FileListError } from '../core/paths/input.ts';
 import type { Detection } from '../core/presets/detect.ts';
 import { exitCodeOf } from '../core/report/report.ts';
 import { attributeRuleError, RuleError, ruleShapeProblem } from '../core/rules/guard.ts';
 import type { Rule } from '../core/rules/rule.ts';
 import { applySuppressions, PER_PROJECT, type StaleSuppression } from '../core/suppressions.ts';
 import { locate } from './config/file.ts';
-import { listFiles } from './files.ts';
+import { realPath } from './config/real-path.ts';
+import { listFiles, readFileList } from './files.ts';
 import { loadConfig, loadConfigFile, type LoadedConfig } from './load-config.ts';
 import { detectConfig } from './manifests.ts';
 import { SuppressionFiles, suppressionsPathFor } from './suppressions-files.ts';
@@ -127,7 +128,8 @@ export async function lint(options: LintOptions = {}): Promise<LintResult> {
 }
 
 async function open(options: LinterOptions): Promise<{ linter: Linter; listed: readonly string[] | undefined }> {
-    const cwd = resolve(options.cwd ?? process.cwd());
+    // The real path, once: the root and the configuration are real paths, and every path is compared with them.
+    const cwd = realPath(resolve(options.cwd ?? process.cwd()));
     for (const [name, rule] of Object.entries(options.rules ?? {})) {
         const problem = ruleShapeProblem(rule);
         if (problem !== undefined) {
@@ -164,7 +166,7 @@ async function open(options: LinterOptions): Promise<{ linter: Linter; listed: r
     const whereOnce = (paths: readonly string[], run: Pick<LintRun, 'files'> = {}): WhereResult[] => {
         const own = filesOf(run.files, root);
         const files = scope === '.' ? own : own.map(file => `${scope}/${file}`);
-        const read = normaliseFileList(paths, root);
+        const read = readFileList(paths, root);
         if (read.problems.length > 0) {
             throw new FileListError(read.problems);
         }
@@ -239,7 +241,7 @@ function filesOf(given: readonly string[] | undefined, root: string): readonly s
     if (given === undefined) {
         return listFiles(root, { git: true }).files;
     }
-    const read = normaliseFileList(given, root);
+    const read = readFileList(given, root);
     if (read.problems.length > 0) {
         throw new FileListError(read.problems);
     }

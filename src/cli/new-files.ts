@@ -3,7 +3,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 
 import { normalisePath } from '../core/paths/tree.ts';
 import { shownPath } from '../node/config/error.ts';
-import { realPath } from '../node/config/file.ts';
+import { realPath } from '../node/config/real-path.ts';
 import { joinScope, type Session, within } from './session.ts';
 import { UsageError } from './usage-error.ts';
 

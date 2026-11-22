@@ -2,6 +2,7 @@ import { AgentsKitError } from '../core/agents/kit.ts';
 import { FileListError } from '../core/paths/input.ts';
 import { attributeRuleError, RuleError } from '../core/rules/guard.ts';
 import { describeConfigError } from '../node/config/error.ts';
+import { realPath } from '../node/config/real-path.ts';
 import { GitError } from '../node/files.ts';
 import { ConfigError } from '../node/load-config.ts';
 import { type Args, parseCommandLine, UsageError } from './args.ts';
@@ -21,7 +22,10 @@ import { openSession, type Session } from './session.ts';
 import { TOOL } from './tool.ts';
 
 /** Runs the command and returns its exit code: 0 clean, 1 problems, 2 the input was wrong or it broke. */
-export async function run(argv: readonly string[], io: Io = processIo()): Promise<number> {
+export async function run(argv: readonly string[], given: Io = processIo()): Promise<number> {
+    // The one place the folder the command was typed in is read: from here on it is its real path, the
+    // form every other path of the run is compared with (a Windows short name, a junction, macOS's /var).
+    const io: Io = { ...given, cwd: realPath(given.cwd) };
     let args: Args | undefined;
     let session: Session | undefined;
     try {

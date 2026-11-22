@@ -3,15 +3,16 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import type { ResolvedConfig, RuleSetting } from '../core/config/types.ts';
 import { compileGlob, matchesSelfOrAncestor } from '../core/paths/glob.ts';
-import { FileListError, isAbsolutePath, normaliseFileList } from '../core/paths/input.ts';
+import { FileListError, isAbsolutePath } from '../core/paths/input.ts';
 import { closest } from '../core/paths/suggest.ts';
 import { baseName, normalisePath, parentOf } from '../core/paths/tree.ts';
 import { plural } from '../core/plural.ts';
 import { configFromDetections, type Detection } from '../core/presets/detect.ts';
 import { BUILT_IN_PRESETS } from '../core/presets/index.ts';
 import { shownPath } from '../node/config/error.ts';
-import { gitRootOf, locate, misnamedConfigs, nestedConfigs, realPath } from '../node/config/file.ts';
-import { listFiles, markedByAttributes, parseFileList } from '../node/files.ts';
+import { gitRootOf, locate, misnamedConfigs, nestedConfigs } from '../node/config/file.ts';
+import { realPath } from '../node/config/real-path.ts';
+import { listFiles, markedByAttributes, parseFileList, readFileList } from '../node/files.ts';
 import { ConfigError, loadConfig, loadConfigFile, type LoadedConfig } from '../node/load-config.ts';
 import { suppressionsPathFor } from '../node/suppressions-files.ts';
 import { type Args, COMMANDS, UsageError } from './args.ts';
@@ -272,7 +273,7 @@ async function filesFromStdin(
             );
         }
     }
-    const { files, problems } = normaliseFileList(lines, root);
+    const { files, problems } = readFileList(lines, root);
     if (problems.length > 0) {
         throw new UsageError(`--stdin: ${new FileListError(problems).message}`);
     }

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import { isObject } from '../../core/config/json-schema.ts';
@@ -7,6 +7,7 @@ import { positionOf, syntaxErrorOffset } from '../../core/config/locate.ts';
 import { ConfigError } from '../../core/config/validate.ts';
 import { importDefault } from '../modules.ts';
 import { PACKAGE_KEY } from './error.ts';
+import { realPath } from './real-path.ts';
 
 /**
  * The names a configuration can have, in the order they are looked for in each folder. `.ts` and
@@ -249,15 +250,6 @@ export function locate(options: {
         scope: inside === '' ? '.' : inside.replaceAll('\\', '/'),
         ...(project && { project }),
     };
-}
-
-/** The real path of something that exists (the long, correctly cased form); the path itself otherwise. */
-export function realPath(path: string): string {
-    try {
-        return realpathSync.native(path);
-    } catch {
-        return path;
-    }
 }
 
 /**

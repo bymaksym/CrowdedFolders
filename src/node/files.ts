@@ -3,8 +3,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve } from 'node:path';
 
 import { type IgnoreFile, isIgnored, parseGitignore } from '../core/paths/gitignore.ts';
+import { isAbsolutePath, normaliseFileList, type PathProblem } from '../core/paths/input.ts';
 import { normalisePath } from '../core/paths/tree.ts';
 import { gitRootOf } from './config/file.ts';
+import { realPathOfAny } from './config/real-path.ts';
 
 export interface FileList {
     readonly files: readonly string[];
@@ -84,6 +86,21 @@ export function parseFileList(text: string): string[] {
         .split(separator)
         .map(line => line.trim())
         .filter(line => line !== '');
+}
+
+/**
+ * A file list from outside (standard input, `lint({ files })`, `where`) as files of `root`, which is a
+ * real path: an absolute path is read as its real path first, so `C:\link\src\a.ts` through a
+ * junction, a short name or macOS's `/var` is the file under the root it is, not a path outside it.
+ */
+export function readFileList(
+    paths: Iterable<string>,
+    root: string,
+): { readonly files: string[]; readonly problems: PathProblem[] } {
+    return normaliseFileList(
+        [...paths].map(path => (isAbsolutePath(path) ? realPathOfAny(path) : path)),
+        root,
+    );
 }
 
 /** Runs git in a folder with some input, and gives its output, or `undefined` when it fails. */

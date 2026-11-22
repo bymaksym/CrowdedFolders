@@ -2,7 +2,7 @@ import { existsSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 
 import { shownPath } from '../../node/config/error.ts';
-import { realPath } from '../../node/config/file.ts';
+import { realPath } from '../../node/config/real-path.ts';
 import { isTrackedByGit } from '../../node/files.ts';
 import { type Args, UsageError } from '../args.ts';
 import type { Session } from '../session.ts';

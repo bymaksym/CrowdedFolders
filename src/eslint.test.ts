@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { after, afterEach, describe, it } from 'node:test';
@@ -72,6 +72,16 @@ describe('crowded-folders/folder, run by ESLint', () => {
         assert.equal(message.severity, 2);
         assert.match(message.message, /render/u);
         assert.match(message.message, /\[prefix-groups\] https:\/\//u);
+    });
+
+    it('reports from a repository reached through a link (a junction, a short name, macOS /var)', async () => {
+        const root = crowded();
+        const folder = mkdtempSync(join(tmpdir(), 'crowded-folders-eslint-link-'));
+        roots.push(folder);
+        const link = join(folder, 'repo');
+        symlinkSync(root, link, 'junction');
+        const results = await eslintIn(link).lintFiles(['cli/*.js']);
+        assert.equal(results.filter(result => result.messages.length > 0).length, 1);
     });
 
     it('keeps reporting at the same file when it is linted again, as an editor does', async () => {

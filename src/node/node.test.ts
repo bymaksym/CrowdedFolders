@@ -462,16 +462,19 @@ describe('locate', () => {
             'other/a.ts': '',
         });
         const found = locate({ cwd: join(top, 'here'), root: join(top, 'other') });
-        assert.equal(found.configPath, join(top, 'other', 'crowded-folders.config.json'));
-        assert.equal(found.root, join(top, 'other'));
+        // Real paths, as locate() promises: the temporary folder can be a short name or a symlink (macOS).
+        const real = realpathSync.native(top);
+        assert.equal(found.configPath, join(real, 'other', 'crowded-folders.config.json'));
+        assert.equal(found.root, join(real, 'other'));
         assert.equal(found.scope, '.');
     });
 
     it('keeps the configuration as the base of paths when the root is inside its folder (QR Checker --root android)', () => {
         const top = folder({ '.config/crowded-folders.json': '{}', 'android/app/a.kt': '' });
         const found = locate({ cwd: top, root: join(top, 'android') });
-        assert.equal(found.configPath, join(top, '.config', 'crowded-folders.json'));
-        assert.equal(found.base, top);
+        const real = realpathSync.native(top);
+        assert.equal(found.configPath, join(real, '.config', 'crowded-folders.json'));
+        assert.equal(found.base, real);
         assert.equal(found.scope, 'android');
     });
 

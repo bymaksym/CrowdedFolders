@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 
 import { docsUrl } from './core/docs-url.ts';
+import { realPathOfAny } from './node/config/real-path.ts';
 
 /** What the rule reads from ESLint's context. */
 export interface FolderRuleContext {
@@ -101,7 +102,8 @@ function folderOf(root: string, filename: string): string | undefined {
     if (!isAbsolute(filename)) {
         return undefined; // '<input>', '<text>': code that is not a file of the repository
     }
-    const path = relative(root, filename);
+    // The root is a real path; the file is read as one too, or a link to the repository finds nothing.
+    const path = relative(root, realPathOfAny(filename));
     if (path === '' || path.startsWith('..') || isAbsolute(path)) {
         return undefined;
     }
